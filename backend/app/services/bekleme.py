@@ -3,7 +3,7 @@ from datetime import datetime, timedelta
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models import Booking, BookingKaynagi, ClassSession, WaitlistEntry
+from app.models import Booking, BookingKaynagi, ClassSession, Member, WaitlistEntry
 from app.services.hatalar import (
     DersDoluDegil, TeklifSuresiDolmus, ZatenSirada,
 )
@@ -16,6 +16,19 @@ async def siraya_gir(
     db: AsyncSession, *, member_id: int, session_id: int
 ) -> WaitlistEntry:
     """Dolu bir derse bekleme sırası kaydı açar."""
+    # Global kilit sırasını koru: members -> class_sessions.
+    #
+    # Bu satır olmadan sıra fiilen TERSİNE dönüyordu: waitlist_entries
+    # INSERT'i member_id FK'si yüzünden `members` üzerinde örtük
+    # FOR KEY SHARE alır ve bu, `rezerve_et`'in FOR UPDATE'i ile çatışır.
+    # Yani siraya_gir'in etkin sırası class_sessions -> members oluyordu.
+    # Üye satırını önce kilitleyerek sırayı rezerve_et ile hizalıyoruz.
+    kilit = await db.execute(
+        select(Member.id).where(Member.id == member_id).with_for_update()
+    )
+    if kilit.scalar_one_or_none() is None:
+        raise ValueError(f"Üye bulunamadı: {member_id}")
+
     # Ders satırını kilitle. Bu kilit İKİ işi birden yapıyor:
     #
     # 1. Kontenjanı TAZE okur. ORM nesnesinden okumak yanlış olurdu:
@@ -24,10 +37,6 @@ async def siraya_gir(
     # 2. Sıra numarası üretimini serileştirir. `MAX(sira) + 1` kilitsiz
     #    olsaydı iki üye aynı anda sıraya girip aynı numarayı alırdı ve
     #    yer açıldığında yanlış kişiye teklif giderdi.
-    #
-    # Kilit sırası güvenli: bu fonksiyon yalnız class_sessions kilitler,
-    # başka kaynağa gitmez, dolayısıyla members -> class_sessions sırasını
-    # izleyen `rezerve_et` ile döngü kuramaz.
     sonuc = await db.execute(
         select(ClassSession.dolu_sayi, ClassSession.kontenjan)
         .where(ClassSession.id == session_id)
@@ -76,6 +85,13 @@ async def sirayi_ilerlet(
     if oturum is None:
         raise ValueError(f"Ders bulunamadı: {session_id}")
 
+    # Ders başlamış veya geçmişse bekleme listesi anlamsızdır. Bu kontrol
+    # olmadan ardışık çağrılar bekleme listesini sessizce yakardı: her
+    # çağrı geçmişte biten (dolayısıyla kullanılamaz) bir teklif_bitis
+    # üretip sıradaki kişiye geçerdi.
+    if now >= oturum.baslangic:
+        return None
+
     sonuc = await db.execute(
         select(WaitlistEntry)
         .where(
@@ -85,8 +101,14 @@ async def sirayi_ilerlet(
         .order_by(WaitlistEntry.sira)
     )
     for kayit in sonuc.scalars():
-        # Süresi dolmuş teklifleri atla — bunlar sırayı kaybetmiştir
-        if kayit.teklif_bitis is not None and kayit.teklif_bitis <= now:
+        # Süresi dolmuş teklifleri atla — bunlar sırayı kaybetmiştir.
+        # Sınır `teklifi_kullan`'daki `now > teklif_bitis` kontrolüyle
+        # hizalı olmalı (iptal penceresindeki `now <= son_iptal_ani`
+        # tercihiyle aynı mantık): tam `now == teklif_bitis` anında
+        # teklif hâlâ AÇIK sayılır. Aksi halde `<=` kullanılsaydı bu an
+        # `sirayi_ilerlet`'te dolmuş, `teklifi_kullan`'da hâlâ geçerli
+        # sayılır ve aynı yer için iki kişi geçerli teklif tutabilirdi.
+        if kayit.teklif_bitis is not None and kayit.teklif_bitis < now:
             continue
         if kayit.teklif_bitis is not None:
             return kayit  # hâlâ açık bir teklif var, yenisini verme

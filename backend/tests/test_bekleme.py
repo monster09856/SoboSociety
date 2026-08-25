@@ -2,7 +2,7 @@ import asyncio
 from datetime import UTC, date, datetime, timedelta
 
 import pytest
-from sqlalchemy import select
+from sqlalchemy import select, text
 
 from app.models import (
     ClassSession, ClassType, Instructor, Member, Package, Room, WaitlistEntry,
@@ -162,6 +162,51 @@ async def test_bos_sirada_ilerletmek_none_doner(db):
     assert await sirayi_ilerlet(db, session_id=oturum.id, now=an) is None
 
 
+async def test_tam_sinirda_teklif_hala_gecerlidir(db):
+    """`sirayi_ilerlet` ile `teklifi_kullan` sınırda hizalı olmalı.
+
+    `now == teklif_bitis` anında teklif hâlâ AÇIK sayılmalı — aksi halde
+    `sirayi_ilerlet` teklifi dolmuş sayıp sıradakine yeni teklif verirken
+    `teklifi_kullan` ilk kişiye hâlâ izin verir ve aynı yer için iki
+    geçerli teklif oluşur.
+    """
+    oturum, _, ece, zeynep, kayit = await _dolu_ders(db)
+    await siraya_gir(db, member_id=ece.id, session_id=oturum.id)
+    await siraya_gir(db, member_id=zeynep.id, session_id=oturum.id)
+
+    an = DERS_ANI - timedelta(hours=8)
+    await iptal_et(db, booking_id=kayit.id, now=an)
+    ilk_teklif = await sirayi_ilerlet(db, session_id=oturum.id, now=an)
+
+    tam_sinir = ilk_teklif.teklif_bitis
+    tekrar = await sirayi_ilerlet(db, session_id=oturum.id, now=tam_sinir)
+
+    assert tekrar.id == ilk_teklif.id
+    assert tekrar.member_id == ece.id
+
+
+async def test_ders_baslamissa_sira_ilerletilemez(db):
+    """Ders başlamış/geçmişse bekleme listesi ilerletilmemeli.
+
+    Aksi halde ardışık çağrılar sırayı sessizce yakar: her çağrı
+    kullanılamaz (geçmişte biten) bir teklif verip sıradaki kişiye geçer.
+    """
+    oturum, _, ece, _, kayit = await _dolu_ders(db)
+    await siraya_gir(db, member_id=ece.id, session_id=oturum.id)
+
+    an = DERS_ANI - timedelta(hours=8)
+    await iptal_et(db, booking_id=kayit.id, now=an)
+
+    assert await sirayi_ilerlet(db, session_id=oturum.id, now=DERS_ANI) is None
+
+    sonuc = await db.execute(
+        select(WaitlistEntry).where(
+            WaitlistEntry.member_id == ece.id, WaitlistEntry.session_id == oturum.id
+        )
+    )
+    assert sonuc.scalar_one().teklif_bitis is None
+
+
 async def test_ayni_anda_siraya_giren_iki_uye_farkli_sira_numarasi_alir(temiz_db):
     """Sıra numarası üretimi yarışa dayanıklı olmalı.
 
@@ -196,8 +241,17 @@ async def test_ayni_anda_siraya_giren_iki_uye_farkli_sira_numarasi_alir(temiz_db
         oturum_id, ece_id, zeynep_id = oturum.id, ece.id, zeynep.id
         await hazirlik.commit()
 
+    kapi = asyncio.Barrier(2)
+
     async def dene(member_id: int) -> WaitlistEntry:
         async with temiz_db() as oturum_db:
+            # Yarışı gerçekten kurabilmek için iki şey birden gerekiyor:
+            # bağlantıyı önceden ısıtmak VE iki görevi tam aynı anda serbest
+            # bırakmak. Yalnız biri yapılırsa görevler kayar ve çakışma
+            # penceresi kapanır — test kilit silinse bile yeşil kalır.
+            await oturum_db.execute(text("SELECT 1"))
+            async with asyncio.timeout(10):
+                await kapi.wait()
             kayit = await siraya_gir(oturum_db, member_id=member_id, session_id=oturum_id)
             await oturum_db.commit()
             return kayit
