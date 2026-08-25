@@ -29,6 +29,17 @@ async def uret(db: AsyncSession, *, baslangic: date, bitis: date) -> int:
     Garanti veritabanından gelir (`uq_salon_saat` + ON CONFLICT DO NOTHING),
     uygulama kodundaki "önce var mı" kontrolünden değil — o kontrol yarış
     koşuluna açıktır.
+
+    Aktiflik kapsamı, bilinçli olarak dar tutuldu: yalnızca `ClassType.aktif`
+    filtreleniyor. `Instructor.aktif` ve `Room.aktif` kasıtlı olarak
+    filtrelenMİYOR — eğitmen veya salon pasife alınsa bile şablon üretime
+    devam eder. Sebebi: sessizce üretmemek, sessizce üretmekten daha
+    tehlikeli. Bir eğitmen ayrıldığında filtre onu otomatik dışlarsa, tüm
+    programı takvimde fark edilmeyen bir boşluk olarak sessizce kaybolur;
+    üyeler ders arar, bulamaz, kimse hatayı görmez. Eğitmen/salon değişikliği
+    doğru çözüm yeri şablonun kendisidir: panelden `ScheduleTemplate` güncellenir
+    veya `gecerli_bitis` ile kapatılır (panel akışı, sonraki faz) — üretim
+    fonksiyonu bunu sessizce tahmin etmeye çalışmaz.
     """
     sonuc = await db.execute(
         select(ScheduleTemplate, ClassType.kontenjan)

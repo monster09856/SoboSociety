@@ -85,3 +85,31 @@ async def test_kontenjan_ders_tipinden_kopyalanir(db):
     oturum = (await _oturumlar(db))[0]
     assert oturum.kontenjan == 8
     assert oturum.dolu_sayi == 0
+
+
+async def test_pasif_ders_tipi_icin_oturum_uretilmez(db):
+    sablon = await _sablon_kur(db, hafta_gunu=1, saat_dk=19 * 60)
+
+    tip = await db.get(ClassType, sablon.class_type_id)
+    tip.aktif = False
+    await db.flush()
+
+    sayi = await uret(db, baslangic=date(2026, 9, 1), bitis=date(2026, 9, 21))
+
+    assert sayi == 0
+    assert await _oturumlar(db) == []
+
+
+async def test_yerel_gece_yarisi_utc_de_onceki_gune_duser(db):
+    """Salı 00:00 yerel = Pazartesi 21:00 UTC. Bu doğru davranıştır.
+
+    Gün döngüsü `weekday()`'i YEREL takvim günü olarak karşılaştırır; şablon
+    "Salı" der ve yerel Salı gecesi üretilir. UTC gösteriminin bir gün geride
+    olması TZ dönüşümünün doğal sonucudur, hata değildir.
+    """
+    await _sablon_kur(db, hafta_gunu=1, saat_dk=0)
+
+    await uret(db, baslangic=date(2026, 9, 1), bitis=date(2026, 9, 2))
+
+    oturum = (await _oturumlar(db))[0]
+    assert oturum.baslangic.astimezone(UTC) == datetime(2026, 8, 31, 21, 0, tzinfo=UTC)
