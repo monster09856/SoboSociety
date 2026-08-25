@@ -1385,6 +1385,7 @@ tarihçe ayrıştığında hangisinin doğru olduğu bilinemez."
   - `BookingDurumu` — StrEnum: `BOOKED, CANCELLED, ATTENDED, NO_SHOW`
   - `BookingKaynagi` — StrEnum: `APP, WEB, ADMIN`
   - `Booking` — `id, member_id, session_id, durum, kaynak, cancelled_at`
+  - `WaitlistEntry` — `id, member_id, session_id, sira, teklif_bitis, kullanildi` (modeli bu görevde yazılır; servisi Task 9'da)
   - `rezerve_et(db, *, member_id, session_id, kaynak=BookingKaynagi.APP) -> Booking`
   - Hatalar: `DersDolu`, `DersIptalEdilmis`, `ZatenRezerve`, `YetersizKredi`
 
@@ -2276,10 +2277,21 @@ async def siraya_gir(
     db: AsyncSession, *, member_id: int, session_id: int
 ) -> WaitlistEntry:
     """Dolu bir derse bekleme sırası kaydı açar."""
-    oturum = await db.get(ClassSession, session_id)
-    if oturum is None:
+    # Kontenjan DURUMU ORM nesnesinden OKUNMAZ. `rezerve_et` kontenjanı
+    # atomik UPDATE ile artırır; identity map'teki ClassSession nesnesi bu
+    # değişikliği görmez ve `dolu_sayi` eski değerinde kalır. Aynı oturumda
+    # önce rezervasyon sonra siraya_gir çağrılırsa dolu ders "boş" görünür.
+    # Kolon seviyesinde SELECT identity map'i baypas eder, hep taze okur.
+    sonuc = await db.execute(
+        select(ClassSession.dolu_sayi, ClassSession.kontenjan).where(
+            ClassSession.id == session_id
+        )
+    )
+    satir = sonuc.one_or_none()
+    if satir is None:
         raise ValueError(f"Ders bulunamadı: {session_id}")
-    if oturum.dolu_sayi < oturum.kontenjan:
+    dolu_sayi, kontenjan = satir
+    if dolu_sayi < kontenjan:
         raise DersDoluDegil("Derste yer var, doğrudan rezervasyon yapılabilir")
 
     mevcut = await db.execute(
