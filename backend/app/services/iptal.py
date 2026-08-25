@@ -1,13 +1,14 @@
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 
-from sqlalchemy import update
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import (
-    Booking, BookingDurumu, ClassSession, ClassType, LedgerTipi,
+    Booking, BookingDurumu, ClassSession, ClassType, CreditLedger,
+    LedgerTipi, Member,
 )
-from app.services.hatalar import ZatenIptal
+from app.services.hatalar import KayitBulunamadi, ZatenIptal
 from app.services.kredi import hareket_ekle
 
 
@@ -31,7 +32,19 @@ async def iptal_et(db: AsyncSession, *, booking_id: int, now: datetime) -> Iptal
     """
     kayit = await db.get(Booking, booking_id)
     if kayit is None:
-        raise ValueError(f"Rezervasyon bulunamadı: {booking_id}")
+        raise KayitBulunamadi(f"Rezervasyon bulunamadı: {booking_id}")
+
+    # Global kilit sırasını koru: members -> class_sessions.
+    #
+    # Bu kilit olmadan sıra fiilen tersine dönüyordu: credit_ledger INSERT'i
+    # member_id FK'si yüzünden `members` üzerinde örtük FOR KEY SHARE alır ve
+    # bu, `siraya_gir`/`rezerve_et`'in FOR UPDATE'i ile çatışır. İnceleme bu
+    # döngüyle gerçek bir DeadlockDetectedError üretti.
+    kilit = await db.execute(
+        select(Member.id).where(Member.id == kayit.member_id).with_for_update()
+    )
+    if kilit.scalar_one_or_none() is None:
+        raise KayitBulunamadi(f"Üye bulunamadı: {kayit.member_id}")
 
     oturum = await db.get(ClassSession, kayit.session_id)
     tip = await db.get(ClassType, oturum.class_type_id)
@@ -64,17 +77,30 @@ async def iptal_et(db: AsyncSession, *, booking_id: int, now: datetime) -> Iptal
     )
     bosalan_yer = sonuc.first() is not None
 
+    # İade/ceza satırı, kredinin DÜŞÜLDÜĞÜ paketle aynı pakete yazılmalı.
+    # Burada yeniden `aktif_paket_sec` çağırmak YANLIŞ olurdu: aradan geçen
+    # sürede yeni bir paket açılmış olabilir ve iade, krediyi hiç almamış
+    # bir pakete gider. Doğru kaynak, bu rezervasyonun BOOKING satırıdır.
+    sonuc = await db.execute(
+        select(CreditLedger.member_package_id).where(
+            CreditLedger.booking_id == kayit.id,
+            CreditLedger.tip == LedgerTipi.BOOKING,
+        )
+    )
+    kaynak_paket_id = sonuc.scalar_one_or_none()
+
     if pencerede:
         await hareket_ekle(
             db, member_id=kayit.member_id, tip=LedgerTipi.CANCEL_REFUND, miktar=1,
-            sebep=f"{tip.ad} — pencerede iptal", booking_id=kayit.id,
+            sebep=f"{tip.ad} — pencerede iptal",
+            member_package_id=kaynak_paket_id, booking_id=kayit.id,
         )
     else:
         kalan_saat = (oturum.baslangic - now).total_seconds() / 3600
         await hareket_ekle(
             db, member_id=kayit.member_id, tip=LedgerTipi.LATE_CANCEL, miktar=0,
             sebep=f"{tip.ad} — ders saatine {kalan_saat:.1f} saat kala iptal",
-            booking_id=kayit.id,
+            member_package_id=kaynak_paket_id, booking_id=kayit.id,
         )
 
     await db.flush()

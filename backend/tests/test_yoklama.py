@@ -8,11 +8,14 @@ from app.models import (
     Booking, BookingDurumu, ClassSession, ClassType, CreditLedger,
     Instructor, LedgerTipi, Member, Package, Room,
 )
+from app.services.hatalar import DersBaslamamis
 from app.services.kredi import bakiye, paket_tanimla
 from app.services.rezervasyon import rezerve_et
 from app.services.yoklama import yoklama_al
 
 DERS_ANI = datetime(2026, 9, 1, 16, 0, tzinfo=UTC)
+# Rezervasyon/sıra anı dersten önce olmalı; başlamış derse kayıt alınmaz.
+REZERVASYON_ANI = DERS_ANI - timedelta(hours=8)
 DERS_SONRASI = DERS_ANI + timedelta(hours=1)
 
 
@@ -35,7 +38,7 @@ async def _iki_kayitli_ders(db):
 
     for uye in (selin, ece):
         await paket_tanimla(db, member_id=uye.id, package_id=paket.id, baslangic=date(2026, 9, 1))
-        await rezerve_et(db, member_id=uye.id, session_id=oturum.id)
+        await rezerve_et(db, member_id=uye.id, session_id=oturum.id, now=REZERVASYON_ANI)
 
     return oturum, selin, ece
 
@@ -157,7 +160,7 @@ async def test_ayni_anda_iki_kez_yoklama_alinirsa_ceza_bir_kez_yazilir(temiz_db)
             await paket_tanimla(
                 hazirlik, member_id=uye.id, package_id=paket.id, baslangic=date(2026, 9, 1)
             )
-            await rezerve_et(hazirlik, member_id=uye.id, session_id=oturum.id)
+            await rezerve_et(hazirlik, member_id=uye.id, session_id=oturum.id, now=REZERVASYON_ANI)
 
         oturum_id, selin_id, ece_id = oturum.id, selin.id, ece.id
         await hazirlik.commit()
@@ -218,3 +221,79 @@ async def test_kimse_gelmediyse_hepsi_no_show_olur(db):
         select(CreditLedger).where(CreditLedger.tip == LedgerTipi.NO_SHOW)
     )
     assert len(list(izler.scalars())) == 2
+
+
+async def test_ders_baslamadan_yoklama_alinamaz(db):
+    """D1: yanlış karta basmak KALICI hasar demekti.
+
+    Ders başlamadan günler önce yoklama alınıp herkes `no_show`
+    yapılabiliyordu ve geri alma yolu yok: `iptal_et` `ZatenIptal`
+    fırlatır, ledger append-only.
+    """
+    oturum, selin, ece = await _iki_kayitli_ders(db)
+
+    with pytest.raises(DersBaslamamis):
+        await yoklama_al(
+            db, session_id=oturum.id, gelen_member_ids={selin.id},
+            now=DERS_ANI - timedelta(days=30),
+        )
+
+    kayitlar = await db.execute(
+        select(Booking).where(Booking.session_id == oturum.id)
+    )
+    assert all(k.durum == BookingDurumu.BOOKED for k in kayitlar.scalars())
+
+
+async def test_tam_ders_aninda_yoklama_alinabilir(db):
+    """Sınır: `now == baslangic` anında ders başlamıştır."""
+    oturum, selin, _ = await _iki_kayitli_ders(db)
+
+    sonuc = await yoklama_al(
+        db, session_id=oturum.id, gelen_member_ids={selin.id}, now=DERS_ANI
+    )
+
+    assert (sonuc.gelen, sonuc.gelmeyen) == (1, 1)
+
+
+async def test_no_show_satiri_kredinin_dusuldugu_pakete_yazilir(db):
+    """A2: ceza satırı yeni paket seçimiyle değil, orijinal paketle yazılır."""
+    oturum, selin, ece = await _iki_kayitli_ders(db)
+
+    ece_booking = (
+        await db.execute(select(Booking).where(Booking.member_id == ece.id))
+    ).scalar_one()
+    booking_satiri = (
+        await db.execute(
+            select(CreditLedger).where(
+                CreditLedger.booking_id == ece_booking.id,
+                CreditLedger.tip == LedgerTipi.BOOKING,
+            )
+        )
+    ).scalar_one()
+    assert booking_satiri.member_package_id is not None
+
+    # Tuzak: daha erken biten yeni paket — yeniden seçim yapılsaydı bu gelirdi.
+    kisa_paket = Package(
+        ad="2 Ders", ders_adedi=2, gecerlilik_gun=10, fiyat_kurus=120000
+    )
+    db.add(kisa_paket)
+    await db.flush()
+    yeni_paket = await paket_tanimla(
+        db, member_id=ece.id, package_id=kisa_paket.id, baslangic=date(2026, 9, 1)
+    )
+
+    await yoklama_al(
+        db, session_id=oturum.id, gelen_member_ids={selin.id}, now=DERS_SONRASI
+    )
+
+    ceza = (
+        await db.execute(
+            select(CreditLedger).where(
+                CreditLedger.booking_id == ece_booking.id,
+                CreditLedger.tip == LedgerTipi.NO_SHOW,
+            )
+        )
+    ).scalar_one()
+
+    assert ceza.member_package_id == booking_satiri.member_package_id
+    assert ceza.member_package_id != yeni_paket.id

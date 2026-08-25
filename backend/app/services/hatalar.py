@@ -36,3 +36,24 @@ class TeklifSuresiDolmus(SoboHata):
 
 class ZatenSirada(SoboHata):
     pass
+
+
+class DersBaslamis(SoboHata):
+    """Ders başladıktan sonra rezervasyon/sıra kaydı açılamaz."""
+
+
+class DersBaslamamis(SoboHata):
+    """Ders başlamadan yoklama alınamaz — geri alınamaz hasar üretir."""
+
+
+class KayitBulunamadi(SoboHata):
+    """Servisin ihtiyaç duyduğu satır yok.
+
+    `ValueError` değil: API katmanı domain hatalarını `SoboHata` üzerinden
+    tanır ve 4xx'e çevirir. `ValueError` olarak kalsaydı "ders bulunamadı"
+    gibi tamamen normal bir istemci hatası 500 dönerdi.
+    """
+
+
+class GecersizHareket(SoboHata):
+    """Ledger satırı domain kurallarını çiğniyor (ör. boş sebep)."""

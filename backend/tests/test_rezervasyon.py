@@ -1,18 +1,24 @@
 import asyncio
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, timedelta
 
 import pytest
 from sqlalchemy import select
 
 from app.models import (
     Booking, BookingDurumu, BookingKaynagi, ClassSession, ClassType,
-    Instructor, LedgerTipi, Member, Package, Room, SessionDurumu,
+    CreditLedger, Instructor, LedgerTipi, Member, MemberPackage, Package,
+    Room, SessionDurumu,
 )
 from app.services.hatalar import (
-    DersDolu, DersIptalEdilmis, YetersizKredi, ZatenRezerve,
+    DersBaslamis, DersDolu, DersIptalEdilmis, KayitBulunamadi,
+    YetersizKredi, ZatenRezerve,
 )
 from app.services.kredi import bakiye, hareket_ekle, paket_tanimla
 from app.services.rezervasyon import rezerve_et
+
+DERS_ANI = datetime(2026, 9, 1, 16, 0, tzinfo=UTC)
+# Rezervasyon anı dersten önce olmalı; `rezerve_et` başlamış derse kayıt almaz.
+REZERVASYON_ANI = DERS_ANI - timedelta(hours=8)
 
 
 async def _senaryo(db, *, kontenjan: int = 2, kredi_ver: bool = True):
@@ -25,7 +31,7 @@ async def _senaryo(db, *, kontenjan: int = 2, kredi_ver: bool = True):
     await db.flush()
 
     oturum = ClassSession(
-        baslangic=datetime(2026, 9, 1, 16, 0, tzinfo=UTC),
+        baslangic=DERS_ANI,
         class_type_id=tip.id, instructor_id=egitmen.id,
         room_id=salon.id, kontenjan=kontenjan,
     )
@@ -42,7 +48,7 @@ async def _senaryo(db, *, kontenjan: int = 2, kredi_ver: bool = True):
 async def test_rezervasyon_dolu_sayiyi_artirir_ve_kredi_duser(db):
     uye, oturum, _ = await _senaryo(db)
 
-    kayit = await rezerve_et(db, member_id=uye.id, session_id=oturum.id)
+    kayit = await rezerve_et(db, member_id=uye.id, session_id=oturum.id, now=REZERVASYON_ANI)
 
     await db.refresh(oturum)
     assert kayit.durum == BookingDurumu.BOOKED
@@ -53,7 +59,7 @@ async def test_rezervasyon_dolu_sayiyi_artirir_ve_kredi_duser(db):
 async def test_kontenjan_dolunca_rezervasyon_reddedilir(db):
     uye, oturum, paket = await _senaryo(db, kontenjan=1)
 
-    await rezerve_et(db, member_id=uye.id, session_id=oturum.id)
+    await rezerve_et(db, member_id=uye.id, session_id=oturum.id, now=REZERVASYON_ANI)
 
     baskasi = Member(telefon="+905321112233", ad="Ece")
     db.add(baskasi)
@@ -61,14 +67,14 @@ async def test_kontenjan_dolunca_rezervasyon_reddedilir(db):
     await paket_tanimla(db, member_id=baskasi.id, package_id=paket.id, baslangic=date(2026, 9, 1))
 
     with pytest.raises(DersDolu):
-        await rezerve_et(db, member_id=baskasi.id, session_id=oturum.id)
+        await rezerve_et(db, member_id=baskasi.id, session_id=oturum.id, now=REZERVASYON_ANI)
 
 
 async def test_kredisi_olmayan_uye_rezervasyon_yapamaz(db):
     uye, oturum, _ = await _senaryo(db, kredi_ver=False)
 
     with pytest.raises(YetersizKredi):
-        await rezerve_et(db, member_id=uye.id, session_id=oturum.id)
+        await rezerve_et(db, member_id=uye.id, session_id=oturum.id, now=REZERVASYON_ANI)
 
     await db.refresh(oturum)
     # Kredi kontrolü kontenjan artışından ÖNCE olmalı — reddedilen istek
@@ -79,10 +85,10 @@ async def test_kredisi_olmayan_uye_rezervasyon_yapamaz(db):
 async def test_ayni_derse_iki_kez_rezervasyon_yapilamaz(db):
     uye, oturum, _ = await _senaryo(db)
 
-    await rezerve_et(db, member_id=uye.id, session_id=oturum.id)
+    await rezerve_et(db, member_id=uye.id, session_id=oturum.id, now=REZERVASYON_ANI)
 
     with pytest.raises(ZatenRezerve):
-        await rezerve_et(db, member_id=uye.id, session_id=oturum.id)
+        await rezerve_et(db, member_id=uye.id, session_id=oturum.id, now=REZERVASYON_ANI)
 
 
 async def test_iptal_edilmis_derse_rezervasyon_yapilamaz(db):
@@ -91,7 +97,7 @@ async def test_iptal_edilmis_derse_rezervasyon_yapilamaz(db):
     await db.flush()
 
     with pytest.raises(DersIptalEdilmis):
-        await rezerve_et(db, member_id=uye.id, session_id=oturum.id)
+        await rezerve_et(db, member_id=uye.id, session_id=oturum.id, now=REZERVASYON_ANI)
 
 
 async def test_son_yere_ayni_anda_basan_iki_uyeden_yalniz_biri_kazanir(temiz_db):
@@ -113,7 +119,7 @@ async def test_son_yere_ayni_anda_basan_iki_uyeden_yalniz_biri_kazanir(temiz_db)
         await hazirlik.flush()
 
         oturum = ClassSession(
-            baslangic=datetime(2026, 9, 1, 16, 0, tzinfo=UTC),
+            baslangic=DERS_ANI,
             class_type_id=tip.id, instructor_id=egitmen.id,
             room_id=salon.id, kontenjan=1,
         )
@@ -131,7 +137,7 @@ async def test_son_yere_ayni_anda_basan_iki_uyeden_yalniz_biri_kazanir(temiz_db)
     async def dene(member_id: int) -> str:
         async with temiz_db() as oturum_db:
             try:
-                await rezerve_et(oturum_db, member_id=member_id, session_id=oturum_id)
+                await rezerve_et(oturum_db, member_id=member_id, session_id=oturum_id, now=REZERVASYON_ANI)
                 await oturum_db.commit()
                 return "kazandi"
             except DersDolu:
@@ -168,12 +174,12 @@ async def test_ayni_uye_iki_derse_ayni_anda_basarsa_krediden_fazlasini_alamaz(te
         await hazirlik.flush()
 
         oturum1 = ClassSession(
-            baslangic=datetime(2026, 9, 1, 16, 0, tzinfo=UTC),
+            baslangic=DERS_ANI,
             class_type_id=tip.id, instructor_id=egitmen.id,
             room_id=salon.id, kontenjan=5,
         )
         oturum2 = ClassSession(
-            baslangic=datetime(2026, 9, 1, 18, 0, tzinfo=UTC),
+            baslangic=DERS_ANI + timedelta(hours=2),
             class_type_id=tip.id, instructor_id=egitmen.id,
             room_id=salon.id, kontenjan=5,
         )
@@ -191,7 +197,7 @@ async def test_ayni_uye_iki_derse_ayni_anda_basarsa_krediden_fazlasini_alamaz(te
     async def dene(session_id: int) -> str:
         async with temiz_db() as oturum_db:
             try:
-                await rezerve_et(oturum_db, member_id=uye_id, session_id=session_id)
+                await rezerve_et(oturum_db, member_id=uye_id, session_id=session_id, now=REZERVASYON_ANI)
                 await oturum_db.commit()
                 return "kazandi"
             except YetersizKredi:
@@ -212,7 +218,16 @@ async def test_ayni_uye_iki_derse_ayni_anda_basarsa_krediden_fazlasini_alamaz(te
 
 
 async def test_ayni_derse_iki_sekmeden_ayni_anda_basmak_domain_hatasi_verir(temiz_db):
-    """Ham IntegrityError sızmamalı — çağıran SoboHata görmeli."""
+    """Aynı derse iki eşzamanlı istek: yalnız biri geçer, diğeri SoboHata alır.
+
+    NOT: Bu test IntegrityError yolunu SINAMAZ. Üye satırı FOR UPDATE ile
+    kilitli olduğu için iki istek serileşir ve ikincisi kısmi unique
+    index'e hiç ulaşmadan ön kontroldeki `ZatenRezerve`'ye takılır.
+    (İnceleme bunu mutasyon testiyle kanıtladı: savepoint bloğu tamamen
+    silindiğinde bu dosya 3/3 çalıştırmada yeşil kalıyordu.) Savepoint
+    bloğunu asıl sınayan test
+    `test_uye_kilidini_baypas_eden_cift_kayit_domain_hatasi_verir`.
+    """
     async with temiz_db() as hazirlik:
         tip = ClassType(ad="Barre", kontenjan=5, sure_dk=50)
         egitmen = Instructor(ad="Deniz")
@@ -223,7 +238,7 @@ async def test_ayni_derse_iki_sekmeden_ayni_anda_basmak_domain_hatasi_verir(temi
         await hazirlik.flush()
 
         oturum = ClassSession(
-            baslangic=datetime(2026, 9, 1, 16, 0, tzinfo=UTC),
+            baslangic=DERS_ANI,
             class_type_id=tip.id, instructor_id=egitmen.id,
             room_id=salon.id, kontenjan=5,
         )
@@ -240,7 +255,7 @@ async def test_ayni_derse_iki_sekmeden_ayni_anda_basmak_domain_hatasi_verir(temi
     async def dene() -> str:
         async with temiz_db() as oturum_db:
             try:
-                await rezerve_et(oturum_db, member_id=uye_id, session_id=oturum_id)
+                await rezerve_et(oturum_db, member_id=uye_id, session_id=oturum_id, now=REZERVASYON_ANI)
                 await oturum_db.commit()
                 return "kazandi"
             except ZatenRezerve:
@@ -266,7 +281,126 @@ async def test_kaynak_parametresi_kayda_yazilir(db):
     uye, oturum, _ = await _senaryo(db)
 
     kayit = await rezerve_et(
-        db, member_id=uye.id, session_id=oturum.id, kaynak=BookingKaynagi.ADMIN,
+        db, member_id=uye.id, session_id=oturum.id,
+        now=REZERVASYON_ANI, kaynak=BookingKaynagi.ADMIN,
     )
 
     assert kayit.kaynak == "admin"
+
+
+async def test_baslamis_derse_rezervasyon_yapilamaz(db):
+    """Geçmiş derse kayıt olup kredi yakmak mümkün olmamalı.
+
+    Kontrol kredi ve kontenjan kontrollerinden ÖNCE: reddedilen istek
+    ne kontenjandan yer çalmalı ne de krediye dokunmalı.
+    """
+    uye, oturum, _ = await _senaryo(db)
+
+    with pytest.raises(DersBaslamis):
+        await rezerve_et(
+            db, member_id=uye.id, session_id=oturum.id,
+            now=DERS_ANI + timedelta(minutes=1),
+        )
+
+    await db.refresh(oturum)
+    assert oturum.dolu_sayi == 0
+    assert await bakiye(db, uye.id) == 8
+
+
+async def test_tam_ders_aninda_rezervasyon_yapilamaz(db):
+    """Sınır: `now == baslangic` anında ders başlamış sayılır."""
+    uye, oturum, _ = await _senaryo(db)
+
+    with pytest.raises(DersBaslamis):
+        await rezerve_et(db, member_id=uye.id, session_id=oturum.id, now=DERS_ANI)
+
+
+async def test_booking_satiri_hangi_paketten_dusuldugunu_yazar(db):
+    """A2: tüketimin hangi pakete ait olduğu ŞİMDİ yazılmalı.
+
+    Yazılmazsa "bu paketten kaç ders kaldı" sorusu sonradan cevaplanamaz
+    ve geçmiş satırların atfı geriye dönük kurtarılamaz.
+    """
+    uye, oturum, _ = await _senaryo(db)
+
+    kayit = await rezerve_et(
+        db, member_id=uye.id, session_id=oturum.id, now=REZERVASYON_ANI
+    )
+
+    uye_paketi = (
+        await db.execute(select(MemberPackage).where(MemberPackage.member_id == uye.id))
+    ).scalar_one()
+    satir = (
+        await db.execute(
+            select(CreditLedger).where(
+                CreditLedger.booking_id == kayit.id,
+                CreditLedger.tip == LedgerTipi.BOOKING,
+            )
+        )
+    ).scalar_one()
+
+    assert satir.member_package_id == uye_paketi.id
+
+
+async def test_paketi_olmayan_uyenin_booking_satiri_paketsiz_yazilir(db):
+    """Admin düzeltmesiyle kredi verilmiş ama paketi olmayan üye geçerlidir."""
+    uye, oturum, _ = await _senaryo(db, kredi_ver=False)
+    await hareket_ekle(
+        db, member_id=uye.id, tip=LedgerTipi.ADMIN_ADJUST, miktar=1,
+        sebep="Deneme dersi hediye edildi",
+    )
+
+    kayit = await rezerve_et(
+        db, member_id=uye.id, session_id=oturum.id, now=REZERVASYON_ANI
+    )
+
+    satir = (
+        await db.execute(
+            select(CreditLedger).where(
+                CreditLedger.booking_id == kayit.id,
+                CreditLedger.tip == LedgerTipi.BOOKING,
+            )
+        )
+    ).scalar_one()
+    assert satir.member_package_id is None
+
+
+async def test_bulunmayan_ders_domain_hatasi_verir(db):
+    """B1: `ValueError` değil `SoboHata` — API katmanı 500 değil 4xx dönmeli."""
+    uye, _, _ = await _senaryo(db)
+
+    with pytest.raises(KayitBulunamadi):
+        await rezerve_et(
+            db, member_id=uye.id, session_id=999999, now=REZERVASYON_ANI
+        )
+
+
+async def test_uye_kilidini_baypas_eden_cift_kayit_domain_hatasi_verir(db):
+    """D3: savepoint/`IntegrityError` bloğunun gerçekten çalıştığını kanıtlar.
+
+    `rezerve_et`'in NORMAL akışında bu blok ulaşılamaz: üye satırı
+    FOR UPDATE ile kilitli olduğu için eşzamanlı çağrılar serileşir ve
+    ikincisi ön kontrole (`ZatenRezerve`) takılır. Ayrıca kilit tutulurken
+    başka bir transaction aynı üye için `bookings` INSERT'i bile yapamaz —
+    FK, `members` üzerinde FOR KEY SHARE ister ve FOR UPDATE ile çatışır.
+
+    Blok yine de gereklidir: kilidi HİÇ ALMAYAN bir kod yolu (veri taşıma,
+    admin toplu kayıt) aynı satırı yazarsa kısmi unique index tetiklenir.
+    Burada o yolu, ön kontrolün göremeyeceği bekleyen bir INSERT ile taklit
+    ediyoruz — `no_autoflush` sayesinde satır ön kontrol SELECT'i sırasında
+    veritabanına yazılmaz, akış savepoint bloğuna ULAŞIR ve orada ham
+    IntegrityError üretir.
+    """
+    uye, oturum, _ = await _senaryo(db)
+
+    kacak = Booking(
+        member_id=uye.id, session_id=oturum.id, durum=BookingDurumu.BOOKED,
+        kaynak=BookingKaynagi.ADMIN,
+    )
+    db.add(kacak)
+
+    with db.no_autoflush:
+        with pytest.raises(ZatenRezerve):
+            await rezerve_et(
+                db, member_id=uye.id, session_id=oturum.id, now=REZERVASYON_ANI
+            )

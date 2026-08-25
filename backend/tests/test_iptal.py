@@ -5,15 +5,17 @@ import pytest
 from sqlalchemy import select
 
 from app.models import (
-    Booking, BookingDurumu, ClassSession, ClassType, Instructor, LedgerTipi,
-    Member, Package, Room,
+    Booking, BookingDurumu, ClassSession, ClassType, CreditLedger,
+    Instructor, LedgerTipi, Member, Package, Room,
 )
-from app.services.hatalar import ZatenIptal
+from app.services.hatalar import KayitBulunamadi, ZatenIptal
 from app.services.iptal import iptal_et
 from app.services.kredi import bakiye, paket_tanimla
 from app.services.rezervasyon import rezerve_et
 
 DERS_ANI = datetime(2026, 9, 1, 16, 0, tzinfo=UTC)
+# Rezervasyon/sıra anı dersten önce olmalı; başlamış derse kayıt alınmaz.
+REZERVASYON_ANI = DERS_ANI - timedelta(hours=8)
 
 
 async def _rezervasyonlu_senaryo(db, *, iptal_penceresi_saat: int = 6):
@@ -36,7 +38,7 @@ async def _rezervasyonlu_senaryo(db, *, iptal_penceresi_saat: int = 6):
     await db.flush()
 
     await paket_tanimla(db, member_id=uye.id, package_id=paket.id, baslangic=date(2026, 9, 1))
-    kayit = await rezerve_et(db, member_id=uye.id, session_id=oturum.id)
+    kayit = await rezerve_et(db, member_id=uye.id, session_id=oturum.id, now=REZERVASYON_ANI)
     return uye, oturum, kayit
 
 
@@ -151,8 +153,8 @@ async def test_ayni_rezervasyon_ayni_anda_iki_kez_iptal_edilemez(temiz_db):
                 hazirlik, member_id=uye.id, package_id=paket.id, baslangic=date(2026, 9, 1)
             )
 
-        selin_kayit = await rezerve_et(hazirlik, member_id=selin.id, session_id=oturum.id)
-        await rezerve_et(hazirlik, member_id=ece.id, session_id=oturum.id)
+        selin_kayit = await rezerve_et(hazirlik, member_id=selin.id, session_id=oturum.id, now=REZERVASYON_ANI)
+        await rezerve_et(hazirlik, member_id=ece.id, session_id=oturum.id, now=REZERVASYON_ANI)
 
         oturum_id, booking_id = oturum.id, selin_kayit.id
         await hazirlik.commit()
@@ -205,9 +207,9 @@ async def test_dolu_sayi_ile_aktif_rezervasyon_sayisi_tutarli(db):
             db, member_id=uye.id, package_id=paket.id, baslangic=date(2026, 9, 1)
         )
 
-    kayit1 = await rezerve_et(db, member_id=uye1.id, session_id=oturum.id)
-    kayit2 = await rezerve_et(db, member_id=uye2.id, session_id=oturum.id)
-    await rezerve_et(db, member_id=uye3.id, session_id=oturum.id)
+    kayit1 = await rezerve_et(db, member_id=uye1.id, session_id=oturum.id, now=REZERVASYON_ANI)
+    kayit2 = await rezerve_et(db, member_id=uye2.id, session_id=oturum.id, now=REZERVASYON_ANI)
+    await rezerve_et(db, member_id=uye3.id, session_id=oturum.id, now=REZERVASYON_ANI)
 
     # uye1: pencere içinde iptal
     await iptal_et(db, booking_id=kayit1.id, now=DERS_ANI - timedelta(hours=8))
@@ -226,3 +228,81 @@ async def test_dolu_sayi_ile_aktif_rezervasyon_sayisi_tutarli(db):
 
     assert oturum.dolu_sayi == aktif_rezervasyon_sayisi
     assert oturum.dolu_sayi == 1
+
+
+async def test_iade_satiri_kredinin_dusuldugu_pakete_yazilir(db):
+    """A2: iade, yeni bir paket seçimiyle DEĞİL, orijinal paketle yazılmalı.
+
+    Aradan geçen sürede daha erken biten yeni bir paket açılmış olabilir;
+    `aktif_paket_sec` yeniden çağrılsaydı iade, krediyi hiç almamış bir
+    pakete giderdi. Bu test tam o tuzağı kurar.
+    """
+    uye, _, kayit = await _rezervasyonlu_senaryo(db)
+
+    booking_satiri = (
+        await db.execute(
+            select(CreditLedger).where(
+                CreditLedger.booking_id == kayit.id,
+                CreditLedger.tip == LedgerTipi.BOOKING,
+            )
+        )
+    ).scalar_one()
+    assert booking_satiri.member_package_id is not None
+
+    # Tuzak: daha ERKEN biten ikinci bir paket. `aktif_paket_sec` yeniden
+    # çağrılsaydı bunu seçerdi.
+    kisa_paket = Package(
+        ad="2 Ders", ders_adedi=2, gecerlilik_gun=10, fiyat_kurus=120000
+    )
+    db.add(kisa_paket)
+    await db.flush()
+    yeni_paket = await paket_tanimla(
+        db, member_id=uye.id, package_id=kisa_paket.id, baslangic=date(2026, 9, 1)
+    )
+
+    await iptal_et(db, booking_id=kayit.id, now=DERS_ANI - timedelta(hours=8))
+
+    iade = (
+        await db.execute(
+            select(CreditLedger).where(
+                CreditLedger.booking_id == kayit.id,
+                CreditLedger.tip == LedgerTipi.CANCEL_REFUND,
+            )
+        )
+    ).scalar_one()
+
+    assert iade.member_package_id == booking_satiri.member_package_id
+    assert iade.member_package_id != yeni_paket.id
+
+
+async def test_gec_iptal_satiri_da_ayni_pakete_yazilir(db):
+    """A2: LATE_CANCEL de tüketimin yapıldığı paketi işaret etmeli."""
+    uye, _, kayit = await _rezervasyonlu_senaryo(db)
+
+    booking_satiri = (
+        await db.execute(
+            select(CreditLedger).where(
+                CreditLedger.booking_id == kayit.id,
+                CreditLedger.tip == LedgerTipi.BOOKING,
+            )
+        )
+    ).scalar_one()
+
+    await iptal_et(db, booking_id=kayit.id, now=DERS_ANI - timedelta(hours=2))
+
+    ceza = (
+        await db.execute(
+            select(CreditLedger).where(
+                CreditLedger.booking_id == kayit.id,
+                CreditLedger.tip == LedgerTipi.LATE_CANCEL,
+            )
+        )
+    ).scalar_one()
+
+    assert ceza.member_package_id == booking_satiri.member_package_id
+
+
+async def test_bulunmayan_rezervasyon_domain_hatasi_verir(db):
+    """B1: `ValueError` değil `SoboHata`."""
+    with pytest.raises(KayitBulunamadi):
+        await iptal_et(db, booking_id=999999, now=DERS_ANI)

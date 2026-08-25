@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from sqlalchemy import select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -7,9 +9,10 @@ from app.models import (
     ClassType, LedgerTipi, Member, SessionDurumu,
 )
 from app.services.hatalar import (
-    DersDolu, DersIptalEdilmis, YetersizKredi, ZatenRezerve,
+    DersBaslamis, DersDolu, DersIptalEdilmis, KayitBulunamadi,
+    YetersizKredi, ZatenRezerve,
 )
-from app.services.kredi import bakiye, hareket_ekle
+from app.services.kredi import aktif_paket_sec, bakiye, hareket_ekle
 
 
 async def rezerve_et(
@@ -17,13 +20,16 @@ async def rezerve_et(
     *,
     member_id: int,
     session_id: int,
+    now: datetime,
     kaynak: BookingKaynagi = BookingKaynagi.APP,
 ) -> Booking:
     """Üyeyi derse kaydeder, kredisinden bir ders düşer.
 
-    Sıra önemlidir: önce ucuz ve reddedici kontroller (iptal, çift kayıt,
-    kredi), en son kontenjan artışı. Reddedilecek bir istek kontenjandan
-    geçici olarak yer çalmamalı.
+    Zaman dışarıdan `now` ile gelir; servis `datetime.now()` çağırmaz.
+
+    Sıra önemlidir: önce ucuz ve reddedici kontroller (iptal, ders başlamış,
+    çift kayıt, kredi), en son kontenjan artışı. Reddedilecek bir istek
+    kontenjandan geçici olarak yer çalmamalı.
 
     Atomiklik tamamen çağıranın transaction disiplinine bağlıdır: bu
     fonksiyon commit yapmaz (repo genelinde tutarlı bir desen). Çağıran
@@ -32,13 +38,20 @@ async def rezerve_et(
     """
     oturum = await db.get(ClassSession, session_id)
     if oturum is None:
-        raise ValueError(f"Ders bulunamadı: {session_id}")
+        raise KayitBulunamadi(f"Ders bulunamadı: {session_id}")
     if oturum.durum != SessionDurumu.AKTIF:
         raise DersIptalEdilmis("Bu ders iptal edilmiş")
 
+    # Başlamış (veya geçmiş) derse rezervasyon yapılamaz. Bu kontrol kredi ve
+    # kontenjan kontrollerinden ÖNCE: reddedilecek istek hiçbir kaynağa
+    # dokunmamalı. `sirayi_ilerlet` aynı soruyu zaten soruyordu; rezervasyonda
+    # sorulmadığı için 2020'deki bir derse kayıt olup kredi yakmak mümkündü.
+    if now >= oturum.baslangic:
+        raise DersBaslamis("Ders başlamış, rezervasyon yapılamaz")
+
     tip = await db.get(ClassType, oturum.class_type_id)
     if tip is None:
-        raise ValueError(f"Ders tipi bulunamadı: {oturum.class_type_id}")
+        raise KayitBulunamadi(f"Ders tipi bulunamadı: {oturum.class_type_id}")
 
     # Bu üyenin eşzamanlı rezervasyon isteklerini serileştir.
     #
@@ -52,7 +65,7 @@ async def rezerve_et(
         select(Member.id).where(Member.id == member_id).with_for_update()
     )
     if kilit.scalar_one_or_none() is None:
-        raise ValueError(f"Üye bulunamadı: {member_id}")
+        raise KayitBulunamadi(f"Üye bulunamadı: {member_id}")
 
     mevcut = await db.execute(
         select(Booking).where(
@@ -93,6 +106,16 @@ async def rezerve_et(
     # unique index son savunma hattı olarak kalsın. SAVEPOINT olmadan
     # IntegrityError tüm transaction'ı zehirler ve çağıran rollback etmek
     # zorunda kalır — burada yakalayıp domain hatasına çeviriyoruz.
+    #
+    # Ulaşılabilirliği: `rezerve_et`'in NORMAL akışında bu blok fiilen
+    # ulaşılamaz — üye satırı FOR UPDATE ile kilitli olduğu için eşzamanlı
+    # iki çağrı serileşir ve ikincisi yukarıdaki `ZatenRezerve` ön
+    # kontrolüne takılır. Blok yine de duruyor çünkü kısmi unique index'i
+    # tetikleyebilecek TEK yol `rezerve_et` değil: aynı transaction'da
+    # doğrudan `Booking` INSERT'i yapan (ör. veri taşıma/admin) bir kod
+    # yolu bu satıra ulaşır. Bunu `test_rezervasyon.py` içindeki
+    # `test_uye_kilidini_baypas_eden_cift_kayit_domain_hatasi_verir`
+    # üye kilidini baypas ederek doğrudan kanıtlıyor.
     try:
         async with db.begin_nested():
             db.add(kayit)
@@ -100,12 +123,20 @@ async def rezerve_et(
     except IntegrityError as hata:
         raise ZatenRezerve("Bu derse zaten kayıtlısın") from hata
 
+    # Krediyi hangi paketten düştüğümüzü yaz. Bu atıf ŞİMDİ yazılmazsa
+    # "bu paketten kaç ders kaldı" sorusu sonradan cevaplanamaz; geçmiş
+    # satırların hangi pakete ait olduğu geriye dönük kurtarılamaz.
+    # `None` olabilir: admin düzeltmesiyle kredi verilmiş ama paketi
+    # olmayan üye geçerli bir durumdur.
+    paket = await aktif_paket_sec(db, member_id=member_id, bugun=now.date())
+
     await hareket_ekle(
         db,
         member_id=member_id,
         tip=LedgerTipi.BOOKING,
         miktar=-1,
         sebep=f"{tip.ad} — {oturum.baslangic:%d.%m.%Y %H:%M} UTC",
+        member_package_id=paket.id if paket is not None else None,
         booking_id=kayit.id,
     )
     return kayit
