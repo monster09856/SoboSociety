@@ -4,3 +4,7 @@ class SoboHata(Exception):
 
 class GecersizTelefon(SoboHata):
     pass
+
+
+class YetersizKredi(SoboHata):
+    pass
