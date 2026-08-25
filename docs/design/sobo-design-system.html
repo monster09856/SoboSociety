@@ -1,0 +1,860 @@
+<title>Sobo Society Tasarım Sistemi</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&family=Jost:wght@300;400;500;600&display=swap">
+
+<style>
+/* ─────────────────────────────────────────────────────────────
+   Sobo Society — tek tema, bilinçli.
+   Bu marka aydınlık. Koyu varyant üretmek markayı bozar; bu yüzden
+   prefers-color-scheme bloğu YOK. Omisyon değil, karar.
+   Her renk açıkça boyanır ki sayfa hangi zeminde açılırsa açılsın tutsun.
+   ───────────────────────────────────────────────────────────── */
+:root {
+  --ivory:     #F7F4EF;
+  --sand:      #E9E1D6;
+  --sand-deep: #DED4C6;
+  --line:      #DDD3C7;
+  --line-soft: #EAE3D9;
+  --ink:       #2B2522;
+  --secondary: #6B5D52;
+  --muted:     #8A7B6E;
+  --mocha:     #A2846F;
+  --espresso:  #6F5647;
+  --sage:      #7D8B72;
+  --clay:      #B5714E;
+  --white:     #FFFFFF;
+
+  --r-chip:  10px;
+  --r-input: 12px;
+  --r-card:  14px;
+  --r-panel: 18px;
+  --r-sheet: 24px;
+
+  --d-instant: .12s;
+  --d-quick:   .18s;
+  --d-fast:    .20s;
+  --d-std:     .25s;
+  --d-smooth:  .30s;
+  --ease: cubic-bezier(.16,1,.3,1);
+
+  --gutter: clamp(20px, 5vw, 56px);
+  --measure: 66ch;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--ivory);
+  color: var(--ink);
+  font-family: "Jost", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 1.65;
+  -webkit-font-smoothing: antialiased;
+}
+
+.wrap {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 0 var(--gutter) 96px;
+}
+
+/* ── Tipografi ───────────────────────────────────────────── */
+.display {
+  font-family: "Cormorant Garamond", Georgia, "Times New Roman", serif;
+  font-weight: 300;
+  line-height: 1.08;
+  letter-spacing: .01em;
+  text-wrap: balance;
+  margin: 0;
+}
+h2.sec {
+  font-family: "Cormorant Garamond", Georgia, serif;
+  font-weight: 400;
+  font-size: clamp(1.75rem, 3.4vw, 2.6rem);
+  line-height: 1.15;
+  letter-spacing: .005em;
+  margin: 0 0 6px;
+  text-wrap: balance;
+}
+h3 {
+  font-size: 1.0625rem;
+  font-weight: 500;
+  letter-spacing: .005em;
+  margin: 0 0 8px;
+  color: var(--ink);
+}
+p { margin: 0 0 14px; max-width: var(--measure); color: var(--secondary); }
+p.lead { color: var(--secondary); font-size: 1.0625rem; }
+strong { font-weight: 600; color: var(--ink); }
+code {
+  font-family: ui-monospace, "SF Mono", "Cascadia Mono", Menlo, monospace;
+  font-size: .8125em;
+  background: var(--sand);
+  padding: .12em .42em;
+  border-radius: 5px;
+  color: var(--espresso);
+}
+a { color: var(--espresso); text-decoration-thickness: 1px; text-underline-offset: 3px; }
+
+/* Bölüm etiketi — sayfanın kendi kuralına uyar:
+   kap yok, ikon yok, muted, semibold, pozitif harf aralığı. */
+.label {
+  font-size: .6875rem;
+  font-weight: 600;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin: 0 0 10px;
+}
+
+/* ── Sayfa başlığı ───────────────────────────────────────── */
+header.hero {
+  padding: clamp(64px, 11vw, 128px) 0 clamp(40px, 6vw, 64px);
+  border-bottom: 1px solid var(--line);
+}
+.brandmark {
+  font-family: "Cormorant Garamond", Georgia, serif;
+  font-size: .9375rem;
+  font-weight: 400;
+  letter-spacing: .42em;
+  text-transform: uppercase;
+  color: var(--mocha);
+  margin: 0 0 22px;
+}
+.brandmark em {
+  font-style: italic;
+  letter-spacing: .04em;
+  text-transform: none;
+  font-size: 1.05em;
+}
+h1.display { font-size: clamp(2.5rem, 7vw, 4.75rem); }
+.hero p {
+  font-size: clamp(1rem, 1.6vw, 1.1875rem);
+  margin-top: 26px;
+  max-width: 58ch;
+}
+.meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 20px;
+  margin-top: 32px;
+  font-size: .8125rem;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Bölüm ───────────────────────────────────────────────── */
+section { padding-top: clamp(56px, 8vw, 88px); }
+.sec-head { margin-bottom: 32px; }
+.sec-head p { margin-bottom: 0; }
+
+/* ── Palet ───────────────────────────────────────────────── */
+.swatches {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(148px, 1fr));
+  gap: 12px;
+  margin-bottom: 28px;
+}
+.sw {
+  border: 1px solid var(--line);
+  border-radius: var(--r-card);
+  overflow: hidden;
+  background: var(--white);
+}
+.sw .chip { height: 68px; }
+.sw .info { padding: 10px 12px 12px; }
+.sw .nm { font-size: .8125rem; font-weight: 500; color: var(--ink); }
+.sw .hx {
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: .6875rem;
+  color: var(--muted);
+  letter-spacing: .02em;
+  text-transform: uppercase;
+}
+
+.scroller { overflow-x: auto; }
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: .875rem;
+  min-width: 480px;
+}
+th, td {
+  text-align: left;
+  padding: 11px 14px;
+  border-bottom: 1px solid var(--line-soft);
+}
+th {
+  font-size: .6875rem;
+  font-weight: 600;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--muted);
+  border-bottom-color: var(--line);
+}
+td.num { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.verdict { font-weight: 500; white-space: nowrap; }
+.ok   { color: var(--sage); }
+.warn { color: var(--clay); }
+.bad  { color: #A63D2E; }
+
+.note {
+  border-left: 2px solid var(--mocha);
+  padding: 2px 0 2px 18px;
+  margin: 26px 0 0;
+  max-width: var(--measure);
+}
+.note p:last-child { margin-bottom: 0; }
+
+/* ── Tip ölçeği ──────────────────────────────────────────── */
+.typerow {
+  display: grid;
+  grid-template-columns: 128px 1fr;
+  gap: 20px;
+  align-items: baseline;
+  padding: 16px 0;
+  border-bottom: 1px solid var(--line-soft);
+}
+.typerow:last-child { border-bottom: 0; }
+.typerow .k {
+  font-size: .6875rem;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.t-lg  { font-family:"Cormorant Garamond",Georgia,serif; font-weight:300; font-size:3rem;    line-height:1.08; }
+.t-t1  { font-family:"Cormorant Garamond",Georgia,serif; font-weight:400; font-size:2.125rem; line-height:1.15; }
+.t-t2  { font-family:"Cormorant Garamond",Georgia,serif; font-weight:500; font-size:1.5rem;  line-height:1.25; }
+.t-hd  { font-weight:600; font-size:1.0625rem; }
+.t-bd  { font-weight:400; font-size:1rem; }
+.t-cl  { font-weight:400; font-size:.9375rem; color: var(--secondary); }
+.t-cp  { font-weight:500; font-size:.8125rem; color: var(--muted); letter-spacing:.14em; text-transform:uppercase; }
+
+/* ── Butonlar ────────────────────────────────────────────── */
+.btn {
+  font-family: inherit;
+  font-size: .9375rem;
+  font-weight: 500;
+  letter-spacing: .01em;
+  border: 0;
+  cursor: pointer;
+  min-height: 48px;
+  padding: 0 26px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform var(--d-instant) var(--ease),
+              opacity   var(--d-instant) var(--ease),
+              background-color var(--d-fast) var(--ease),
+              border-color var(--d-fast) var(--ease);
+}
+.btn:active { transform: scale(.96); opacity: .88; }
+.btn:focus-visible { outline: 2px solid var(--espresso); outline-offset: 3px; }
+
+.btn-1 { background: var(--espresso); color: var(--white); box-shadow: 0 1px 2px rgba(43,37,34,.16); }
+.btn-1:hover { background: #5E4839; }
+
+.btn-2 { background: transparent; color: var(--ink); border: 1px solid var(--line); }
+.btn-2:hover { border-color: var(--mocha); }
+
+.btn-3 {
+  background: none; border: 0; padding: 0 2px; min-height: 44px;
+  color: var(--secondary);
+  font-size: .8125rem; font-weight: 600;
+  letter-spacing: .12em; text-transform: uppercase;
+}
+.btn-3:hover { color: var(--ink); }
+.btn-3:active { transform: none; opacity: .6; }
+
+/* AI klişesi versiyonu — kasten yanlış */
+.btn-wrong {
+  background: var(--mocha); color: var(--white);
+  border: 1px solid var(--espresso);
+  border-radius: 999px;
+  min-height: 40px; padding: 0 18px;
+  font-size: .8125rem; font-weight: 600;
+  font-family: inherit; cursor: pointer;
+  display: inline-flex; align-items: center; gap: 6px;
+  box-shadow: 0 2px 10px rgba(162,132,111,.4);
+}
+
+.btn-row { display: flex; flex-wrap: wrap; gap: 14px; align-items: center; }
+
+/* ── Yarıçap ─────────────────────────────────────────────── */
+.radii { display: flex; flex-wrap: wrap; gap: 14px; }
+.radius-box {
+  width: 108px; height: 88px;
+  background: var(--sand);
+  border: 1px solid var(--line);
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: 2px;
+}
+.radius-box b { font-size: .8125rem; font-weight: 600; }
+.radius-box span { font-size: .6875rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+
+/* ── Hareket demosu ──────────────────────────────────────── */
+.motion-panel {
+  border: 1px solid var(--line);
+  border-radius: var(--r-panel);
+  background: var(--white);
+  padding: 22px;
+}
+.track {
+  position: relative;
+  height: 52px;
+  background: var(--sand);
+  border-radius: var(--r-chip);
+  overflow: hidden;
+  margin-bottom: 18px;
+}
+.dot {
+  position: absolute; top: 8px; left: 8px;
+  width: 36px; height: 36px;
+  border-radius: 50%;
+  background: var(--espresso);
+  transition-property: transform;
+  transition-timing-function: var(--ease);
+  transition-duration: var(--d-std);
+}
+.dot.go { transform: translateX(calc(100% * 0 + var(--travel, 0px))); }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.mchip {
+  font-family: inherit;
+  font-size: .8125rem; font-weight: 500;
+  padding: 8px 15px; min-height: 40px;
+  border-radius: var(--r-chip);
+  border: 1px solid var(--line);
+  background: var(--white); color: var(--secondary);
+  cursor: pointer;
+  font-variant-numeric: tabular-nums;
+  transition: background-color var(--d-fast) var(--ease), color var(--d-fast) var(--ease), border-color var(--d-fast) var(--ease);
+}
+.mchip:hover { border-color: var(--mocha); }
+.mchip[aria-pressed="true"] { background: var(--espresso); color: var(--white); border-color: var(--espresso); }
+.mchip:focus-visible { outline: 2px solid var(--espresso); outline-offset: 2px; }
+
+/* ── Karşılaştırma ───────────────────────────────────────── */
+.compare {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+@media (max-width: 700px) { .compare { grid-template-columns: 1fr; } }
+.pane {
+  border: 1px solid var(--line);
+  border-radius: var(--r-card);
+  background: var(--white);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+}
+.pane.x { border-color: #E4C9BF; background: #FDF8F6; }
+.pane.v { border-color: #CFD9C8; background: #FAFBF8; }
+.pane-tag {
+  font-size: .6875rem; font-weight: 600;
+  letter-spacing: .12em; text-transform: uppercase;
+  margin-bottom: 16px;
+}
+.pane.x .pane-tag { color: #A63D2E; }
+.pane.v .pane-tag { color: var(--sage); }
+.demo {
+  flex: 1;
+  padding: 18px;
+  background: var(--ivory);
+  border-radius: var(--r-input);
+  margin-bottom: 14px;
+}
+.why { font-size: .875rem; color: var(--secondary); margin: 0; max-width: none; }
+
+/* yanlış bölüm başlığı */
+.wrong-head { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+.wrong-icon {
+  width: 30px; height: 30px; border-radius: 8px;
+  background: var(--mocha); color: var(--white);
+  display: grid; place-items: center;
+}
+.wrong-title {
+  font-family: "Cormorant Garamond", Georgia, serif;
+  font-size: 1.375rem; font-weight: 600; color: var(--mocha);
+}
+.right-title {
+  font-family: "Cormorant Garamond", Georgia, serif;
+  font-size: 1.375rem; font-weight: 400; color: var(--ink);
+  margin-bottom: 12px;
+}
+.stub { font-size: .875rem; color: var(--muted); }
+
+/* düz kart (aynı-tonluluk demosu) */
+.flat-card, .tier-card {
+  border-radius: var(--r-card);
+  padding: 14px 16px;
+  margin-bottom: 10px;
+}
+.flat-card { background: var(--sand); border: 1px solid var(--sand-deep); }
+.flat-card * { color: var(--secondary) !important; font-size: .9375rem; font-weight: 400; }
+.tier-card { background: var(--white); border: 1px solid var(--line); }
+
+/* ── Ders kartı (gerçek bileşen) ─────────────────────────── */
+.cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(268px, 1fr));
+  gap: 14px;
+}
+.cls {
+  background: var(--white);
+  border: 1px solid var(--line);
+  border-radius: var(--r-card);
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.cls-top { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+.cls-time {
+  font-family: "Cormorant Garamond", Georgia, serif;
+  font-size: 2rem; font-weight: 400; line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.cls-dur { font-size: .8125rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+.cls-name { font-size: 1.0625rem; font-weight: 500; margin: 0; }
+.cls-who { font-size: .875rem; color: var(--secondary); margin: 2px 0 0; }
+.cls-foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: auto; }
+.seats { font-size: .8125rem; font-weight: 500; font-variant-numeric: tabular-nums; }
+.seats.free { color: var(--secondary); }
+.seats.last { color: var(--clay); }
+.seats.full { color: var(--muted); }
+.cls .btn { min-height: 44px; padding: 0 20px; font-size: .875rem; }
+
+/* ── Kurallar ────────────────────────────────────────────── */
+ul.rules { list-style: none; padding: 0; margin: 0; max-width: var(--measure); }
+ul.rules li {
+  padding: 13px 0 13px 26px;
+  border-bottom: 1px solid var(--line-soft);
+  position: relative;
+  color: var(--secondary);
+  font-size: .9375rem;
+}
+ul.rules li::before {
+  content: "";
+  position: absolute; left: 0; top: 22px;
+  width: 11px; height: 1px;
+  background: var(--mocha);
+}
+ul.rules li:last-child { border-bottom: 0; }
+
+footer {
+  margin-top: clamp(56px, 8vw, 88px);
+  padding-top: 28px;
+  border-top: 1px solid var(--line);
+  font-size: .8125rem;
+  color: var(--muted);
+}
+footer p { color: var(--muted); font-size: .8125rem; }
+
+@media (prefers-reduced-motion: reduce) {
+  * { transition-duration: .01ms !important; animation-duration: .01ms !important; }
+}
+</style>
+
+<div class="wrap">
+
+<header class="hero">
+  <p class="brandmark">Sobo <em>Society</em></p>
+  <h1 class="display">Aynı palet, iki sonuç.</h1>
+  <p class="lead">
+    Krem zemin, ince serif, sıcak taupe — bu üçlü şu anda yapay zekâ üretimi
+    arayüzlerin en tanıdık klişesi. Ama Sobo'nun markası da tam olarak bu.
+    Kaçmıyoruz. Farkı palet yapmıyor; <strong>hiyerarşi</strong> yapıyor.
+    Aşağıdaki her kart, aynı beş rengi kullanan iki sonucu yan yana koyuyor.
+  </p>
+  <div class="meta">
+    <span>25 Ağustos 2026</span>
+    <span>Taslak v0.1</span>
+    <span>iOS (SwiftUI) + Web</span>
+  </div>
+</header>
+
+<section>
+  <div class="sec-head">
+    <p class="label">Renk</p>
+    <h2 class="sec">Dokuz token, üç iş</h2>
+    <p>Zemin, metin ve vurgu. Marka rengi bu üçünden yalnız birinde çalışır — vurguda.</p>
+  </div>
+
+  <div class="swatches">
+    <div class="sw"><div class="chip" style="background:#F7F4EF"></div><div class="info"><div class="nm">ivory</div><div class="hx">#F7F4EF</div></div></div>
+    <div class="sw"><div class="chip" style="background:#E9E1D6"></div><div class="info"><div class="nm">sand</div><div class="hx">#E9E1D6</div></div></div>
+    <div class="sw"><div class="chip" style="background:#DDD3C7"></div><div class="info"><div class="nm">line</div><div class="hx">#DDD3C7</div></div></div>
+    <div class="sw"><div class="chip" style="background:#A2846F"></div><div class="info"><div class="nm">mocha</div><div class="hx">#A2846F</div></div></div>
+    <div class="sw"><div class="chip" style="background:#6F5647"></div><div class="info"><div class="nm">espresso</div><div class="hx">#6F5647</div></div></div>
+    <div class="sw"><div class="chip" style="background:#2B2522"></div><div class="info"><div class="nm">ink</div><div class="hx">#2B2522</div></div></div>
+    <div class="sw"><div class="chip" style="background:#6B5D52"></div><div class="info"><div class="nm">secondary</div><div class="hx">#6B5D52</div></div></div>
+    <div class="sw"><div class="chip" style="background:#8A7B6E"></div><div class="info"><div class="nm">muted</div><div class="hx">#8A7B6E</div></div></div>
+    <div class="sw"><div class="chip" style="background:#7D8B72"></div><div class="info"><div class="nm">sage</div><div class="hx">#7D8B72</div></div></div>
+    <div class="sw"><div class="chip" style="background:#B5714E"></div><div class="info"><div class="nm">clay</div><div class="hx">#B5714E</div></div></div>
+  </div>
+
+  <div class="scroller">
+    <table>
+      <thead>
+        <tr><th>Kombinasyon</th><th>Kontrast</th><th>Sonuç</th><th>Nerede</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><code>ink</code> / ivory</td><td class="num">13.8&nbsp;:&nbsp;1</td><td class="verdict ok">AAA</td><td>Başlık, ders adı</td></tr>
+        <tr><td><code>ink</code> / sand</td><td class="num">11.7&nbsp;:&nbsp;1</td><td class="verdict ok">AAA</td><td>Kart içi başlık</td></tr>
+        <tr><td><code>secondary</code> / ivory</td><td class="num">5.8&nbsp;:&nbsp;1</td><td class="verdict ok">AA</td><td>Açıklama, eğitmen adı</td></tr>
+        <tr><td><code>secondary</code> / sand</td><td class="num">4.9&nbsp;:&nbsp;1</td><td class="verdict ok">AA</td><td>Kart içi gövde</td></tr>
+        <tr><td><code>muted</code> / ivory</td><td class="num">3.7&nbsp;:&nbsp;1</td><td class="verdict warn">yalnız ≥18pt</td><td>Bölüm etiketi</td></tr>
+        <tr><td><code>muted</code> / sand</td><td class="num">3.2&nbsp;:&nbsp;1</td><td class="verdict warn">yalnız ≥18pt</td><td>Kart içi etiket</td></tr>
+        <tr><td>beyaz / <code>espresso</code></td><td class="num">6.8&nbsp;:&nbsp;1</td><td class="verdict ok">AA</td><td>Dolu buton metni</td></tr>
+        <tr><td>beyaz / <code>mocha</code></td><td class="num">3.5&nbsp;:&nbsp;1</td><td class="verdict bad">yetersiz</td><td>—</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="note">
+    <p><strong>Marka rengi metin rengi değildir.</strong> <code>mocha</code>
+    beyazla 3.5:1 veriyor — gövde metni için AA sınırının (4.5:1) altında.
+    Dolu butonlar bu yüzden <code>espresso</code> kullanır. Mocha vurguda,
+    ince çizgide, aktif durumda kalır.</p>
+    <p><code>muted</code> kart zemininde 3.2:1'e düşüyor. Bu, token yorumuna
+    yazılacak — yoksa altı ay sonra biri açıklama metnine uygular ve kimse
+    fark etmez.</p>
+  </div>
+</section>
+
+<section>
+  <div class="sec-head">
+    <p class="label">Tipografi</p>
+    <h2 class="sec">Serif yalnız başlıkta</h2>
+    <p>Cormorant Garamond gövde metnine yayılırsa sonuç Canva şablonudur.
+    Logodaki <span style="letter-spacing:.3em">S O B O</span> hissi fonttan
+    değil, harf aralığından gelir.</p>
+  </div>
+
+  <div class="typerow"><div class="k">largeTitle 48</div><div class="t-lg">Bu hafta</div></div>
+  <div class="typerow"><div class="k">title1 34</div><div class="t-t1">Barre Flow</div></div>
+  <div class="typerow"><div class="k">title2 24</div><div class="t-t2">Salı, 26 Ağustos</div></div>
+  <div class="typerow"><div class="k">headline 17</div><div class="t-hd">Reformer Pilates</div></div>
+  <div class="typerow"><div class="k">body 16</div><div class="t-bd">Ders başlamadan 6 saat öncesine kadar iptal edebilirsin.</div></div>
+  <div class="typerow"><div class="k">callout 15</div><div class="t-cl">Eğitmen: Deniz · 50 dakika</div></div>
+  <div class="typerow"><div class="k">caption 13</div><div class="t-cp">Üyeliğim</div></div>
+
+  <div class="note">
+    <p><strong>Türkçe büyük harf tuzağı.</strong> SwiftUI'da
+    <code>.textCase(.uppercase)</code> cihazın yerelini okur, parametre almaz.
+    Telefonu İngilizce olan bir kullanıcıda <code>i → I</code> olur:
+    “Üyeliğim” → “ÜYELIĞIM”. AkorLab'de ölçüldü — 37 bölüm başlığının 16'sı
+    küçük <em>i</em> içeriyordu. Çözüm <code>SoboL10n.buyukHarf()</code>:
+    cihazın değil, uygulamanın seçili dilini kullanır.</p>
+  </div>
+</section>
+
+<section>
+  <div class="sec-head">
+    <p class="label">Butonlar</p>
+    <h2 class="sec">Üç kademe, sayfada tek birincil</h2>
+    <p>Basıp hissedebilirsin — her kademede ölçek 0.96'ya iner ve opaklık
+    birlikte düşer. Yalnız ölçek değiştirmek sönük hissettirir.</p>
+  </div>
+
+  <div class="btn-row" style="margin-bottom:22px">
+    <button class="btn btn-1" type="button">Rezerve Et</button>
+    <button class="btn btn-2" type="button">Bekleme listesine gir</button>
+    <button class="btn btn-3" type="button">Tümünü gör</button>
+  </div>
+
+  <div class="scroller">
+    <table>
+      <thead><tr><th>Kademe</th><th>Biçim</th><th>Sobo'da</th></tr></thead>
+      <tbody>
+        <tr><td>Birincil</td><td><code>espresso</code> dolgu, beyaz metin, min 50pt</td><td><strong>Rezerve Et</strong> — ekranda tek</td></tr>
+        <tr><td>İkincil</td><td>saydam + 1px <code>line</code> kenarlık</td><td>İptal et, bekleme listesi</td></tr>
+        <tr><td>Üçüncül</td><td>kap yok, kenarlık yok, ikon yok</td><td>Tümünü gör, geçmiş dersler</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section>
+  <div class="sec-head">
+    <p class="label">Karşılaştırma</p>
+    <h2 class="sec">“AI hissi” dediğimiz şey</h2>
+    <p>Dördü de aynı paletle yapıldı. Soldakiler hiçbir kural ihlal etmiyor —
+    sadece her boşluğa bir şey koyuyorlar.</p>
+  </div>
+
+  <div class="compare">
+    <div class="pane x">
+      <p class="pane-tag">Yanlış · bölüm başlığı</p>
+      <div class="demo">
+        <div class="wrong-head">
+          <div class="wrong-icon" aria-hidden="true">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 11h18"/></svg>
+          </div>
+          <div class="wrong-title">Bu Hafta</div>
+        </div>
+        <p class="stub">Salı · Perşembe · Cumartesi</p>
+      </div>
+      <p class="why">İkon “Bu Hafta” yazısının söylediğini tekrarlıyor —
+      sıfır yeni bilgi. Üstelik dolu ve marka renginde, yani sistem bunu
+      <em>aktif</em> diye işaretliyor. Oysa pasif bir etiket.</p>
+    </div>
+
+    <div class="pane v">
+      <p class="pane-tag">Doğru · bölüm başlığı</p>
+      <div class="demo">
+        <div class="right-title">Bu Hafta</div>
+        <p class="stub">Salı · Perşembe · Cumartesi</p>
+      </div>
+      <p class="why">İkon kaldırıldı, kullanıcı hiçbir şey kaybetmedi —
+      bu, ikonun süs olduğunun kanıtı. Başlık <code>ink</code>'e döndü,
+      marka rengi gerçek vurgular için serbest kaldı.</p>
+    </div>
+  </div>
+
+  <div class="compare">
+    <div class="pane x">
+      <p class="pane-tag">Yanlış · üçüncül eylem</p>
+      <div class="demo" style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
+        <div class="right-title" style="margin:0">Geçmiş dersler</div>
+        <button class="btn-wrong" type="button">Tümünü Gör
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
+        </button>
+      </div>
+      <p class="why">Kapsül + kenarlık + gölge + ikon. Bu görsel yük
+      “Rezerve Et” ile aynı ağırlıkta — sayfanın gerçek ana eylemiyle
+      yarışıyor.</p>
+    </div>
+
+    <div class="pane v">
+      <p class="pane-tag">Doğru · üçüncül eylem</p>
+      <div class="demo" style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
+        <div class="right-title" style="margin:0">Geçmiş dersler</div>
+        <button class="btn btn-3" type="button">Tümünü gör</button>
+      </div>
+      <p class="why">Ayrım renkten değil, <strong>ağırlık ve harf
+      aralığından</strong> geliyor. Dokunma alanı hâlâ 44pt — görsel kabı
+      kaldırmak dokunma alanını küçültmez.</p>
+    </div>
+  </div>
+
+  <div class="compare">
+    <div class="pane x">
+      <p class="pane-tag">Yanlış · aynı-tonluluk</p>
+      <div class="demo">
+        <div class="flat-card"><div>09:30 Barre Flow</div><div>Deniz · 3 yer kaldı</div></div>
+        <div class="flat-card"><div>11:00 Reformer</div><div>Ece · Dolu</div></div>
+        <div class="flat-card" style="margin-bottom:0"><div>18:30 Functional</div><div>Deniz · 5 yer kaldı</div></div>
+      </div>
+      <p class="why">Krem üstü bej üstü taupe — her şey aynı ailede.
+      Sakin değil, <em>okunmuyor</em>. Saat mi ders adı mı önemli, göz
+      bilemiyor. Sakin paletin gerçek riski budur.</p>
+    </div>
+
+    <div class="pane v">
+      <p class="pane-tag">Doğru · hiyerarşi</p>
+      <div class="demo">
+        <div class="tier-card">
+          <div style="display:flex;gap:12px;align-items:baseline">
+            <span style="font-family:'Cormorant Garamond',Georgia,serif;font-size:1.5rem;font-variant-numeric:tabular-nums">09:30</span>
+            <span style="font-weight:500">Barre Flow</span>
+          </div>
+          <div style="font-size:.8125rem;color:var(--muted)">Deniz · 3 yer kaldı</div>
+        </div>
+        <div class="tier-card">
+          <div style="display:flex;gap:12px;align-items:baseline">
+            <span style="font-family:'Cormorant Garamond',Georgia,serif;font-size:1.5rem;font-variant-numeric:tabular-nums">11:00</span>
+            <span style="font-weight:500">Reformer</span>
+          </div>
+          <div style="font-size:.8125rem;color:var(--muted)">Ece · Dolu</div>
+        </div>
+        <div class="tier-card" style="margin-bottom:0">
+          <div style="display:flex;gap:12px;align-items:baseline">
+            <span style="font-family:'Cormorant Garamond',Georgia,serif;font-size:1.5rem;font-variant-numeric:tabular-nums">18:30</span>
+            <span style="font-weight:500">Functional</span>
+          </div>
+          <div style="font-size:.8125rem;color:var(--muted)">Deniz · 5 yer kaldı</div>
+        </div>
+      </div>
+      <p class="why">Aynı renkler, üç metin kademesi. “Quiet luxury” boşluk
+      demek değil — <strong>kontrollü kontrast</strong> demek: çok büyük
+      rakam, çok küçük etiket, arada hiçbir şey yok.</p>
+    </div>
+  </div>
+
+  <div class="compare">
+    <div class="pane x">
+      <p class="pane-tag">Yanlış · boş durum</p>
+      <div class="demo" style="text-align:center;padding:34px 18px">
+        <p class="stub" style="margin:0">Kayıt bulunamadı.</p>
+      </div>
+      <p class="why">Kullanıcı ne olduğunu da, ne yapacağını da bilmiyor.
+      Bir şeyin bozulduğunu sanabilir.</p>
+    </div>
+
+    <div class="pane v">
+      <p class="pane-tag">Doğru · boş durum</p>
+      <div class="demo" style="padding:26px 18px">
+        <p style="margin:0 0 6px;font-weight:500;color:var(--ink)">Bu hafta rezervasyonun yok</p>
+        <p style="margin:0 0 16px;font-size:.875rem;color:var(--secondary)">Programda 11 ders açık, 4'ünde yer var.</p>
+        <button class="btn btn-1" type="button" style="min-height:44px;padding:0 20px;font-size:.875rem">Programa git</button>
+      </div>
+      <p class="why">Neden boş olduğunu söylüyor, gidilecek net bir eylem
+      veriyor ve bir sayı taşıyor — boş ekran bile bilgi taşıyabilir.</p>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="sec-head">
+    <p class="label">Bileşen</p>
+    <h2 class="sec">Ders kartı, üç durum</h2>
+    <p>Kontenjan durumu hem <strong>renkle hem sözle</strong> kodlanır —
+    yalnız renge güvenmek renk körü kullanıcıyı dışarıda bırakır.</p>
+  </div>
+
+  <div class="cards">
+    <article class="cls">
+      <div class="cls-top"><div class="cls-time">09:30</div><div class="cls-dur">50 dk</div></div>
+      <div><p class="cls-name">Barre Flow</p><p class="cls-who">Deniz</p></div>
+      <div class="cls-foot">
+        <span class="seats free">4 yer kaldı</span>
+        <button class="btn btn-1" type="button">Rezerve et</button>
+      </div>
+    </article>
+
+    <article class="cls">
+      <div class="cls-top"><div class="cls-time">11:00</div><div class="cls-dur">50 dk</div></div>
+      <div><p class="cls-name">Reformer Pilates</p><p class="cls-who">Ece</p></div>
+      <div class="cls-foot">
+        <span class="seats last">Son 1 yer</span>
+        <button class="btn btn-1" type="button">Rezerve et</button>
+      </div>
+    </article>
+
+    <article class="cls">
+      <div class="cls-top"><div class="cls-time">18:30</div><div class="cls-dur">45 dk</div></div>
+      <div><p class="cls-name">Functional</p><p class="cls-who">Deniz</p></div>
+      <div class="cls-foot">
+        <span class="seats full">Dolu · 2 kişi sırada</span>
+        <button class="btn btn-2" type="button">Sıraya gir</button>
+      </div>
+    </article>
+  </div>
+</section>
+
+<section>
+  <div class="sec-head">
+    <p class="label">Yarıçap</p>
+    <h2 class="sec">Kademe de hiyerarşidir</h2>
+    <p>Her şey 12px olursa arayüz şablon gibi durur. Bileşenin ağırlığı
+    yarıçapından okunur.</p>
+  </div>
+  <div class="radii">
+    <div class="radius-box" style="border-radius:10px"><b>chip</b><span>10</span></div>
+    <div class="radius-box" style="border-radius:12px"><b>input</b><span>12</span></div>
+    <div class="radius-box" style="border-radius:14px"><b>card</b><span>14</span></div>
+    <div class="radius-box" style="border-radius:18px"><b>panel</b><span>18</span></div>
+    <div class="radius-box" style="border-radius:24px"><b>sheet</b><span>24</span></div>
+  </div>
+  <div class="note">
+    <p>Bu ölçek uydurulmadı. AkorLab'de aynı iş yapıldığında ölçek önce
+    8/12/16/22 seçilmişti; fiilen sevk edilen <strong>527 yüzey</strong>
+    sayıldığında en sık üç değerden ikisi ölçekte yoktu ve ölçeği kullanan
+    yalnız 16 çağrı vardı (%3) — çünkü ihtiyaç duyulan değer ölçekte yoktu.
+    Gerçeği tarif etmeyen token kullanılmaz.</p>
+  </div>
+</section>
+
+<section>
+  <div class="sec-head">
+    <p class="label">Hareket</p>
+    <h2 class="sec">Beş kademe, ara değer yok</h2>
+    <p>Bir kademeye bas, farkı gör. Her animasyonun kendi süresi olması
+    arayüzü amatörleştirir — tüm uygulama aynı hareket dilini konuşur.</p>
+  </div>
+
+  <div class="motion-panel">
+    <div class="track"><div class="dot" id="dot"></div></div>
+    <div class="chips" role="group" aria-label="Hareket süresi kademeleri">
+      <button class="mchip" type="button" data-d="120" aria-pressed="false">instant · 0.12s</button>
+      <button class="mchip" type="button" data-d="180" aria-pressed="false">quick · 0.18s</button>
+      <button class="mchip" type="button" data-d="200" aria-pressed="false">fast · 0.20s</button>
+      <button class="mchip" type="button" data-d="250" aria-pressed="true">standard · 0.25s</button>
+      <button class="mchip" type="button" data-d="300" aria-pressed="false">smooth · 0.30s</button>
+    </div>
+  </div>
+
+  <div class="note">
+    <p><code>standard 0.25s</code> varsayılan çünkü ölçüldü: AkorLab'in 191
+    animasyon çağrısında en yaygın süre buydu (31 kullanım). Kademeler
+    dağılımın üstüne oturtuldu, “yakın bir değer” seçilmedi.</p>
+  </div>
+</section>
+
+<section>
+  <div class="sec-head">
+    <p class="label">Özet</p>
+    <h2 class="sec">On kural</h2>
+  </div>
+  <ul class="rules">
+    <li>Sayfada <strong>tek</strong> birincil buton bulunur.</li>
+    <li>İkon başlığın tekrarıysa kaldırılır — kullanıcı hiçbir şey kaybetmez.</li>
+    <li>Pasif şey çizgi ikon ve gri; aktif şey dolu ikon ve renk.</li>
+    <li>Marka rengi metin rengi değildir. Dolu buton <code>espresso</code>.</li>
+    <li>Serif yalnız display ve başlıkta; gövde sans.</li>
+    <li>Emoji yok — platformdan platforma farklı çizilir, tipografiyle hizalanmaz.</li>
+    <li>Dokunma alanı 44pt'nin altına inmez, glif 16pt olsa bile.</li>
+    <li>Basışta ölçek <em>ve</em> opaklık birlikte değişir.</li>
+    <li>Yükleme spinner değil iskelet; iskelet içeriğin ritmini taklit eder.</li>
+    <li>Bir öğeyi kaldırınca kullanıcı hiçbir şey kaybetmiyorsa, o öğe arayüzü zayıflatıyordur.</li>
+  </ul>
+</section>
+
+<footer>
+  <p><strong>Koyu tema yok.</strong> Bu marka aydınlık; koyu varyant üretmek
+  markayı bozar. Sayfa tek temaya bilinçli olarak bağlı — omisyon değil, karar.</p>
+  <p style="margin-bottom:0">Taslak · onay bekliyor · spec:
+  <code>docs/superpowers/specs/2026-08-25-sobo-society-design.md</code></p>
+</footer>
+
+</div>
+
+<script>
+(function () {
+  var dot = document.getElementById('dot');
+  var chips = Array.prototype.slice.call(document.querySelectorAll('.mchip'));
+  var atEnd = false;
+
+  function travel() {
+    var track = dot.parentElement;
+    return Math.max(0, track.clientWidth - dot.offsetWidth - 16);
+  }
+
+  function play(ms) {
+    dot.style.transitionDuration = (ms / 1000) + 's';
+    atEnd = !atEnd;
+    dot.style.transform = atEnd ? 'translateX(' + travel() + 'px)' : 'translateX(0px)';
+  }
+
+  chips.forEach(function (chip) {
+    chip.addEventListener('click', function () {
+      chips.forEach(function (c) { c.setAttribute('aria-pressed', String(c === chip)); });
+      play(Number(chip.dataset.d));
+    });
+  });
+
+  window.addEventListener('resize', function () {
+    if (atEnd) { dot.style.transform = 'translateX(' + travel() + 'px)'; }
+  });
+})();
+</script>

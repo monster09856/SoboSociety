@@ -270,9 +270,10 @@ yok** — bu marka aydınlık, koyu varyant üretmek markayı bozar.
 
 | Token | Oran | Kullanım |
 |---|---|---|
-| `ink` | 13.0:1 | ✅ AAA — her yerde |
+| `ink` | 13.8:1 | ✅ AAA — her yerde |
 | `secondary` | 5.8:1 | ✅ AA — açıklama, eğitmen adı |
 | `muted` | 3.7:1 | ⚠️ **yalnız ≥18pt** etiket / bölüm başlığı |
+| `muted` on `sand` | 3.2:1 | ⚠️ kart zemininde daha da düşer |
 | beyaz on `espresso` | 6.8:1 | ✅ AA — buton metni |
 | beyaz on `mocha` | 3.4:1 | ❌ **gövde metni için YASAK** |
 
@@ -311,7 +312,13 @@ mekânı görmeye gelir.
 ### 6.6 Tipografi
 
 - **Display/başlık:** Cormorant Garamond (ince serif, geniş tracking)
-- **Gövde:** Inter
+- **Gövde:** Jost
+
+  🔴 25 Ağu 2026 — Inter'den Jost'a değişti. Inter kötü değil, fazlaca
+  *varsayılan*: her arayüzün güvenli tercihi olduğu için markaya hiçbir şey
+  katmıyordu. Jost geometrik-humanist; Cormorant'ın yüksek kontrastlı
+  serifiyle daha iyi eşleşiyor ve stüdyonun sakin/zarif tonunu taşıyor.
+  İkisi de `latin-ext` — Türkçe tam.
 - İkisi de Türkçe karakter tam desteği (ğ ş ı İ ç ö ü)
 - iOS'ta ikisi de bundle edilir; sistem fontuna düşülmez (marka tutarlılığı)
 - Dynamic Type desteklenir (`...Scaled` varyantlar — AkorFonts deseni)
@@ -444,3 +451,14 @@ davet etmektir.**
 3. SMS OTP sağlayıcısı: Netgsm mi İletimerkezi mi? (maliyet/mesaj)
 4. Alan adı
 5. Stüdyo adresi (harita + yerel SEO için)
+
+---
+
+## 10. Ekler
+
+**Canlı tasarım sistemi sayfası (25 Ağu 2026):**
+https://claude.ai/code/artifact/079d5b8f-5ae0-41c4-96c9-c35108854efa
+
+Palet + kontrast tablosu, tip ölçeği, üç buton kademesi, yarıçap ve hareket
+kademeleri, ders kartının üç durumu ve dört adet doğru/yanlış karşılaştırması.
+Kaynak: `docs/design/sobo-design-system.html`
