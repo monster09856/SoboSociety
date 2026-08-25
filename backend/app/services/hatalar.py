@@ -20,3 +20,7 @@ class DersIptalEdilmis(SoboHata):
 
 class ZatenRezerve(SoboHata):
     pass
+
+
+class ZatenIptal(SoboHata):
+    pass
