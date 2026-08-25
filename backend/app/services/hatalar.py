@@ -24,3 +24,15 @@ class ZatenRezerve(SoboHata):
 
 class ZatenIptal(SoboHata):
     pass
+
+
+class DersDoluDegil(SoboHata):
+    pass
+
+
+class TeklifSuresiDolmus(SoboHata):
+    pass
+
+
+class ZatenSirada(SoboHata):
+    pass
