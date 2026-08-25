@@ -5,13 +5,13 @@ import pytest
 from sqlalchemy import select
 
 from app.models import (
-    Booking, BookingDurumu, ClassSession, ClassType, Instructor,
-    Member, Package, Room, SessionDurumu,
+    Booking, BookingDurumu, BookingKaynagi, ClassSession, ClassType,
+    Instructor, LedgerTipi, Member, Package, Room, SessionDurumu,
 )
 from app.services.hatalar import (
     DersDolu, DersIptalEdilmis, YetersizKredi, ZatenRezerve,
 )
-from app.services.kredi import bakiye, paket_tanimla
+from app.services.kredi import bakiye, hareket_ekle, paket_tanimla
 from app.services.rezervasyon import rezerve_et
 
 
@@ -150,3 +150,123 @@ async def test_son_yere_ayni_anda_basan_iki_uyeden_yalniz_biri_kazanir(temiz_db)
             select(Booking).where(Booking.session_id == oturum_id)
         )
         assert len(list(kayitlar.scalars())) == 1
+
+
+async def test_ayni_uye_iki_derse_ayni_anda_basarsa_krediden_fazlasini_alamaz(temiz_db):
+    """1 kredisi kalan üye iki FARKLI derse aynı anda basarsa yalnız biri geçer.
+
+    Kontenjan yarışı atomik UPDATE ile çözüldü; bu test aynı korumanın
+    kredi ekseninde de olduğunu doğrular. Üye satırı FOR UPDATE ile
+    kilitlendiği için istekler serileşir.
+    """
+    async with temiz_db() as hazirlik:
+        tip = ClassType(ad="Barre", kontenjan=5, sure_dk=50)
+        egitmen = Instructor(ad="Deniz")
+        salon = Room(ad="Stüdyo")
+        uye = Member(telefon="+905316033080", ad="Selin")
+        hazirlik.add_all([tip, egitmen, salon, uye])
+        await hazirlik.flush()
+
+        oturum1 = ClassSession(
+            baslangic=datetime(2026, 9, 1, 16, 0, tzinfo=UTC),
+            class_type_id=tip.id, instructor_id=egitmen.id,
+            room_id=salon.id, kontenjan=5,
+        )
+        oturum2 = ClassSession(
+            baslangic=datetime(2026, 9, 1, 18, 0, tzinfo=UTC),
+            class_type_id=tip.id, instructor_id=egitmen.id,
+            room_id=salon.id, kontenjan=5,
+        )
+        hazirlik.add_all([oturum1, oturum2])
+        await hazirlik.flush()
+
+        await hareket_ekle(
+            hazirlik, member_id=uye.id, tip=LedgerTipi.ADMIN_ADJUST,
+            miktar=1, sebep="test",
+        )
+
+        uye_id, oturum1_id, oturum2_id = uye.id, oturum1.id, oturum2.id
+        await hazirlik.commit()
+
+    async def dene(session_id: int) -> str:
+        async with temiz_db() as oturum_db:
+            try:
+                await rezerve_et(oturum_db, member_id=uye_id, session_id=session_id)
+                await oturum_db.commit()
+                return "kazandi"
+            except YetersizKredi:
+                await oturum_db.rollback()
+                return "yetersiz"
+
+    sonuclar = await asyncio.gather(dene(oturum1_id), dene(oturum2_id))
+
+    assert sorted(sonuclar) == ["kazandi", "yetersiz"]
+
+    async with temiz_db() as kontrol:
+        assert await bakiye(kontrol, uye_id) == 0
+
+        kayitlar = await kontrol.execute(
+            select(Booking).where(Booking.member_id == uye_id)
+        )
+        assert len(list(kayitlar.scalars())) == 1
+
+
+async def test_ayni_derse_iki_sekmeden_ayni_anda_basmak_domain_hatasi_verir(temiz_db):
+    """Ham IntegrityError sızmamalı — çağıran SoboHata görmeli."""
+    async with temiz_db() as hazirlik:
+        tip = ClassType(ad="Barre", kontenjan=5, sure_dk=50)
+        egitmen = Instructor(ad="Deniz")
+        salon = Room(ad="Stüdyo")
+        paket = Package(ad="8 Ders", ders_adedi=8, gecerlilik_gun=60, fiyat_kurus=480000)
+        uye = Member(telefon="+905316033080", ad="Selin")
+        hazirlik.add_all([tip, egitmen, salon, paket, uye])
+        await hazirlik.flush()
+
+        oturum = ClassSession(
+            baslangic=datetime(2026, 9, 1, 16, 0, tzinfo=UTC),
+            class_type_id=tip.id, instructor_id=egitmen.id,
+            room_id=salon.id, kontenjan=5,
+        )
+        hazirlik.add(oturum)
+        await hazirlik.flush()
+
+        await paket_tanimla(
+            hazirlik, member_id=uye.id, package_id=paket.id, baslangic=date(2026, 9, 1)
+        )
+
+        uye_id, oturum_id = uye.id, oturum.id
+        await hazirlik.commit()
+
+    async def dene() -> str:
+        async with temiz_db() as oturum_db:
+            try:
+                await rezerve_et(oturum_db, member_id=uye_id, session_id=oturum_id)
+                await oturum_db.commit()
+                return "kazandi"
+            except ZatenRezerve:
+                await oturum_db.rollback()
+                return "zaten_rezerve"
+
+    sonuclar = await asyncio.gather(dene(), dene())
+
+    assert sorted(sonuclar) == ["kazandi", "zaten_rezerve"]
+
+    async with temiz_db() as kontrol:
+        guncel = await kontrol.get(ClassSession, oturum_id)
+        assert guncel.dolu_sayi == 1
+
+        kayitlar = await kontrol.execute(
+            select(Booking).where(Booking.session_id == oturum_id)
+        )
+        assert len(list(kayitlar.scalars())) == 1
+
+
+async def test_kaynak_parametresi_kayda_yazilir(db):
+    """kaynak=ADMIN ile yapılan rezervasyon panelden geldiği anlaşılsın."""
+    uye, oturum, _ = await _senaryo(db)
+
+    kayit = await rezerve_et(
+        db, member_id=uye.id, session_id=oturum.id, kaynak=BookingKaynagi.ADMIN,
+    )
+
+    assert kayit.kaynak == "admin"
