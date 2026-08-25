@@ -8,3 +8,15 @@ class GecersizTelefon(SoboHata):
 
 class YetersizKredi(SoboHata):
     pass
+
+
+class DersDolu(SoboHata):
+    pass
+
+
+class DersIptalEdilmis(SoboHata):
+    pass
+
+
+class ZatenRezerve(SoboHata):
+    pass
