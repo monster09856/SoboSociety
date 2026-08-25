@@ -1,7 +1,13 @@
 from datetime import date
 
+import pytest
+from sqlalchemy.exc import IntegrityError
+
 from app.models import LedgerTipi, Member, Package
-from app.services.kredi import bakiye, hareket_ekle, paket_tanimla
+from app.services.hatalar import GecersizHareket, KayitBulunamadi
+from app.services.kredi import (
+    aktif_paket_sec, bakiye, hareket_ekle, paket_tanimla,
+)
 
 
 async def _uye_ve_paket(db):
@@ -75,3 +81,86 @@ async def test_bakiye_baska_uyenin_hareketlerini_saymaz(db):
     await db.flush()
 
     assert await bakiye(db, baskasi.id) == 0
+
+
+async def test_bos_sebeple_ledger_satiri_yazilamaz(db):
+    """B3: tasarım §5.2(b) sebebi zorunlu tutar.
+
+    `String(200) NOT NULL` boş string'i geçirir. Satır append-only olduğu
+    için sonradan düzeltilemez; sebepsiz bir ADMIN_ADJUST tarihçeyi
+    okunamaz kılar.
+    """
+    uye, _ = await _uye_ve_paket(db)
+
+    for gecersiz in ("", "   ", "\n\t"):
+        with pytest.raises(GecersizHareket):
+            await hareket_ekle(
+                db, member_id=uye.id, tip=LedgerTipi.ADMIN_ADJUST,
+                miktar=2, sebep=gecersiz,
+            )
+
+    assert await bakiye(db, uye.id) == 0
+
+
+async def test_hayalet_booking_id_ile_ledger_satiri_yazilamaz(db):
+    """B2: `booking_id` artık foreign key — olmayan rezervasyona iz yazılamaz."""
+    uye, _ = await _uye_ve_paket(db)
+
+    with pytest.raises(IntegrityError):
+        await hareket_ekle(
+            db, member_id=uye.id, tip=LedgerTipi.BOOKING, miktar=-1,
+            sebep="hayalet", booking_id=999999,
+        )
+
+
+async def test_aktif_paket_sec_en_erken_biteni_secer(db):
+    """A2: üyenin lehine — yanma riski en yüksek paket önce tüketilir."""
+    uye, uzun = await _uye_ve_paket(db)
+    kisa = Package(ad="4 Ders", ders_adedi=4, gecerlilik_gun=10, fiyat_kurus=240000)
+    db.add(kisa)
+    await db.flush()
+
+    await paket_tanimla(db, member_id=uye.id, package_id=uzun.id, baslangic=date(2026, 9, 1))
+    kisa_paket = await paket_tanimla(
+        db, member_id=uye.id, package_id=kisa.id, baslangic=date(2026, 9, 1)
+    )
+
+    secilen = await aktif_paket_sec(db, member_id=uye.id, bugun=date(2026, 9, 5))
+
+    assert secilen is not None
+    assert secilen.id == kisa_paket.id
+
+
+async def test_aktif_paket_sec_bitis_gununde_paketi_secmez(db):
+    """D2: `bitis` GEÇERSİZ OLDUĞU İLK GÜNDÜR, son geçerli gün değil.
+
+    1 Eylül'de açılan 60 günlük paketin son geçerli günü 30 Ekim,
+    `bitis` değeri 31 Ekim'dir. `>= bitis` yazmak pakete bir gün fazladan
+    ömür verirdi.
+    """
+    uye, paket = await _uye_ve_paket(db)
+    uye_paketi = await paket_tanimla(
+        db, member_id=uye.id, package_id=paket.id, baslangic=date(2026, 9, 1)
+    )
+    assert uye_paketi.bitis == date(2026, 10, 31)
+
+    son_gecerli = await aktif_paket_sec(db, member_id=uye.id, bugun=date(2026, 10, 30))
+    assert son_gecerli is not None and son_gecerli.id == uye_paketi.id
+
+    assert await aktif_paket_sec(db, member_id=uye.id, bugun=date(2026, 10, 31)) is None
+    # Başlangıç günü dahildir.
+    assert await aktif_paket_sec(db, member_id=uye.id, bugun=date(2026, 8, 31)) is None
+    baslangic_gunu = await aktif_paket_sec(
+        db, member_id=uye.id, bugun=date(2026, 9, 1)
+    )
+    assert baslangic_gunu is not None and baslangic_gunu.id == uye_paketi.id
+
+
+async def test_bulunmayan_paket_domain_hatasi_verir(db):
+    """B1: `ValueError` değil `SoboHata`."""
+    uye, _ = await _uye_ve_paket(db)
+
+    with pytest.raises(KayitBulunamadi):
+        await paket_tanimla(
+            db, member_id=uye.id, package_id=999999, baslangic=date(2026, 9, 1)
+        )

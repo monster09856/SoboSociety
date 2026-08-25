@@ -55,6 +55,12 @@ class MemberPackage(ZamanDamgali, Base):
     member_id: Mapped[int] = mapped_column(ForeignKey("members.id"), index=True)
     package_id: Mapped[int] = mapped_column(ForeignKey("packages.id"))
     baslangic: Mapped[date] = mapped_column(Date)
+    # DİKKAT: `bitis` paketin GEÇERSİZ OLDUĞU İLK GÜNDÜR, son geçerli gün
+    # değildir. `paket_tanimla` bunu `baslangic + gecerlilik_gun` olarak
+    # hesaplar: 1 Eylül'de açılan 60 günlük paketin son geçerli günü 30 Ekim,
+    # `bitis` değeri 31 Ekim'dir. Geçerlilik kontrolü bu yüzden yarı-açık
+    # aralıktır: `baslangic <= gun < bitis`. `<= bitis` yazmak pakete bir gün
+    # fazladan ömür verir.
     bitis: Mapped[date] = mapped_column(Date)
 
 
@@ -76,7 +82,12 @@ class CreditLedger(Base):
     tip: Mapped[str] = mapped_column(String(24))
     miktar: Mapped[int] = mapped_column(Integer)
     sebep: Mapped[str] = mapped_column(String(200))
-    booking_id: Mapped[int | None] = mapped_column(Integer, default=None, index=True)
+    # FK: `bookings` tablosu Task 7'de geldi, bu sütunun başta FK'siz
+    # bırakılma sebebi ortadan kalktı. FK olmadan `booking_id=999999` ile
+    # hayalet satır yazılabiliyordu — `member_id` FK'li olduğu için tutarsızdı.
+    booking_id: Mapped[int | None] = mapped_column(
+        ForeignKey("bookings.id"), default=None, index=True
+    )
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
