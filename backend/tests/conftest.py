@@ -1,6 +1,3 @@
-import asyncio
-
-import pytest
 import pytest_asyncio
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
@@ -8,14 +5,13 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 from app.models import Base
 from app.settings import ayarlar
 
-TEST_URL = ayarlar.database_url
+TEST_URL = ayarlar.test_database_url
 
-
-@pytest.fixture(scope="session")
-def event_loop():
-    loop = asyncio.new_event_loop()
-    yield loop
-    loop.close()
+if "test" not in TEST_URL.rsplit("/", 1)[-1]:
+    raise RuntimeError(
+        f"Test veritabanı adında 'test' geçmeli, aksi halde drop_all/TRUNCATE "
+        f"yanlış veritabanını siler. Gelen: {TEST_URL}"
+    )
 
 
 @pytest_asyncio.fixture(scope="session")
@@ -50,5 +46,7 @@ async def temiz_db(motor):
     fabrika = async_sessionmaker(motor, class_=AsyncSession, expire_on_commit=False)
     yield fabrika
     tablolar = ", ".join(t.name for t in reversed(Base.metadata.sorted_tables))
+    if not tablolar:
+        return
     async with motor.begin() as baglanti:
         await baglanti.execute(text(f"TRUNCATE {tablolar} RESTART IDENTITY CASCADE"))
