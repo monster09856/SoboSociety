@@ -1,0 +1,31 @@
+workflows:
+  ios-app-store:
+    name: Sobo Society iOS App Store & TestFlight Build
+    instance_type: mac_mini_m1
+    max_build_duration: 60
+    environment:
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: com.sobosociety.app
+      vars:
+        XCODE_WORKSPACE: "SoboSociety.xcworkspace"
+        XCODE_SCHEME: "SoboSociety"
+    scripts:
+      - name: Initialize App & Dependencies
+        script: |
+          echo "Building Sobo Society iOS App..."
+      - name: Build Xcode Archive (.ipa)
+        script: |
+          xcodebuild -project SoboSociety.xcodeproj \
+            -scheme SoboSociety \
+            -sdk iphoneos \
+            -configuration Release \
+            -archivePath build/SoboSociety.xcarchive \
+            archive
+    artifacts:
+      - build/*.ipa
+      - *.xcarchive
+    publishing:
+      app_store_connect:
+        auth: integration
+        submit_to_testflight: true
