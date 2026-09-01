@@ -1,0 +1,51 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --ivory: #F7F4EF;
+  --sand: #E9E1D6;
+  --line: #DDD3C7;
+  --ink: #2B2522;
+  --secondary: #6B5D52;
+  --muted: #8A7B6E;
+  --mocha: #A2846F;
+  --espresso: #6F5647;
+  --sage: #7D8B72;
+  --clay: #B5714E;
+}
+
+body {
+  color: var(--ink);
+  background: var(--ivory);
+  font-family: var(--font-jost), sans-serif;
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+}
+
+.font-serif-title {
+  font-family: var(--font-cormorant), Georgia, serif;
+  font-weight: 400;
+  letter-spacing: 0.01em;
+}
+
+/* Custom Sobo Card & Luxury Effects */
+.sobo-card {
+  background: #FFFFFF;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  box-shadow: 0 4px 20px -2px rgba(43, 37, 34, 0.04);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.sobo-card:hover {
+  border-color: var(--mocha);
+  box-shadow: 0 8px 30px -4px rgba(43, 37, 34, 0.08);
+  transform: translateY(-2px);
+}
+
+.sobo-card-sand {
+  background: var(--sand);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+}

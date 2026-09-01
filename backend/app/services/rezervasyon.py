@@ -139,4 +139,12 @@ async def rezerve_et(
         member_package_id=paket.id if paket is not None else None,
         booking_id=kayit.id,
     )
+    from app.services.bildirim import bildirim_gonder
+    await bildirim_gonder(
+        db,
+        member_id=member_id,
+        baslik="Rezervasyon Onayı 🎯",
+        mesaj=f"{tip.ad} dersine yeriniz ayrıldı ({oturum.baslangic:%d.%m %H:%M}).",
+        tip="REZERVE_ONAY",
+    )
     return kayit

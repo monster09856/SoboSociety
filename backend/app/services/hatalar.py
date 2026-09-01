@@ -6,6 +6,14 @@ class GecersizTelefon(SoboHata):
     pass
 
 
+class GecersizOTP(SoboHata):
+    pass
+
+
+class GecersizToken(SoboHata):
+    pass
+
+
 class YetersizKredi(SoboHata):
     pass
 

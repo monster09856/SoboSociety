@@ -14,9 +14,22 @@ if "test" not in TEST_URL.rsplit("/", 1)[-1]:
     )
 
 
+import asyncio
+import pytest
+
+@pytest.fixture(scope="session")
+def event_loop():
+    loop = asyncio.get_event_loop_policy().new_event_loop()
+    yield loop
+    loop.close()
+
+
+
+from sqlalchemy.pool import NullPool
+
 @pytest_asyncio.fixture(scope="session")
 async def motor():
-    m = create_async_engine(TEST_URL, pool_pre_ping=True)
+    m = create_async_engine(TEST_URL, poolclass=NullPool)
     async with m.begin() as baglanti:
         await baglanti.run_sync(Base.metadata.drop_all)
         await baglanti.run_sync(Base.metadata.create_all)

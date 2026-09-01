@@ -5,7 +5,7 @@ from sqlalchemy import (
     Boolean, CheckConstraint, Date, DateTime, ForeignKey,
     Integer, String, UniqueConstraint,
 )
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base, ZamanDamgali
 
@@ -94,6 +94,10 @@ class ClassSession(ZamanDamgali, Base):
     template_id: Mapped[int | None] = mapped_column(
         ForeignKey("schedule_templates.id"), default=None
     )
+
+    class_type: Mapped["ClassType"] = relationship("ClassType", lazy="selectin")
+    instructor: Mapped["Instructor"] = relationship("Instructor", lazy="selectin")
+    room: Mapped["Room"] = relationship("Room", lazy="selectin")
 
     __table_args__ = (
         # Aynı salonda aynı anda iki ders olamaz. Bu kısıt aynı zamanda

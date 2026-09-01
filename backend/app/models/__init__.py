@@ -1,4 +1,5 @@
 from app.models.base import Base, ZamanDamgali
+from app.models.bildirim import DeviceToken, Notification, NotificationCampaign
 from app.models.kredi import CreditLedger, LedgerTipi, MemberPackage, Package
 from app.models.program import (
     ClassSession, ClassType, Room, ScheduleTemplate, SessionDurumu,
@@ -12,4 +13,5 @@ __all__ = [
     "ClassType", "Room", "ScheduleTemplate", "ClassSession", "SessionDurumu",
     "Package", "MemberPackage", "CreditLedger", "LedgerTipi",
     "Booking", "BookingDurumu", "BookingKaynagi", "WaitlistEntry",
+    "Notification", "DeviceToken", "NotificationCampaign",
 ]

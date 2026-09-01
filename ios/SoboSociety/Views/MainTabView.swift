@@ -23,12 +23,18 @@ public struct MainTabView: View {
                 }
                 .tag(1)
 
+            AIChatView()
+                .tabItem {
+                    Label("Sobo AI", systemImage: "sparkles")
+                }
+                .tag(2)
+
             if authViewModel.isAdmin {
                 AdminTodayView()
                     .tabItem {
                         Label("Eğitmen Paneli", systemImage: "list.clipboard")
                     }
-                    .tag(2)
+                    .tag(3)
             }
         }
         .tint(SoboTheme.espresso)

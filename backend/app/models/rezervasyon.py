@@ -2,7 +2,7 @@ from datetime import datetime
 from enum import StrEnum
 
 from sqlalchemy import DateTime, ForeignKey, Index, Integer, String, text
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base, ZamanDamgali
 
@@ -33,6 +33,8 @@ class Booking(ZamanDamgali, Base):
         DateTime(timezone=True), default=None
     )
 
+    session: Mapped["ClassSession"] = relationship("ClassSession", lazy="selectin")
+
     __table_args__ = (
         # Kısmi unique index: bir üye aynı derse aynı anda yalnız BİR aktif
         # rezervasyon yapabilir. Tam unique olsaydı iptal edip yeniden
@@ -61,6 +63,8 @@ class WaitlistEntry(ZamanDamgali, Base):
         DateTime(timezone=True), default=None
     )
     kullanildi: Mapped[bool] = mapped_column(default=False)
+
+    session: Mapped["ClassSession"] = relationship("ClassSession", lazy="selectin")
 
     __table_args__ = (
         Index("uq_bekleme", "member_id", "session_id", unique=True),
