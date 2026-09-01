@@ -1,5 +1,6 @@
 import logging
 import random
+import time
 import httpx
 from app.settings import ayarlar
 
@@ -10,12 +11,12 @@ async def send_sms_otp(telefon: str, kod: str) -> bool:
     
     `ayarlar.sms_provider` değerine göre Netgsm, İletimerkezi veya Mock servis kullanır.
     """
-    mesaj = f"Sobo Society giriş doğrulama kodunuz: {kod}. Bu kodu kimseyle paylaşmayınız."
+    mesaj = f"Sobo Society giris kodunuz: {kod}"
     
-    # Telefon numarasını temizle (örn: +905316033080 -> 905316033080)
+    # Telefon numarasını temizle (905316033080)
     clean_tel = telefon.replace("+", "").replace(" ", "").replace("-", "")
     if clean_tel.startswith("0"):
-        clean_tel = "9" + clean_tel
+        clean_tel = "90" + clean_tel[1:]
     elif not clean_tel.startswith("90") and len(clean_tel) == 10:
         clean_tel = "90" + clean_tel
 
@@ -70,12 +71,10 @@ async def send_sms_otp(telefon: str, kod: str) -> bool:
                 resp = await client.post("https://api.iletimerkezi.com/v1/send-sms/json", json=payload)
                 logger.info(f"İletimerkezi SMS yanıtı ({clean_tel}): status={resp.status_code} body={resp.text}")
                 
-                # İletimerkezi 200 dönerse başarılıdır
                 if resp.status_code == 200 and '"code":200' in resp.text:
                     return True
                 
-                # API Key panellerinde henüz "API Kullanımına İzin Ver" açılmadıysa 401 döner
-                logger.warning(f"İletimerkezi SMS gönderilemedi: {resp.text}")
+                logger.warning(f"İletimerkezi SMS Uyarısı ({clean_tel}): {resp.text}")
                 return False
         except Exception as e:
             logger.error(f"İletimerkezi SMS gönderme hatası: {e}")
