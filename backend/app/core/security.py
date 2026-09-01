@@ -1,10 +1,11 @@
 from datetime import datetime, timedelta, timezone
-
+import asyncio
 import jwt
 
 from app.services.hatalar import GecersizOTP, GecersizToken
 from app.services.telefon import normalize_telefon
 from app.settings import ayarlar
+from app.services.sms import generate_otp_code, send_sms_otp
 
 _OTP_STORE: dict[str, str] = {}
 
@@ -46,13 +47,18 @@ def decode_access_token(token: str) -> dict:
         raise GecersizToken(f"Geçersiz veya süresi dolmuş token: {e}") from e
 
 
-from app.services.sms import generate_otp_code
-
 def send_otp(telefon: str) -> str:
     """Telefon numarasına OTP doğrulama kodu gönderir."""
     norm_tel = normalize_telefon(telefon)
     kod = generate_otp_code()
     _OTP_STORE[norm_tel] = kod
+
+    try:
+        loop = asyncio.get_running_loop()
+        loop.create_task(send_sms_otp(norm_tel, kod))
+    except RuntimeError:
+        pass
+
     return kod
 
 
