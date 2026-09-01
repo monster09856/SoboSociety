@@ -1,31 +1,35 @@
 workflows:
   ios-app-store:
     name: Sobo Society iOS App Store & TestFlight Build
-    instance_type: mac_mini_m1
     max_build_duration: 60
+    instance_type: mac_mini_m2
     environment:
-      ios_signing:
-        distribution_type: app_store
-        bundle_identifier: com.sobosociety.app
+      xcode: latest
+      groups:
+        - app_store_credentials
       vars:
-        XCODE_WORKSPACE: "SoboSociety.xcworkspace"
+        BUNDLE_ID: "com.sobosociety.app"
         XCODE_SCHEME: "SoboSociety"
     scripts:
-      - name: Initialize App & Dependencies
+      - name: Set up keychain + auto-signing via ASC API
         script: |
-          echo "Building Sobo Society iOS App..."
-      - name: Build Xcode Archive (.ipa)
+          keychain initialize
+          app-store-connect fetch-signing-files "$BUNDLE_ID" \
+            --type IOS_APP_STORE \
+            --create
+          keychain add-certificates
+          xcode-project use-profiles
+      - name: Build Xcode Archive & IPA
         script: |
-          xcodebuild -project SoboSociety.xcodeproj \
-            -scheme SoboSociety \
-            -sdk iphoneos \
-            -configuration Release \
-            -archivePath build/SoboSociety.xcarchive \
-            archive
+          xcode-project build-ipa \
+            --project SoboSociety.xcodeproj \
+            --scheme SoboSociety
     artifacts:
-      - build/*.ipa
-      - *.xcarchive
+      - build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
     publishing:
       app_store_connect:
-        auth: integration
+        api_key: $APP_STORE_CONNECT_PRIVATE_KEY
+        key_id: $APP_STORE_CONNECT_KEY_IDENTIFIER
+        issuer_id: $APP_STORE_CONNECT_ISSUER_ID
         submit_to_testflight: true
