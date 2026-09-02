@@ -313,6 +313,21 @@ export const adminApi = {
       method: 'POST',
       body: JSON.stringify(data),
     }),
+  getSessions: () => apiFetch<ClassSessionResponse[]>('/admin/sessions'),
+  createSession: (data: {
+    class_type_id: number
+    instructor_id: number
+    baslangic: string
+    kontenjan?: number
+  }) =>
+    apiFetch<ClassSessionResponse>('/admin/sessions', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  deleteSession: (sessionId: number) =>
+    apiFetch<{ silindi: boolean; session_id: number }>(`/admin/sessions/${sessionId}`, {
+      method: 'DELETE',
+    }),
   broadcastPush: (data: { baslik: string; mesaj: string; hedef_kitle?: string }) =>
     apiFetch<{ mesaj: string; gonderilen_sayisi: number }>('/admin/notifications/broadcast', {
       method: 'POST',

@@ -68,3 +68,12 @@ class SessionGenerateRequest(BaseModel):
 
 class SessionGenerateResponse(BaseModel):
     uretilen_oturum_sayisi: int
+
+
+class SessionCreateRequest(BaseModel):
+    class_type_id: int = Field(..., description="Ders tipi ID'si (1: Barre, 2: Pilates, 3: Yoga)")
+    instructor_id: int = Field(..., description="Eğitmen ID'si")
+    baslangic: datetime = Field(..., description="Ders başlangıç tarihi ve saati")
+    kontenjan: int = Field(default=5, ge=1, description="Ders kontenjan sınırı (varsayılan 5)")
+    room_id: int = Field(default=1, description="Salon ID'si")
+
