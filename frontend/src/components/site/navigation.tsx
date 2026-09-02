@@ -45,7 +45,7 @@ export function Navigation() {
                 SOBO SOCIETY
               </span>
               <span className="text-[9px] uppercase tracking-[0.35em] text-mocha font-light -mt-1">
-                Pilates & Barre Studio
+                WELLNESS STUDIO
               </span>
             </div>
           </Link>
