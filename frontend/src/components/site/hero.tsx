@@ -61,7 +61,7 @@ export function Hero() {
 
           {/* Subtitle */}
           <p className="text-secondary text-base sm:text-lg md:text-xl font-normal leading-relaxed max-w-2xl mx-auto">
-            <strong className="text-ink font-medium">Barre</strong>, <strong className="text-ink font-medium">Pilates</strong> ve <strong className="text-ink font-medium">Functional</strong> antrenman disiplinlerini dingin atmosfer, lüks butik detaylar ve tutkulu bir topluluk ruhuyla buluşturuyoruz.
+            <strong className="text-ink font-medium">Barre</strong>, <strong className="text-ink font-medium">Pilates</strong>, <strong className="text-ink font-medium">Yoga</strong> ve <strong className="text-ink font-medium">Functional Training</strong>’i; hareket, denge ve iyi yaşam odağında, SOBO’nun butik atmosferi ve topluluk ruhuyla buluşturuyoruz.
           </p>
 
           {/* Action CTA Buttons */}
