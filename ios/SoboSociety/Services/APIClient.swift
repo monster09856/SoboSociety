@@ -2,7 +2,7 @@ import Foundation
 
 public final class APIClient: Sendable {
     public static let shared = APIClient()
-    public var baseURL: String = "http://185.171.25.132/api/v1"
+    public var baseURL: String = "https://sobosociety.com/api/v1"
 
     private init() {}
 
