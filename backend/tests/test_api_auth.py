@@ -121,7 +121,7 @@ async def test_otp_verify_endpoint_gecersiz_kod(client: AsyncClient):
 
 async def test_auth_me_endpoint_basarili(client: AsyncClient, db):
     # Önce üye oluştur
-    uye = Member(telefon="+905316033080", ad="Ayşe Yılmaz")
+    uye = Member(telefon="+905329998877", ad="Ayşe Yılmaz")
     db.add(uye)
     await db.flush()
 
@@ -132,7 +132,7 @@ async def test_auth_me_endpoint_basarili(client: AsyncClient, db):
     assert response.status_code == 200
     data = response.json()
     assert data["id"] == uye.id
-    assert data["telefon"] == "+905316033080"
+    assert data["telefon"] == "+905329998877"
     assert data["ad"] == "Ayşe Yılmaz"
     assert data["is_admin"] is False
 

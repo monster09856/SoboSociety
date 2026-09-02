@@ -10,7 +10,7 @@ class Ayarlar(BaseSettings):
     secret_key: str = "sobo-secret-key-change-in-production-2026"
     algorithm: str = "HS256"
     access_token_expire_minutes: int = 60 * 24 * 7
-    admin_telefons: list[str] = ["+905555555555", "+905000000000"]
+    admin_telefons: list[str] = ["+905316033080", "+905555555555", "+905000000000"]
 
     # SMS Konfigürasyonu
     sms_provider: str = "mock"  # "mock" | "netgsm" | "iletimerkezi"
