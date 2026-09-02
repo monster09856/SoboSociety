@@ -107,7 +107,7 @@ export default function PrivacyPolicyPage() {
             <div className="p-4 bg-sand/40 border border-line rounded-xl space-y-2 text-xs">
               <strong className="block text-espresso text-sm font-bold">How to Request Account & Data Deletion:</strong>
               <p>
-                You can initiate account deletion within the mobile app via <strong>Account ➔ Delete Account</strong> or by sending an email to <a href="mailto:info@thesobosociety.com" className="underline text-espresso font-bold">info@thesobosociety.com</a> with your registered phone number. Your account and personal records will be permanently erased within 48 hours.
+                You can initiate account deletion within the mobile app via <strong>Account ➔ Delete Account</strong> or by sending an email to <a href="mailto:sobosociety@gmail.com" className="underline text-espresso font-bold">sobosociety@gmail.com</a> with your registered phone number. Your account and personal records will be permanently erased within 48 hours.
               </p>
             </div>
           </section>
@@ -120,8 +120,8 @@ export default function PrivacyPolicyPage() {
                 <Mail className="w-5 h-5 text-espresso shrink-0" />
                 <div>
                   <span className="block text-secondary text-[10px] uppercase font-bold">Email Address</span>
-                  <a href="mailto:info@thesobosociety.com" className="text-ink hover:text-espresso font-bold">
-                    info@thesobosociety.com
+                  <a href="mailto:sobosociety@gmail.com" className="text-ink hover:text-espresso font-bold">
+                    sobosociety@gmail.com
                   </a>
                 </div>
               </div>

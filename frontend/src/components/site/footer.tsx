@@ -61,7 +61,7 @@ export function Footer() {
             <div className="space-y-3 text-xs text-secondary">
               <div className="flex items-start gap-2.5">
                 <MapPin className="w-4 h-4 text-mocha shrink-0 mt-0.5" />
-                <span>Teşvikiye, Abdi İpekçi Cd. No:42, Nişantaşı / İstanbul</span>
+                <span>Cumhuriyet Mah. 16. Sk. No:3 D:13 Metropol Plaza 1. Kat (İstek Koleji Arkası, Uydukent) Afyonkarahisar</span>
               </div>
               <div className="flex items-center gap-2.5">
                 <Phone className="w-4 h-4 text-mocha shrink-0" />
@@ -69,7 +69,7 @@ export function Footer() {
               </div>
               <div className="flex items-center gap-2.5">
                 <Mail className="w-4 h-4 text-mocha shrink-0" />
-                <span>hello@thesobosociety.com</span>
+                <a href="mailto:sobosociety@gmail.com" className="hover:text-espresso transition-colors">sobosociety@gmail.com</a>
               </div>
             </div>
           </div>

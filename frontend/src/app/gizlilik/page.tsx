@@ -129,7 +129,7 @@ export default function GizlilikPolitikasiPage() {
             <div className="p-4 bg-sand/40 border border-line rounded-xl space-y-2 text-xs">
               <strong className="block text-espresso text-sm font-bold">Hesabınızı ve Verilerinizi Nasıl Silebilirsiniz?</strong>
               <p>
-                Uygulama içerisindeki <strong>Hesabım ➔ Hesabı Sil</strong> seçeneğini kullanarak veya stüdyomuza <a href="mailto:info@thesobosociety.com" className="underline text-espresso font-bold">info@thesobosociety.com</a> adresinden kayıtlı telefon numaranızla talep göndererek hesabınızın ve geçmiş verilerinizin 48 saat içerisinde sistemlerimizden kalıcı olarak silinmesini sağlayabilirsiniz.
+                Uygulama içerisindeki <strong>Hesabım ➔ Hesabı Sil</strong> seçeneğini kullanarak veya stüdyomuza <a href="mailto:sobosociety@gmail.com" className="underline text-espresso font-bold">sobosociety@gmail.com</a> adresinden kayıtlı telefon numaranızla talep göndererek hesabınızın ve geçmiş verilerinizin 48 saat içerisinde sistemlerimizden kalıcı olarak silinmesini sağlayabilirsiniz.
               </p>
             </div>
           </section>
@@ -157,8 +157,8 @@ export default function GizlilikPolitikasiPage() {
                 <Mail className="w-5 h-5 text-espresso shrink-0" />
                 <div>
                   <span className="block text-secondary text-[10px] uppercase font-bold">E-Posta Adresi</span>
-                  <a href="mailto:info@thesobosociety.com" className="text-ink hover:text-espresso font-bold">
-                    info@thesobosociety.com
+                  <a href="mailto:sobosociety@gmail.com" className="text-ink hover:text-espresso font-bold">
+                    sobosociety@gmail.com
                   </a>
                 </div>
               </div>
