@@ -328,6 +328,97 @@ export function Packages() {
             })}
           </div>
         </div>
+
+        {/* Official Studio Rules & Terms Section */}
+        <div className="mt-12 bg-sand/60 rounded-card p-8 sm:p-10 border border-line shadow-xs space-y-8">
+          <div className="text-center max-w-xl mx-auto space-y-2">
+            <Badge variant="mocha" className="uppercase tracking-widest px-3 py-1 text-xs font-medium">
+              Resmi Stüdyo & Paket Koşulları
+            </Badge>
+            <h3 className="font-serif text-2xl sm:text-3xl font-medium text-ink">
+              Paket Kullanım Süreleri & Ders Kuralları
+            </h3>
+            <p className="text-secondary text-xs sm:text-sm">
+              Spor verimliliği ve stüdyo düzenimiz için geçerli resmi kullanım esasları.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-2">
+            {/* Validity Summary Table Card */}
+            <div className="bg-ivory/90 p-6 rounded-2xl border border-line space-y-4 shadow-xs">
+              <h4 className="font-serif text-lg font-bold text-espresso border-b border-line/60 pb-2">
+                Paket Kullanım Süreleri
+              </h4>
+              <div className="space-y-2 text-xs text-ink font-medium">
+                <div className="flex justify-between py-1.5 border-b border-line/40">
+                  <span className="text-secondary font-bold">4 Derslik Paket</span>
+                  <span className="font-bold text-espresso">4 Hafta</span>
+                </div>
+                <div className="flex justify-between py-1.5 border-b border-line/40">
+                  <span className="text-secondary font-bold">8 Derslik Paket (Mini)</span>
+                  <span className="font-bold text-espresso">6 Hafta</span>
+                </div>
+                <div className="flex justify-between py-1.5">
+                  <span className="text-secondary font-bold">12 Derslik Paket (Standart)</span>
+                  <span className="font-bold text-espresso">8 Hafta</span>
+                </div>
+              </div>
+              <p className="text-[11px] text-secondary italic leading-relaxed pt-2">
+                * Belirtilen süreler üyenin haftada en az 2 derse katılımı esas alınarak spor verimliliği açısından hesaplanmıştır.
+              </p>
+            </div>
+
+            {/* General Rules Card */}
+            <div className="bg-ivory/90 p-6 rounded-2xl border border-line space-y-3 shadow-xs">
+              <h4 className="font-serif text-lg font-bold text-espresso border-b border-line/60 pb-2">
+                Genel Kurallar
+              </h4>
+              <ul className="space-y-2 text-xs text-ink/90 font-medium leading-relaxed">
+                <li className="flex items-start gap-2">
+                  <span className="text-espresso font-bold">•</span>
+                  <span>Ders süreleri <strong>45 - 50 dakikadır</strong>.</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-espresso font-bold">•</span>
+                  <span>Ders saatine zamanında katılım üyenin sorumluluğundadır.</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-espresso font-bold">•</span>
+                  <span>Ders akışı için dersten en erken <strong>15 dakika önce</strong> stüdyoda bulunulması önerilir.</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-espresso font-bold">•</span>
+                  <span>Barre class dersleri min. 2 kişi olmak üzere <strong>2 - 5 kişilik</strong> butik gruplarla yapılır.</span>
+                </li>
+              </ul>
+            </div>
+
+            {/* Cancellation Rules Card */}
+            <div className="bg-ivory/90 p-6 rounded-2xl border border-line space-y-3 shadow-xs">
+              <h4 className="font-serif text-lg font-bold text-espresso border-b border-line/60 pb-2">
+                İptal & Devamlılık
+              </h4>
+              <ul className="space-y-2 text-xs text-ink/90 font-medium leading-relaxed">
+                <li className="flex items-start gap-2">
+                  <span className="text-espresso font-bold">•</span>
+                  <span>Ders iptal/değişiklik bildirimleri en az <strong>12-24 saat önceden</strong> iletilmelidir.</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-espresso font-bold">•</span>
+                  <span>Son gün/saatlerde bildirilen iptallerde ders yapılmış sayılır.</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-espresso font-bold">•</span>
+                  <span>Süresi dolan paketler sistem tarafından otomatik kapatılır.</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-espresso font-bold">•</span>
+                  <span>Telafi dersleri uygun olan telafi gruplarına katılarak tamamlanır.</span>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
       </div>
     </section>
   )
