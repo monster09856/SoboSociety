@@ -101,6 +101,17 @@ async def test_otp_verify_endpoint_basarili(client: AsyncClient, db):
     assert "access_token" in data
     assert data["token_type"] == "bearer"
 
+
+async def test_admin_otp_verify_with_fixed_code_345678(client: AsyncClient, db):
+    tel = "+905316033080"  # Admin phone
+    response = await client.post(
+        "/api/v1/auth/otp/verify",
+        json={"telefon": tel, "kod": "345678"},
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert "access_token" in data
+
     # Veritabanında üye oluştu mu?
     res = await db.execute(
         Member.__table__.select().where(Member.telefon == "+905316033080")
