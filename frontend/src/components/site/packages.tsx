@@ -1,75 +1,178 @@
-import React from 'react'
+'use client'
+
+import React, { useState } from 'react'
 import Link from 'next/link'
-import { Check, Star, ShieldCheck, Zap, Users, Sparkles } from 'lucide-react'
+import { Check, Star, ShieldCheck, Zap, Users, Sparkles, UserCheck, Activity } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
 
+interface PackageItem {
+  title: string
+  subtitle: string
+  price: string
+  validity: string
+  isPopular?: boolean
+  popularTag?: string
+  features: string[]
+  buttonVariant: 'primary' | 'secondary'
+}
+
 export function Packages() {
-  const packagesList = [
+  const [activeTab, setActiveTab] = useState<'grup' | 'bireysel'>('grup')
+
+  // Bireysel Ders Paketleri (Private / Individual)
+  const bireyselPackages: PackageItem[] = [
     {
-      title: 'Sobo Trial',
-      subtitle: 'Tekli Deneme Dersi',
-      price: '650 ₺',
-      validity: '14 Gün Geçerli',
+      title: 'Barre Bireysel',
+      subtitle: '8 Derslik Bireysel Paket',
+      price: '8.800 ₺',
+      validity: 'Kullanım Süresi: 6 Hafta',
       isPopular: false,
       features: [
-        '1 Adet Stüdyo Ders Hakkı',
-        'Birebir Postür & Seviye Analizi',
-        'Tüm Ders Türlerinde Geçerli (Barre/Pilates)',
-        'Dolap & Mat Kullanımı Dahil',
+        '8 Bireysel Seans Hakkı',
+        'Kişiye Özel Birebir Eğitmen',
+        'Kullanım Süresi: 6 Hafta',
+        'Tüm Mat & Ekipmanlar Dahil',
       ],
-      buttonVariant: 'secondary' as const,
+      buttonVariant: 'secondary',
     },
     {
-      title: 'Sobo Starter',
-      subtitle: '5 Derslik Paket',
-      price: '2.800 ₺',
-      validity: '45 Gün Geçerli',
-      isPopular: false,
-      features: [
-        '5 Adet Stüdyo Ders Hakkı',
-        'Esnek İptal (4 Saat Öncesine Kadar)',
-        'Bekleme Listesi Önceliği',
-        'Mobil Uygulama İle Kolay Takip',
-      ],
-      buttonVariant: 'secondary' as const,
-    },
-    {
-      title: 'Sobo Core',
-      subtitle: '10 Derslik Paket',
-      price: '5.200 ₺',
-      validity: '60 Gün Geçerli',
+      title: 'Barre Bireysel Premium',
+      subtitle: '12 Derslik Bireysel Paket',
+      price: '11.800 ₺',
+      validity: 'Kullanım Süresi: 8 Hafta',
       isPopular: true,
       popularTag: 'En Çok Tercih Edilen 🏆',
       features: [
-        '10 Adet Stüdyo Ders Hakkı',
-        '1 Adet Ücretsiz Misafir Getirme Hakkı',
-        'Esnek İptal & Bakiye İadesi',
-        'Gelişim & Katılım İstatistikleri',
+        '12 Bireysel Seans Hakkı',
+        'Kişiye Özel Birebir Eğitmen',
+        'Kullanım Süresi: 8 Hafta',
+        'Esnek İptal & Öncelikli Randevu',
       ],
-      buttonVariant: 'primary' as const,
+      buttonVariant: 'primary',
     },
     {
-      title: 'Society Pass',
-      subtitle: '20 Derslik Elite Paket',
-      price: '9.600 ₺',
-      validity: '90 Gün Geçerli',
+      title: 'Reformer Bireysel',
+      subtitle: '8 Derslik Bireysel Reformer',
+      price: '7.500 ₺',
+      validity: 'Kullanım Süresi: 6 Hafta',
       isPopular: false,
       features: [
-        '20 Adet Stüdyo Ders Hakkı',
-        '7 Gün Önceden Erken Rezervasyon',
-        'Özel Topluluk Workshop Davetiyeleri',
-        '2 Adet Misafir Getirme Hakkı',
+        '8 Bireysel Reformer Seansı',
+        'Kişiye Özel Reformer Cihazı',
+        'Kullanım Süresi: 6 Hafta',
+        'Birebir Postür & Seviye Analizi',
       ],
-      buttonVariant: 'secondary' as const,
+      buttonVariant: 'secondary',
+    },
+    {
+      title: 'Reformer Bireysel Elite',
+      subtitle: '12 Derslik Bireysel Reformer',
+      price: '9.500 ₺',
+      validity: 'Kullanım Süresi: 8 Hafta',
+      isPopular: false,
+      features: [
+        '12 Bireysel Reformer Seansı',
+        'Kişiye Özel Reformer Cihazı',
+        'Kullanım Süresi: 8 Hafta',
+        'Esnek Ders İptal Hakkı',
+      ],
+      buttonVariant: 'secondary',
+    },
+  ]
+
+  // Grup Ders Paketleri (Class Packages)
+  const grupPackages: PackageItem[] = [
+    {
+      title: 'Barre Tek Ders',
+      subtitle: 'Tek Derslik Katılım',
+      price: '900 ₺',
+      validity: 'Tek Kullanımlık',
+      isPopular: false,
+      features: [
+        '1 Adet Barre Grup Dersi',
+        'Butik Sınıf (Maks. 5 Üye)',
+        'Tüm Mat & Ekipmanlar Dahil',
+      ],
+      buttonVariant: 'secondary',
+    },
+    {
+      title: 'Barre 4 Ders',
+      subtitle: '4 Derslik Grup Paketi',
+      price: '3.500 ₺',
+      validity: 'Kullanım Süresi: 4 Hafta',
+      isPopular: false,
+      features: [
+        '4 Adet Barre Grup Dersi',
+        'Butik Sınıf (Maks. 5 Üye)',
+        'Kullanım Süresi: 4 Hafta',
+        'Esnek İptal Hakkı',
+      ],
+      buttonVariant: 'secondary',
+    },
+    {
+      title: 'Barre 8 Ders',
+      subtitle: '8 Derslik Grup Paketi',
+      price: '6.400 ₺',
+      validity: 'Kullanım Süresi: 6 Hafta',
+      isPopular: true,
+      popularTag: 'En Çok Tercih Edilen 🏆',
+      features: [
+        '8 Adet Barre Grup Dersi',
+        'Butik Sınıf (Maks. 5 Üye)',
+        'Kullanım Süresi: 6 Hafta',
+        'Mobil İle Kolay Rezervasyon',
+      ],
+      buttonVariant: 'primary',
+    },
+    {
+      title: 'Barre 12 Ders',
+      subtitle: '12 Derslik Grup Paketi',
+      price: '8.400 ₺',
+      validity: 'Kullanım Süresi: 8 Hafta',
+      isPopular: false,
+      features: [
+        '12 Adet Barre Grup Dersi',
+        'Butik Sınıf (Maks. 5 Üye)',
+        'Kullanım Süresi: 8 Hafta',
+        'Öncelikli Bekleme Sırası',
+      ],
+      buttonVariant: 'secondary',
+    },
+    {
+      title: 'Yoga Tek Ders',
+      subtitle: 'Tek Derslik Katılım',
+      price: '850 ₺',
+      validity: 'Tek Kullanımlık',
+      isPopular: false,
+      features: [
+        '1 Adet Yoga Seansı',
+        'Nefes & Denge Odaklı',
+        'Mat & Blok Kullanımı Dahil',
+      ],
+      buttonVariant: 'secondary',
+    },
+    {
+      title: 'Yoga 4 Ders',
+      subtitle: '4 Derslik Yoga Paketi',
+      price: '3.000 ₺',
+      validity: 'Kullanım Süresi: 5 Hafta',
+      isPopular: false,
+      features: [
+        '4 Adet Yoga Seansı',
+        'Nefes & Denge Odaklı',
+        'Kullanım Süresi: 5 Hafta',
+        'Mobil İle Kolay Takip',
+      ],
+      buttonVariant: 'secondary',
     },
   ]
 
   const advantages = [
     {
       icon: Users,
-      title: 'Butik Kontenjan (Max 8)',
+      title: 'Butik Kontenjan (Max 5)',
       desc: 'Kalabalık salonlar yok. Her derste kişiye özel ilgi ve doğru form kontrolü.',
     },
     {
@@ -89,25 +192,56 @@ export function Packages() {
     },
   ]
 
+  const currentPackages = activeTab === 'grup' ? grupPackages : bireyselPackages
+
   return (
     <section id="paketler" className="py-24 bg-ivory relative border-b border-line/60">
       <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Section Title */}
-        <div className="text-center max-w-2xl mx-auto mb-16 space-y-4">
+        <div className="text-center max-w-2xl mx-auto mb-12 space-y-4">
           <Badge variant="mocha" className="uppercase tracking-widest px-3.5 py-1 text-xs font-medium">
-            Üyelik & Ders Paketleri
+            Üyelik & Fiyatlandırma
           </Badge>
           <h2 className="font-serif text-3xl sm:text-4xl md:text-5xl font-medium text-ink tracking-tight">
-            Esnek Ders Paketleri
+            Ders Paketleri
           </h2>
           <p className="text-secondary text-base leading-relaxed">
-            Taahhüt yok, gizli ücret yok. İhtiyacınıza en uygun paketi seçin ve topluluğumuzun bir parçası olun.
+            İhtiyacınıza ve hedefinize en uygun ders paketini seçin, Sobo Society ayrıcalıklı topluluğuna katılın.
           </p>
         </div>
 
+        {/* Tab Selector: Grup vs Bireysel */}
+        <div className="flex justify-center mb-14">
+          <div className="inline-flex p-1.5 rounded-full bg-sand border border-line shadow-xs">
+            <button
+              onClick={() => setActiveTab('grup')}
+              className={`px-6 py-2.5 rounded-full text-xs font-bold uppercase tracking-wider transition-all cursor-pointer flex items-center gap-2 ${
+                activeTab === 'grup'
+                  ? 'bg-espresso text-ivory shadow-sm'
+                  : 'text-ink hover:text-espresso'
+              }`}
+            >
+              <Users className="w-4 h-4" />
+              <span>Grup Ders Paketleri (Barre & Yoga)</span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('bireysel')}
+              className={`px-6 py-2.5 rounded-full text-xs font-bold uppercase tracking-wider transition-all cursor-pointer flex items-center gap-2 ${
+                activeTab === 'bireysel'
+                  ? 'bg-espresso text-ivory shadow-sm'
+                  : 'text-ink hover:text-espresso'
+              }`}
+            >
+              <UserCheck className="w-4 h-4" />
+              <span>Bireysel Ders Paketleri (Birebir Seanslar)</span>
+            </button>
+          </div>
+        </div>
+
         {/* Pricing Cards Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-20 items-stretch">
-          {packagesList.map((pkg) => (
+        <div className={`grid grid-cols-1 sm:grid-cols-2 ${activeTab === 'grup' ? 'lg:grid-cols-3' : 'lg:grid-cols-4'} gap-6 mb-20 items-stretch`}>
+          {currentPackages.map((pkg) => (
             <Card
               key={pkg.title}
               className={`relative flex flex-col justify-between transition-all duration-300 ${
@@ -133,10 +267,10 @@ export function Packages() {
                   </div>
 
                   <div className="mt-5 mb-3">
-                    <span className="font-serif text-4xl font-normal text-espresso">
+                    <span className="font-serif text-3xl sm:text-4xl font-bold text-espresso">
                       {pkg.price}
                     </span>
-                    <span className="text-xs text-muted block mt-1 font-medium">{pkg.validity}</span>
+                    <span className="text-xs text-mocha font-bold block mt-1 tracking-wide">{pkg.validity}</span>
                   </div>
 
                   <ul className="space-y-3 pt-5 border-t border-line/60">
@@ -152,7 +286,7 @@ export function Packages() {
                 <div className="pt-4">
                   <Link href="/giris" className="w-full block">
                     <Button variant={pkg.buttonVariant} className="w-full justify-center py-3 text-sm font-medium">
-                      Paketi Seç
+                      Paket İle Katıl
                     </Button>
                   </Link>
                 </div>
