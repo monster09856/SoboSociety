@@ -1,6 +1,6 @@
 import React from 'react'
 import Link from 'next/link'
-import { ArrowRight, Sparkles, HeartHandshake, Flame } from 'lucide-react'
+import { ArrowRight, Sparkles, HeartHandshake, Flame, Sun } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 
@@ -23,10 +23,10 @@ export function Hero() {
       iconBg: 'bg-sage/10 text-sage border-sage/20',
     },
     {
-      title: 'Functional',
-      desc: 'Fonksiyonel kas dayanıklılığı, kalori yakımı ve vücut farkındalığını doruk noktasına çıkaran dinamik butik dersler.',
-      icon: Flame,
-      tag: 'Kondisyon & Enerji',
+      title: 'Yoga',
+      desc: 'Nefes ve hareketi bir araya getirerek esneklik, denge ve gücü geliştiren; bedeni ve zihni bütünsel olarak destekleyen seanslar.',
+      icon: Sun,
+      tag: 'Nefes & Denge',
       badgeVariant: 'clay' as const,
       iconBg: 'bg-clay/10 text-clay border-clay/20',
     },
