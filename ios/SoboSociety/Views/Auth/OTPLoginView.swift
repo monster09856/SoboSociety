@@ -19,7 +19,7 @@ public struct OTPLoginView: View {
                         .tracking(8)
                         .foregroundColor(SoboTheme.ink)
 
-                    Text("P I L A T E S  &  B A R R E")
+                    Text("W E L L N E S S  S T U D I O")
                         .font(.system(size: 11, weight: .light))
                         .tracking(4)
                         .foregroundColor(SoboTheme.mocha)

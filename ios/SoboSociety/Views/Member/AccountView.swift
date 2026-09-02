@@ -38,23 +38,40 @@ public struct AccountView: View {
                                     .foregroundColor(SoboTheme.secondary)
                             }
 
-                            // Credit Badge
-                            HStack(spacing: 6) {
-                                Image(systemName: "sparkles")
-                                    .font(.system(size: 12))
-                                    .foregroundColor(SoboTheme.espresso)
-                                Text("Kalan Ders Kredisi: \(summary?.bakiye ?? 0)")
-                                    .font(.system(size: 13, weight: .semibold))
-                                    .foregroundColor(SoboTheme.espresso)
+                            // Credit Badge & Admin Badge
+                            HStack(spacing: 12) {
+                                HStack(spacing: 6) {
+                                    Image(systemName: "sparkles")
+                                        .font(.system(size: 12))
+                                        .foregroundColor(SoboTheme.espresso)
+                                    Text("Kalan Ders Kredisi: \(summary?.bakiye ?? 0)")
+                                        .font(.system(size: 13, weight: .semibold))
+                                        .foregroundColor(SoboTheme.espresso)
+                                }
+                                .padding(.horizontal, 16)
+                                .padding(.vertical, 8)
+                                .background(SoboTheme.sand.opacity(0.6))
+                                .cornerRadius(20)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 20)
+                                        .stroke(SoboTheme.line, lineWidth: 1)
+                                )
+
+                                if authViewModel.isAdmin {
+                                    HStack(spacing: 4) {
+                                        Image(systemName: "shield.checkmark.fill")
+                                            .font(.system(size: 11))
+                                            .foregroundColor(.white)
+                                        Text("Admin / Yönetici")
+                                            .font(.system(size: 11, weight: .bold))
+                                            .foregroundColor(.white)
+                                    }
+                                    .padding(.horizontal, 12)
+                                    .padding(.vertical, 8)
+                                    .background(SoboTheme.espresso)
+                                    .cornerRadius(20)
+                                }
                             }
-                            .padding(.horizontal, 16)
-                            .padding(.vertical, 8)
-                            .background(SoboTheme.sand.opacity(0.6))
-                            .cornerRadius(20)
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 20)
-                                    .stroke(SoboTheme.line, lineWidth: 1)
-                            )
                         }
                         .frame(maxWidth: .infinity)
                         .padding(24)
@@ -63,6 +80,36 @@ public struct AccountView: View {
                         .shadow(color: Color.black.opacity(0.02), radius: 8, x: 0, y: 2)
                         .overlay(
                             RoundedRectangle(cornerRadius: 20)
+                                .stroke(SoboTheme.line, lineWidth: 1)
+                        )
+
+                        // Stüdyo & Paket Kullanım Kuralları Card
+                        VStack(alignment: .leading, spacing: 12) {
+                            HStack {
+                                Image(systemName: "doc.text.fill")
+                                    .foregroundColor(SoboTheme.mocha)
+                                Text("PAKET KULLANIM & DERS KURALLARI")
+                                    .font(.system(size: 12, weight: .bold))
+                                    .tracking(1.2)
+                                    .foregroundColor(SoboTheme.secondary)
+                            }
+
+                            VStack(alignment: .leading, spacing: 8) {
+                                Text("• Sınıf Kontenjanı: Maksimum 5 Üye")
+                                Text("• İptal Kuralı: Derse en az 12 saat kala iptal edilebilir")
+                                Text("• Paket Süreleri: 4 Ders (4 Hafta), 8 Ders (6 Hafta), 12 Ders (8 Hafta)")
+                                Text("• Ders Süresi: 45 - 50 Dakika")
+                            }
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundColor(SoboTheme.ink)
+                            .lineSpacing(4)
+                        }
+                        .padding(16)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(SoboTheme.sand.opacity(0.4))
+                        .cornerRadius(16)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 16)
                                 .stroke(SoboTheme.line, lineWidth: 1)
                         )
 
