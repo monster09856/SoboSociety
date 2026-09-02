@@ -381,3 +381,164 @@ async def delete_notification_campaign(
         await db.commit()
     return {"mesaj": "Kampanya silindi"}
 
+
+# --- Admin Member Management & Credit Intervention Endpoints ---
+
+from app.models import StudioEvent, CreditLedger, LedgerTipi
+from app.services.kredi import bakiye, hareket_ekle
+from app.schemas.admin import (
+    MemberUpdateRequest, MemberAdminDetailResponse, MemberSinglePushRequest,
+    EventCreateRequest, EventResponse,
+)
+
+@router.get("/members", response_model=list[MemberAdminDetailResponse])
+async def list_admin_members(
+    search: str | None = None,
+    db: AsyncSession = Depends(get_db),
+    current_admin: Member = Depends(get_current_admin),
+):
+    """Admin için stüdyodaki tüm üyeleri, bakiyelerini ve durumlarını listeler."""
+    stmt = select(Member).order_by(Member.id.desc())
+    if search:
+        stmt = stmt.where(
+            (Member.ad.ilike(f"%{search}%")) | (Member.telefon.ilike(f"%{search}%"))
+        )
+    res = await db.execute(stmt)
+    members = res.scalars().all()
+
+    response = []
+    for m in members:
+        current_bakiye = await bakiye(db, m.id)
+        is_adm = m.telefon in ayarlar.admin_telefons
+        response.append(
+            MemberAdminDetailResponse(
+                id=m.id,
+                ad=m.ad,
+                telefon=m.telefon,
+                bakiye=current_bakiye,
+                aktif=m.aktif,
+                is_admin=is_adm,
+            )
+        )
+    return response
+
+
+@router.put("/members/{member_id}", response_model=MemberAdminDetailResponse)
+async def update_admin_member(
+    member_id: int,
+    body: MemberUpdateRequest,
+    db: AsyncSession = Depends(get_db),
+    current_admin: Member = Depends(get_current_admin),
+):
+    """Admin üye bilgilerini düzenler, durumunu değiştirir veya elle bakiye müdahalesi yapar."""
+    m = await db.get(Member, member_id)
+    if not m:
+        raise HTTPException(status_code=404, detail="Üye bulunamadı.")
+
+    if body.ad is not None:
+        m.ad = body.ad
+    if body.telefon is not None:
+        m.telefon = normalize_telefon(body.telefon)
+    if body.aktif is not None:
+        m.aktif = body.aktif
+
+    if body.bakiye_override is not None:
+        current_bakiye = await bakiye(db, member_id)
+        fark = body.bakiye_override - current_bakiye
+        if fark != 0:
+            await hareket_ekle(
+                db,
+                member_id=member_id,
+                tip=LedgerTipi.ADMIN_ADJUST,
+                miktar=fark,
+                sebep="Yönetici tarafından doğrudan bakiye müdahalesi",
+            )
+
+    await db.commit()
+    await db.refresh(m)
+
+    new_bakiye = await bakiye(db, m.id)
+    is_adm = m.telefon in ayarlar.admin_telefons
+    return MemberAdminDetailResponse(
+        id=m.id,
+        ad=m.ad,
+        telefon=m.telefon,
+        bakiye=new_bakiye,
+        aktif=m.aktif,
+        is_admin=is_adm,
+    )
+
+
+@router.post("/members/{member_id}/send-notification")
+async def send_single_member_notification(
+    member_id: int,
+    body: MemberSinglePushRequest,
+    db: AsyncSession = Depends(get_db),
+    current_admin: Member = Depends(get_current_admin),
+):
+    """Spesifik tek bir üyeye özel push bildirimi / duyuru gönderir."""
+    m = await db.get(Member, member_id)
+    if not m:
+        raise HTTPException(status_code=404, detail="Üye bulunamadı.")
+
+    await bildirim_gonder(
+        db,
+        member_id=m.id,
+        baslik=body.baslik,
+        mesaj=body.mesaj,
+        tip="KISIYE_OZEL",
+    )
+    await db.commit()
+    return {"mesaj": f"{m.ad} üyesine özel bildirim gönderildi.", "member_id": m.id}
+
+
+# --- Admin Events & Workshops Endpoints ---
+
+@router.get("/events", response_model=list[EventResponse])
+async def list_admin_events(
+    db: AsyncSession = Depends(get_db),
+    current_admin: Member = Depends(get_current_admin),
+):
+    """Admin paneli için tüm stüdyo etkinliklerini ve workshop'ları listeler."""
+    res = await db.execute(select(StudioEvent).order_by(StudioEvent.tarih_saat.desc()))
+    return list(res.scalars().all())
+
+
+@router.post("/events", response_model=EventResponse)
+async def create_admin_event(
+    body: EventCreateRequest,
+    db: AsyncSession = Depends(get_db),
+    current_admin: Member = Depends(get_current_admin),
+):
+    """Yeni bir Workshop veya Etkinlik ekler."""
+    ev = StudioEvent(
+        baslik=body.baslik,
+        turu=body.turu,
+        tarih_saat=body.tarih_saat,
+        aciklama=body.aciklama,
+        kontenjan=body.kontenjan,
+        ucret=body.ucret,
+        aktif=True,
+    )
+    db.add(ev)
+    await db.commit()
+    await db.refresh(ev)
+    return ev
+
+
+@router.delete("/events/{event_id}")
+async def delete_admin_event(
+    event_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_admin: Member = Depends(get_current_admin),
+):
+    """Etkinliği / Workshop'u siler."""
+    ev = await db.get(StudioEvent, event_id)
+    if not ev:
+        raise HTTPException(status_code=404, detail="Etkinlik bulunamadı.")
+    
+    await db.delete(ev)
+    await db.commit()
+    return {"silindi": True, "event_id": event_id}
+
+

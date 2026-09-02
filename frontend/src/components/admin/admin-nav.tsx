@@ -4,7 +4,7 @@ import React from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { buyukHarf } from '@/lib/utils'
-import { Calendar, Users, Zap, Bell } from 'lucide-react'
+import { Calendar, Users, Zap, Bell, Sparkles } from 'lucide-react'
 
 export function AdminNav() {
   const pathname = usePathname()
@@ -12,22 +12,27 @@ export function AdminNav() {
   const navItems = [
     {
       href: '/admin/today',
-      label: '5 Saniyelik Panel',
+      label: '5 Saniyelik Yoklama',
       icon: Zap,
     },
     {
       href: '/admin/members',
-      label: 'Üye & Paket Yönetimi',
+      label: 'Üye & Bakiye',
       icon: Users,
     },
     {
       href: '/admin/schedule',
-      label: 'Ders Türetme & Şablon',
+      label: 'Ders Programı',
       icon: Calendar,
     },
     {
+      href: '/admin/events',
+      label: 'Workshop & Etkinlik',
+      icon: Sparkles,
+    },
+    {
       href: '/admin/notifications',
-      label: 'Push & Bildirimler',
+      label: 'Bildirimler',
       icon: Bell,
     },
   ]

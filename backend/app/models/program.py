@@ -107,3 +107,19 @@ class ClassSession(ZamanDamgali, Base):
             "dolu_sayi >= 0 AND dolu_sayi <= kontenjan", name="ck_session_dolu_sayi"
         ),
     )
+
+
+class StudioEvent(ZamanDamgali, Base):
+    """Stüdyo içi özel Etkinlik & Workshop kayıtları (Kahve Buluşmaları, Atölyeler)."""
+
+    __tablename__ = "studio_events"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    baslik: Mapped[str] = mapped_column(String(120))
+    turu: Mapped[str] = mapped_column(String(40), default="WORKSHOP")  # WORKSHOP | ETKINLIK | KAHVE
+    tarih_saat: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    aciklama: Mapped[str] = mapped_column(String(500), default="")
+    kontenjan: Mapped[int] = mapped_column(Integer, default=15)
+    ucret: Mapped[str] = mapped_column(String(40), default="Ücretsiz / Üyelere Özel")
+    aktif: Mapped[bool] = mapped_column(Boolean, default=True)
+

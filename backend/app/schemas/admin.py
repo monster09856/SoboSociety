@@ -77,3 +77,50 @@ class SessionCreateRequest(BaseModel):
     kontenjan: int = Field(default=5, ge=1, description="Ders kontenjan sınırı (varsayılan 5)")
     room_id: int = Field(default=1, description="Salon ID'si")
 
+
+class MemberUpdateRequest(BaseModel):
+    ad: str | None = None
+    telefon: str | None = None
+    aktif: bool | None = None
+    bakiye_override: int | None = Field(default=None, description="Elle kural dışı bakiye tanımlama / düzeltme")
+
+
+class MemberAdminDetailResponse(BaseModel):
+    id: int
+    ad: str
+    telefon: str
+    bakiye: int
+    aktif: bool
+    is_admin: bool
+    toplam_rezervasyon: int = 0
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class MemberSinglePushRequest(BaseModel):
+    baslik: str
+    mesaj: str
+
+
+class EventCreateRequest(BaseModel):
+    baslik: str
+    turu: str = "WORKSHOP"  # WORKSHOP | ETKINLIK | KAHVE
+    tarih_saat: datetime
+    aciklama: str = ""
+    kontenjan: int = 15
+    ucret: str = "Ücretsiz / Üyelere Özel"
+
+
+class EventResponse(BaseModel):
+    id: int
+    baslik: str
+    turu: str
+    tarih_saat: datetime
+    aciklama: str
+    kontenjan: int
+    ucret: str
+    aktif: bool
+
+    model_config = ConfigDict(from_attributes=True)
+
+

@@ -361,6 +361,84 @@ export const adminApi = {
     apiFetch<{ mesaj: string }>(`/admin/notifications/campaigns/${id}`, {
       method: 'DELETE',
     }),
+
+  // Member Management & Intervention
+  getMembers: (search?: string) =>
+    apiFetch<
+      {
+        id: number
+        ad: string
+        telefon: string
+        bakiye: number
+        aktif: boolean
+        is_admin: boolean
+      }[]
+    >(`/admin/members${search ? `?search=${encodeURIComponent(search)}` : ''}`),
+  updateMember: (
+    memberId: number,
+    data: {
+      ad?: string
+      telefon?: string
+      aktif?: boolean
+      bakiye_override?: number
+    }
+  ) =>
+    apiFetch<{
+      id: number
+      ad: string
+      telefon: string
+      bakiye: number
+      aktif: boolean
+      is_admin: boolean
+    }>(`/admin/members/${memberId}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+  sendSingleNotification: (memberId: number, data: { baslik: string; mesaj: string }) =>
+    apiFetch<{ mesaj: string; member_id: number }>(`/admin/members/${memberId}/send-notification`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  // Events & Workshops Console
+  getEvents: () =>
+    apiFetch<
+      {
+        id: number
+        baslik: string
+        turu: string
+        tarih_saat: string
+        aciklama: string
+        kontenjan: number
+        ucret: string
+        aktif: boolean
+      }[]
+    >('/admin/events'),
+  createEvent: (data: {
+    baslik: string
+    turu?: string
+    tarih_saat: string
+    aciklama?: string
+    kontenjan?: number
+    ucret?: string
+  }) =>
+    apiFetch<{
+      id: number
+      baslik: string
+      turu: string
+      tarih_saat: string
+      aciklama: string
+      kontenjan: number
+      ucret: string
+      aktif: boolean
+    }>('/admin/events', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  deleteEvent: (eventId: number) =>
+    apiFetch<{ silindi: boolean; event_id: number }>(`/admin/events/${eventId}`, {
+      method: 'DELETE',
+    }),
 }
 
 export const aiApi = {
