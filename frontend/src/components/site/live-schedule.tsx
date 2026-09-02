@@ -29,7 +29,7 @@ const scheduleData: Record<string, ClassSession[]> = {
       instructor: 'Ece Karaca',
       time: '08:30 - 09:20',
       duration: '50 dk',
-      capacity: 8,
+      capacity: 5,
       enrolled: 4,
       status: 'available',
       statusText: '4 Yer Kaldı',
@@ -41,7 +41,7 @@ const scheduleData: Record<string, ClassSession[]> = {
       instructor: 'Defne Yılmaz',
       time: '10:00 - 10:50',
       duration: '50 dk',
-      capacity: 8,
+      capacity: 5,
       enrolled: 7,
       status: 'few_left',
       statusText: 'Son 1 Yer',
@@ -53,7 +53,7 @@ const scheduleData: Record<string, ClassSession[]> = {
       instructor: 'Can Tezcan',
       time: '18:30 - 19:20',
       duration: '50 dk',
-      capacity: 8,
+      capacity: 5,
       enrolled: 8,
       status: 'full',
       statusText: 'Dolu (Sıra Bekleme)',
@@ -67,7 +67,7 @@ const scheduleData: Record<string, ClassSession[]> = {
       instructor: 'Defne Yılmaz',
       time: '09:00 - 09:50',
       duration: '50 dk',
-      capacity: 8,
+      capacity: 5,
       enrolled: 3,
       status: 'available',
       statusText: '5 Yer Kaldı',
@@ -79,7 +79,7 @@ const scheduleData: Record<string, ClassSession[]> = {
       instructor: 'Ece Karaca',
       time: '12:15 - 13:05',
       duration: '50 dk',
-      capacity: 8,
+      capacity: 5,
       enrolled: 6,
       status: 'few_left',
       statusText: 'Son 2 Yer',
@@ -91,7 +91,7 @@ const scheduleData: Record<string, ClassSession[]> = {
       instructor: 'Can Tezcan',
       time: '19:00 - 19:50',
       duration: '50 dk',
-      capacity: 8,
+      capacity: 5,
       enrolled: 5,
       status: 'available',
       statusText: '3 Yer Kaldı',
@@ -105,7 +105,7 @@ const scheduleData: Record<string, ClassSession[]> = {
       instructor: 'Ece Karaca',
       time: '08:00 - 08:50',
       duration: '50 dk',
-      capacity: 8,
+      capacity: 5,
       enrolled: 2,
       status: 'available',
       statusText: '6 Yer Kaldı',
@@ -117,7 +117,7 @@ const scheduleData: Record<string, ClassSession[]> = {
       instructor: 'Defne Yılmaz',
       time: '11:00 - 11:50',
       duration: '50 dk',
-      capacity: 8,
+      capacity: 5,
       enrolled: 8,
       status: 'full',
       statusText: 'Dolu (Sıra Bekleme)',
@@ -129,7 +129,7 @@ const scheduleData: Record<string, ClassSession[]> = {
       instructor: 'Can Tezcan',
       time: '18:30 - 19:20',
       duration: '50 dk',
-      capacity: 8,
+      capacity: 5,
       enrolled: 6,
       status: 'few_left',
       statusText: 'Son 2 Yer',
@@ -143,7 +143,7 @@ const scheduleData: Record<string, ClassSession[]> = {
       instructor: 'Defne Yılmaz',
       time: '09:30 - 10:20',
       duration: '50 dk',
-      capacity: 8,
+      capacity: 5,
       enrolled: 4,
       status: 'available',
       statusText: '4 Yer Kaldı',
@@ -155,7 +155,7 @@ const scheduleData: Record<string, ClassSession[]> = {
       instructor: 'Ece Karaca',
       time: '18:00 - 18:50',
       duration: '50 dk',
-      capacity: 8,
+      capacity: 5,
       enrolled: 7,
       status: 'few_left',
       statusText: 'Son 1 Yer',
@@ -169,7 +169,7 @@ const scheduleData: Record<string, ClassSession[]> = {
       instructor: 'Can Tezcan',
       time: '08:30 - 09:20',
       duration: '50 dk',
-      capacity: 8,
+      capacity: 5,
       enrolled: 3,
       status: 'available',
       statusText: '5 Yer Kaldı',
@@ -181,7 +181,7 @@ const scheduleData: Record<string, ClassSession[]> = {
       instructor: 'Ece Karaca',
       time: '17:30 - 18:20',
       duration: '50 dk',
-      capacity: 8,
+      capacity: 5,
       enrolled: 8,
       status: 'full',
       statusText: 'Dolu (Sıra Bekleme)',
@@ -195,7 +195,7 @@ const scheduleData: Record<string, ClassSession[]> = {
       instructor: 'Ece Karaca',
       time: '10:00 - 10:50',
       duration: '50 dk',
-      capacity: 8,
+      capacity: 5,
       enrolled: 7,
       status: 'few_left',
       statusText: 'Son 1 Yer',
@@ -207,7 +207,7 @@ const scheduleData: Record<string, ClassSession[]> = {
       instructor: 'Defne Yılmaz',
       time: '11:30 - 12:20',
       duration: '50 dk',
-      capacity: 8,
+      capacity: 5,
       enrolled: 4,
       status: 'available',
       statusText: '4 Yer Kaldı',
@@ -221,7 +221,7 @@ const scheduleData: Record<string, ClassSession[]> = {
       instructor: 'Defne Yılmaz',
       time: '11:00 - 11:50',
       duration: '50 dk',
-      capacity: 8,
+      capacity: 5,
       enrolled: 2,
       status: 'available',
       statusText: '6 Yer Kaldı',
@@ -242,13 +242,13 @@ export function LiveSchedule() {
         {/* Section Header */}
         <div className="text-center max-w-2xl mx-auto mb-14 space-y-4">
           <Badge variant="sage" className="uppercase tracking-widest px-3.5 py-1 text-xs font-medium">
-            Canlı Program & Kontenjan Takibi
+            Program & Kontenjan Takibi
           </Badge>
           <h2 className="font-serif text-3xl sm:text-4xl md:text-5xl font-medium text-ink tracking-tight">
-            Haftalık Canlı Ders Programı
+            Haftalık Ders Programı
           </h2>
           <p className="text-secondary text-base leading-relaxed">
-            Butik stüdyomuzda her sınıfta maksimum 8 üye kabul edilir. Kontenjan durumunu canlı takip edebilir ve saniyeler içinde yerinizi rezerve edebilirsiniz.
+            Butik stüdyomuzda her sınıfta maksimum 5 üye kabul edilir. Kontenjan durumunu takip edebilir ve saniyeler içinde yerinizi rezerve edebilirsiniz.
           </p>
         </div>
 
