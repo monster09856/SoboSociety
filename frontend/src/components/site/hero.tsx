@@ -82,7 +82,7 @@ export function Hero() {
           {/* Key Stats Strip */}
           <div className="pt-10 grid grid-cols-3 gap-6 max-w-lg mx-auto border-t border-line/60">
             <div>
-              <div className="font-serif text-3xl sm:text-4xl font-medium text-ink">Max 8</div>
+              <div className="font-serif text-3xl sm:text-4xl font-medium text-ink">Max 5</div>
               <div className="text-xs text-muted uppercase tracking-wider font-medium mt-1">Butik Sınıf</div>
             </div>
             <div>

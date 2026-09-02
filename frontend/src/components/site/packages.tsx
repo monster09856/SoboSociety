@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react'
 import Link from 'next/link'
-import { Check, Star, ShieldCheck, Zap, Users, Sparkles, UserCheck, Activity } from 'lucide-react'
+import { Check, Star, ShieldCheck, Zap, Users, Sparkles, UserCheck, Activity, MessageCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
@@ -284,11 +284,19 @@ export function Packages() {
                 </div>
 
                 <div className="pt-4">
-                  <Link href="/giris" className="w-full block">
-                    <Button variant={pkg.buttonVariant} className="w-full justify-center py-3 text-sm font-medium">
-                      Paket İle Katıl
+                  <a
+                    href={`https://wa.me/905316033080?text=${encodeURIComponent(
+                      `Merhaba! Sobo Society'den ${pkg.title} (${pkg.price}) satın almak istiyorum. Yardımcı olabilir misiniz?`
+                    )}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-full block"
+                  >
+                    <Button variant={pkg.buttonVariant} className="w-full justify-center py-3 text-sm font-medium gap-2">
+                      <MessageCircle className="w-4 h-4" />
+                      <span>WhatsApp İle Satın Al</span>
                     </Button>
-                  </Link>
+                  </a>
                 </div>
               </CardContent>
             </Card>

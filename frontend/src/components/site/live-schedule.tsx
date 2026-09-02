@@ -349,7 +349,7 @@ export function LiveSchedule() {
                     </div>
                     <div className="flex items-center gap-2.5">
                       <Users className="w-4 h-4 text-mocha" />
-                      <span>Butik Sınıf (Max 8 Kişi)</span>
+                      <span>Butik Sınıf (Max 5 Kişi)</span>
                     </div>
                   </div>
                 </div>
