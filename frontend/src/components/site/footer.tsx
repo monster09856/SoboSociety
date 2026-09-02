@@ -106,9 +106,14 @@ export function Footer() {
         {/* Bottom Bar */}
         <div className="pt-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-secondary">
           <p>© {new Date().getFullYear()} Sobo Society. Tüm hakları saklıdır.</p>
-          <div className="flex items-center gap-1.5">
-            <span>Crafted with passion for</span>
-            <span className="text-ink font-serif font-medium">Sobo Society</span>
+          <div className="flex items-center gap-4">
+            <Link href="/gizlilik" className="hover:text-espresso underline transition-colors">
+              Gizlilik Politikası & KVKK
+            </Link>
+            <span>•</span>
+            <Link href="/privacy" className="hover:text-espresso underline transition-colors">
+              Privacy Policy
+            </Link>
           </div>
         </div>
       </div>
