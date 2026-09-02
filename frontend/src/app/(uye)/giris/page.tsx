@@ -18,11 +18,11 @@ export default function GirisPage() {
             <Sparkles className="w-3.5 h-3.5 text-mocha" />
             <span>Sobo Society</span>
           </div>
-          <h1 className="text-4xl md:text-5xl font-serif font-extrabold tracking-[0.2em] text-espresso group-hover:opacity-90 transition-opacity uppercase">
-            Sobo
+          <h1 className="text-4xl md:text-5xl font-serif font-extrabold tracking-[0.2em] text-espresso group-hover:opacity-90 transition-opacity">
+            SOBO
           </h1>
-          <p className="text-xs uppercase tracking-[0.35em] text-secondary font-bold mt-1.5">
-            Society
+          <p className="text-xs tracking-[0.35em] text-secondary font-bold mt-1.5">
+            SOCIETY
           </p>
         </Link>
         <p className="text-sm italic font-serif text-secondary">
