@@ -8,7 +8,7 @@ export function Hero() {
   const disciplines = [
     {
       title: 'Barre',
-      desc: 'Bale prensipleri, izometrik kas kasılmaları ve zarif pilates hareketleri ile tüm vücudu sıkılaştıran dinamik antrenman seansı.',
+      desc: 'Bale, pilates ve fonksiyonel antrenmanı birleştiren, küçük ve kontrollü hareketlerle tüm vücudu güçlendiren ve şekillendiren dinamik bir antrenman seansı.',
       icon: Sparkles,
       tag: 'Zarafet & Güç',
       badgeVariant: 'mocha' as const,
