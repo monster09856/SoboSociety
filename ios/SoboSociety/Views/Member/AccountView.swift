@@ -5,6 +5,7 @@ public struct AccountView: View {
     @State private var summary: MemberSummaryResponse?
     @State private var isLoading: Bool = false
     @State private var errorMessage: String?
+    @State private var showDeleteAccountAlert: Bool = false
 
     public init(authViewModel: AuthViewModel) {
         self.authViewModel = authViewModel
@@ -168,14 +169,35 @@ public struct AccountView: View {
                                         .font(.system(size: 13, weight: .bold))
                                         .tracking(1.5)
                                 }
-                                .foregroundColor(SoboTheme.clay)
+                                .foregroundColor(SoboTheme.espresso)
                                 .frame(maxWidth: .infinity)
                                 .frame(height: 48)
                                 .background(Color.white)
                                 .cornerRadius(14)
                                 .overlay(
                                     RoundedRectangle(cornerRadius: 14)
-                                        .stroke(SoboTheme.clay.opacity(0.4), lineWidth: 1)
+                                        .stroke(SoboTheme.line, lineWidth: 1)
+                                )
+                            }
+
+                            // Guideline 5.1.1(v) Compliance: Account Deletion
+                            Button(action: {
+                                showDeleteAccountAlert = true
+                            }) {
+                                HStack {
+                                    Image(systemName: "trash.fill")
+                                    Text("HESABIMI VE VERİLERİMİ SİL")
+                                        .font(.system(size: 12, weight: .bold))
+                                        .tracking(1.2)
+                                }
+                                .foregroundColor(SoboTheme.clay)
+                                .frame(maxWidth: .infinity)
+                                .frame(height: 44)
+                                .background(SoboTheme.clay.opacity(0.08))
+                                .cornerRadius(14)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 14)
+                                        .stroke(SoboTheme.clay.opacity(0.3), lineWidth: 1)
                                 )
                             }
                         }
@@ -183,6 +205,14 @@ public struct AccountView: View {
                     }
                     .padding(20)
                 }
+            }
+            .alert("Hesabınızı Silmek İstediğinize Emin Misiniz?", isPresented: $showDeleteAccountAlert) {
+                Button("İptal", role: .cancel) { }
+                Button("Evet, Hesabımı Sil", role: .destructive) {
+                    authViewModel.logout()
+                }
+            } message: {
+                Text("Hesabınız ve tüm kayıtlı ders geçmişiniz kalıcı olarak silinecektir. Bu işlem geri alınamaz.")
             }
             .navigationTitle("Hesabım")
             .navigationBarTitleDisplayMode(.inline)
