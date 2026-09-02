@@ -172,13 +172,13 @@ export function Packages() {
   const advantages = [
     {
       icon: Users,
-      title: 'Butik Kontenjan (Max 5)',
+      title: 'Class Kontenjanı (Max 5 Kişi)',
       desc: 'Kalabalık salonlar yok. Her derste kişiye özel ilgi ve doğru form kontrolü.',
     },
     {
       icon: Zap,
-      title: 'Esnek İptal & Bakiye Koruma',
-      desc: 'Derse 4 saat kalana kadar tek tıkla iptal edin, kredinizi kaybetmeyin.',
+      title: 'İptal & Bakiye Koruma',
+      desc: 'Derse 12 saat kalana kadar tek tıkla iptal edin, kredinizi kaybetmeyin.',
     },
     {
       icon: ShieldCheck,
@@ -187,8 +187,8 @@ export function Packages() {
     },
     {
       icon: Sparkles,
-      title: 'Sobo Community & Etkinlikler',
-      desc: 'Sadece bir stüdyo değil; özel davetler, kahve buluşmaları ve atölyeler.',
+      title: 'Sobo Society & Etkinlikler',
+      desc: 'Özel atölyeler, etkinlikler ve workshop\'lar.',
     },
   ]
 
