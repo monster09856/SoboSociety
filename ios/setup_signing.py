@@ -9,12 +9,31 @@ import traceback
 def main():
     print("=== Sobo Society Automated REST API Signing Setup ===")
     
-    key_id = os.environ.get("APP_STORE_CONNECT_KEY_IDENTIFIER")
-    issuer_id = os.environ.get("APP_STORE_CONNECT_ISSUER_ID")
-    private_key_str = os.environ.get("APP_STORE_CONNECT_PRIVATE_KEY")
+    print("Environment variables matching APP/STORE/KEY/ISSUER:")
+    for k in sorted(os.environ.keys()):
+        if any(w in k.upper() for w in ["APP", "STORE", "KEY", "ISSUER", "CONNECT"]):
+            val = os.environ[k]
+            preview = val[:10] + "..." if len(val) > 10 else val
+            print(f"  {k} = {preview}")
+
+    key_id = (
+        os.environ.get("APP_STORE_CONNECT_KEY_IDENTIFIER") or
+        os.environ.get("APP_STORE_CONNECT_KEY_ID") or
+        os.environ.get("APP_STORE_CONNECT_KEY") or
+        os.environ.get("KEY_ID")
+    )
+    issuer_id = (
+        os.environ.get("APP_STORE_CONNECT_ISSUER_ID") or
+        os.environ.get("ISSUER_ID")
+    )
+    private_key_str = (
+        os.environ.get("APP_STORE_CONNECT_PRIVATE_KEY") or
+        os.environ.get("APP_STORE_CONNECT_KEY") or
+        os.environ.get("PRIVATE_KEY")
+    )
     bundle_id_name = os.environ.get("BUNDLE_ID", "com.sobosociety.app")
 
-    print(f"Environment Check -> Key ID: {key_id is not None}, Issuer ID: {issuer_id is not None}, Private Key: {private_key_str is not None}")
+    print(f"Resolved -> Key ID: {key_id is not None}, Issuer ID: {issuer_id is not None}, Private Key: {private_key_str is not None}")
 
     if not key_id or not issuer_id or not private_key_str:
         print("ERROR: Missing App Store Connect API Key environment variables.")
