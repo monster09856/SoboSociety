@@ -21,9 +21,11 @@ workflows:
         script: |
           set -e
           keychain initialize
-          app-store-connect fetch-signing-files "$BUNDLE_ID" --type IOS_APP_STORE --create || true
-          keychain add-certificates || true
-          xcode-project use-profiles || true
+          security import sobo_private_key.key -k ~/Library/Keychains/login.keychain-db -P "" || true
+          security import sobo_private_key.key || true
+          app-store-connect fetch-signing-files "$BUNDLE_ID" --type IOS_APP_STORE --create
+          keychain add-certificates
+          xcode-project use-profiles
       - name: Build Xcode Archive & IPA
         script: |
           set -e
