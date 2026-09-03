@@ -571,6 +571,10 @@ export const adminApi = {
     apiFetch<any>(`/admin/members/${memberId}/packages/${memberPackageId}/cancel`, {
       method: 'POST',
     }),
+  deleteMember: (memberId: number) =>
+    apiFetch<{ mesaj: string; member_id: number }>(`/admin/members/${memberId}`, {
+      method: 'DELETE',
+    }),
 
   // Events & Workshops Console
   getEvents: () =>

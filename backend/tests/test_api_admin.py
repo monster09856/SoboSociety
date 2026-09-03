@@ -341,3 +341,21 @@ async def test_session_generate_endpoint(client: AsyncClient, admin_fixtures, db
     data = response.json()
 
     assert data["uretilen_oturum_sayisi"] == 1
+
+
+async def test_delete_member_endpoint(client: AsyncClient, admin_fixtures, db):
+    headers = admin_fixtures["admin_headers"]
+    
+    # Silinecek üye oluştur
+    del_member = Member(ad="Silinecek Üye", telefon="+905559998877", aktif=True)
+    db.add(del_member)
+    await db.commit()
+    await db.refresh(del_member)
+
+    res = await client.delete(f"/api/v1/admin/members/{del_member.id}", headers=headers)
+    assert res.status_code == 200
+    assert "silindi" in res.json()["mesaj"]
+
+    # Silinen üyeyi kontrol et
+    check = await db.get(Member, del_member.id)
+    assert check is None

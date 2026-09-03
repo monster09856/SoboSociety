@@ -572,7 +572,7 @@ async def update_admin_credentials_endpoint(
 
 # --- Admin Member Management & Credit Intervention Endpoints ---
 
-from app.models import StudioEvent, CreditLedger, LedgerTipi, MemberPackage, Package
+from app.models import StudioEvent, CreditLedger, LedgerTipi, MemberPackage, Package, WaitlistEntry, Notification
 from app.services.kredi import bakiye, hareket_ekle
 from app.schemas.admin import (
     MemberUpdateRequest, MemberAdminDetailResponse, MemberSinglePushRequest,
@@ -728,6 +728,33 @@ async def send_single_member_notification(
     )
     await db.commit()
     return {"mesaj": f"{m.ad} üyesine özel bildirim gönderildi.", "member_id": m.id}
+
+
+@router.delete("/members/{member_id}")
+async def delete_admin_member(
+    member_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_admin: Member = Depends(get_current_admin),
+):
+    """Üyeyi ve üyeye bağlı tüm ilişkili verileri (rezervasyonlar, bekleme sırası, krediler, paketler, bildirimler) veritabanından tamamen siler."""
+    m = await db.get(Member, member_id)
+    if not m:
+        raise HTTPException(status_code=404, detail="Üye bulunamadı.")
+    
+    if m.id == current_admin.id or m.kullanici_adi == "admin" or (m.telefon and m.telefon in ayarlar.admin_telefons):
+        raise HTTPException(status_code=400, detail="Yönetici (Admin) hesabı veritabanından silinemez.")
+
+    # Bağımlı veritabanı kayıtlarını temizle
+    await db.execute(delete(Booking).where(Booking.member_id == member_id))
+    await db.execute(delete(WaitlistEntry).where(WaitlistEntry.member_id == member_id))
+    await db.execute(delete(CreditLedger).where(CreditLedger.member_id == member_id))
+    await db.execute(delete(MemberPackage).where(MemberPackage.member_id == member_id))
+    await db.execute(delete(Notification).where(Notification.member_id == member_id))
+
+    member_name = m.ad
+    await db.delete(m)
+    await db.commit()
+    return {"mesaj": f"{member_name} isimli üye ve tüm geçmiş kayıtları veritabanından tamamen silindi.", "member_id": member_id}
 
 
 # --- Admin Events & Workshops Endpoints ---

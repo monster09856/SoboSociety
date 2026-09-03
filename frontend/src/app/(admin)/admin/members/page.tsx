@@ -6,7 +6,7 @@ import { buyukHarf } from '@/lib/utils'
 import { AdminNav } from '@/components/admin/admin-nav'
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
-import { Users, Search, Plus, CreditCard, Send, Edit2, ShieldAlert, CheckCircle2, Loader2, Sparkles, UserCheck, AtSign, Phone, Ruler, X, Package, Trash2 } from 'lucide-react'
+import { Users, Search, Plus, CreditCard, Send, Edit2, ShieldAlert, CheckCircle2, Loader2, Sparkles, UserCheck, AtSign, Phone, Ruler, X, Package, Trash2, UserX } from 'lucide-react'
 
 interface MemberDetail {
   id: number
@@ -213,6 +213,17 @@ export default function AdminMembersPage() {
     }
   }
 
+  const handleDeleteMember = async (m: MemberDetail) => {
+    if (!confirm(`${m.ad} (${m.telefon || 'Telefon Yok'}) isimli üyeyi ve tüm geçmiş ders/kredi kayıtlarını veritabanından kalıcı olarak silmek istediğinizden emin misiniz?`)) return
+    try {
+      await admin.deleteMember(m.id)
+      setSuccess(`${m.ad} isimli üye ve tüm geçmiş kayıtları veritabanından silindi.`)
+      loadMembers(search)
+    } catch (err: any) {
+      setError(err?.message || 'Üye silinirken bir hata oluştu.')
+    }
+  }
+
   return (
     <div className="min-h-screen bg-ivory text-ink font-sans antialiased relative">
       <AdminNav />
@@ -391,14 +402,14 @@ export default function AdminMembersPage() {
                     </div>
 
                     {/* Actions */}
-                    <div className="grid grid-cols-3 gap-2 pt-1">
+                    <div className="grid grid-cols-4 gap-1.5 pt-1">
                       <button
                         onClick={() => openEditModal(m)}
-                        className="p-2 rounded-xl bg-ivory border border-line hover:border-espresso text-ink hover:text-espresso text-[11px] font-bold flex flex-col items-center gap-1 transition-all cursor-pointer"
+                        className="p-1.5 rounded-xl bg-ivory border border-line hover:border-espresso text-ink hover:text-espresso text-[10px] font-bold flex flex-col items-center gap-1 transition-all cursor-pointer"
                         title="Tüm Bilgileri Gör / Düzenle"
                       >
                         <Edit2 className="w-3.5 h-3.5 text-mocha" />
-                        <span>Müdahale & Ölçü</span>
+                        <span className="truncate w-full text-center">Ölçü/Müdahale</span>
                       </button>
 
                       <button
@@ -410,11 +421,11 @@ export default function AdminMembersPage() {
                           setCustomCredits(10)
                           setCustomDays(45)
                         }}
-                        className="p-2 rounded-xl bg-ivory border border-line hover:border-espresso text-ink hover:text-espresso text-[11px] font-bold flex flex-col items-center gap-1 transition-all cursor-pointer"
+                        className="p-1.5 rounded-xl bg-ivory border border-line hover:border-espresso text-ink hover:text-espresso text-[10px] font-bold flex flex-col items-center gap-1 transition-all cursor-pointer"
                         title="Paket Tanımla"
                       >
                         <CreditCard className="w-3.5 h-3.5 text-mocha" />
-                        <span>+ Paket</span>
+                        <span className="truncate w-full text-center">+ Paket</span>
                       </button>
 
                       <button
@@ -423,11 +434,20 @@ export default function AdminMembersPage() {
                           setNotifTitle('Sobo Society Duyuru')
                           setNotifBody('')
                         }}
-                        className="p-2 rounded-xl bg-ivory border border-line hover:border-espresso text-ink hover:text-espresso text-[11px] font-bold flex flex-col items-center gap-1 transition-all cursor-pointer"
+                        className="p-1.5 rounded-xl bg-ivory border border-line hover:border-espresso text-ink hover:text-espresso text-[10px] font-bold flex flex-col items-center gap-1 transition-all cursor-pointer"
                         title="Özel Bildirim Gönder"
                       >
                         <Send className="w-3.5 h-3.5 text-mocha" />
-                        <span>Özel Bildirim</span>
+                        <span className="truncate w-full text-center">Bildirim</span>
+                      </button>
+
+                      <button
+                        onClick={() => handleDeleteMember(m)}
+                        className="p-1.5 rounded-xl bg-clay/10 border border-clay/30 hover:bg-clay text-clay hover:text-white text-[10px] font-bold flex flex-col items-center gap-1 transition-all cursor-pointer"
+                        title="Üyeyi Veritabanından Sil"
+                      >
+                        <UserX className="w-3.5 h-3.5 text-clay hover:text-white" />
+                        <span className="truncate w-full text-center">Üyeyi Sil</span>
                       </button>
                     </div>
                   </CardContent>
