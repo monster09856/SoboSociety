@@ -44,8 +44,14 @@ export default function AdminSchedulePage() {
         admin.getClassTypes().catch(() => []),
         admin.getInstructors().catch(() => []),
       ])
-      if (cts && cts.length > 0) setClassList(cts)
-      if (ins && ins.length > 0) setInstructorList(ins)
+      if (cts && cts.length > 0) {
+        setClassList(cts)
+        setNewClassTypeId(cts[0].id)
+      }
+      if (ins && ins.length > 0) {
+        setInstructorList(ins)
+        setNewInstructorId(ins[0].id)
+      }
     } catch (_) {}
   }
 

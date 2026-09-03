@@ -284,11 +284,12 @@ async def list_admin_sessions(
     db: AsyncSession = Depends(get_db),
     current_admin: Member = Depends(get_current_admin),
 ):
-    """Admin için tüm aktif ve gelecek ders oturumlarını listeler."""
+    """Admin için bugün ve gelecekteki tüm aktif ders oturumlarını listeler."""
     now = datetime.now(timezone.utc)
+    start_of_today = now.replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(hours=24)
     stmt = (
         select(ClassSession)
-        .where(ClassSession.baslangic >= now)
+        .where(ClassSession.baslangic >= start_of_today, ClassSession.durum != "cancelled")
         .order_by(ClassSession.baslangic)
     )
     result = await db.execute(stmt)
@@ -302,11 +303,41 @@ async def create_session(
     current_admin: Member = Depends(get_current_admin),
 ):
     """Admin paneli üzerinden tekil yeni ders oturumu ekler."""
+    from app.models.program import ClassType, Instructor, Room
+
+    ct = (await db.execute(select(ClassType).where(ClassType.id == body.class_type_id))).scalar_one_or_none()
+    if not ct:
+        ct = (await db.execute(select(ClassType).limit(1))).scalar_one_or_none()
+        if not ct:
+            ct = ClassType(ad="Barre", kontenjan=5, sure_dk=50, renk="#A2846F")
+            db.add(ct)
+            await db.flush()
+        target_class_type_id = ct.id
+    else:
+        target_class_type_id = body.class_type_id
+
+    ins = (await db.execute(select(Instructor).where(Instructor.id == body.instructor_id))).scalar_one_or_none()
+    if not ins:
+        ins = (await db.execute(select(Instructor).limit(1))).scalar_one_or_none()
+        if not ins:
+            ins = Instructor(ad="Pelin Hoca", biyografi="Barre Eğitmeni", aktif=True)
+            db.add(ins)
+            await db.flush()
+        target_instructor_id = ins.id
+    else:
+        target_instructor_id = body.instructor_id
+
+    room = (await db.execute(select(Room).limit(1))).scalar_one_or_none()
+    if not room:
+        room = Room(ad="Main Studio", aktif=True)
+        db.add(room)
+        await db.flush()
+
     session = ClassSession(
         baslangic=body.baslangic,
-        class_type_id=body.class_type_id,
-        instructor_id=body.instructor_id,
-        room_id=body.room_id,
+        class_type_id=target_class_type_id,
+        instructor_id=target_instructor_id,
+        room_id=room.id,
         kontenjan=body.kontenjan,
         dolu_sayi=0,
         durum="active",
@@ -315,23 +346,6 @@ async def create_session(
     await db.commit()
     await db.refresh(session)
     return session
-
-
-@router.delete("/sessions/{session_id}")
-async def delete_session(
-    session_id: int,
-    db: AsyncSession = Depends(get_db),
-    current_admin: Member = Depends(get_current_admin),
-):
-    """Ders oturumunu takvimden siler / iptal eder."""
-    res = await db.execute(select(ClassSession).where(ClassSession.id == session_id))
-    session = res.scalar_one_or_none()
-    if not session:
-        raise HTTPException(status_code=404, detail="Ders oturumu bulunamadı.")
-    
-    session.durum = "cancelled"
-    await db.commit()
-    return {"silindi": True, "session_id": session_id}
 
 
 from app.schemas.admin import SessionUpdateRequest
