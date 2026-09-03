@@ -450,7 +450,7 @@ public struct AttendanceRecordRow: View {
     public var body: some View {
         HStack(spacing: 12) {
             VStack(alignment: .leading, spacing: 4) {
-                Text(booking.session?.ders_adi ?? "Ders Oturumu")
+                Text(booking.session?.resolvedClassType.ad ?? "Ders Oturumu")
                     .font(.system(size: 14, weight: .bold))
                     .foregroundColor(SoboTheme.ink)
                 if let baslangic = booking.session?.baslangic_utc {
