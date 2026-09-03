@@ -107,7 +107,7 @@ def main():
             print(f"Revoked certificate {oldest_id}: status {del_res.status_code}")
 
         # Post new certificate request
-        csr_clean = csr_pem.replace("-----BEGIN CERTIFICATE REQUEST-----", "").replace("-----END CERTIFICATE REQUEST-----", "").replace("\n", "").strip()
+        csr_clean = csr_pem.replace("-----BEGIN CERTIFICATE REQUEST-----", "").replace("-----END CERTIFICATE REQUEST-----", "").replace("\r", "").replace("\n", "").strip()
         cert_post_body = {
             "data": {
                 "type": "certificates",
@@ -153,6 +153,7 @@ def main():
     res_prof = requests.get("https://api.appstoreconnect.apple.com/v1/profiles?limit=50", headers=api_headers)
     profiles_data = res_prof.json().get("data", []) if res_prof.status_code == 200 else []
 
+    saved_count = 0
     for prof in profiles_data:
         prof_name = prof.get("attributes", {}).get("name", "")
         prof_content = prof.get("attributes", {}).get("profileContent", "")
@@ -172,8 +173,9 @@ def main():
                 f.write(prof_bytes)
                 
             print(f"Saved Provisioning Profile '{prof_name}' ({prof_uuid}) to {prov_dir}")
+            saved_count += 1
 
-    print("=== Automated REST API Signing Setup Completed ===")
+    print(f"=== Setup Signing Completed Successfully. Saved {saved_count} profiles. ===")
 
 if __name__ == "__main__":
     main()
