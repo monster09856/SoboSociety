@@ -39,7 +39,7 @@ export function Packages() {
       title: 'Barre Class Bireysel Premium',
       subtitle: '12 Derslik Bireysel Paket',
       validity: 'Kullanım Süresi: 8 Hafta',
-      isPopular: true,
+      isPopular: false,
       popularTag: '12 Saat Önceden İade Hakkı ⏱️',
       features: [
         '12 Bireysel Class Seansı',
@@ -108,7 +108,7 @@ export function Packages() {
       title: 'Barre Class 8 Ders',
       subtitle: '8 Derslik Grup Paketi',
       validity: 'Kullanım Süresi: 6 Hafta',
-      isPopular: true,
+      isPopular: false,
       popularTag: '12 Saat Önceden İade Hakkı ⏱️',
       features: [
         '8 Adet Barre Class Dersi',
