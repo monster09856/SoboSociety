@@ -33,6 +33,34 @@ export default function AdminTodayPage() {
   const [newCapacity, setNewCapacity] = useState(5)
   const [addingSession, setAddingSession] = useState(false)
 
+  const [classList, setClassList] = useState<{ id: number; ad: string }[]>([
+    { id: 1, ad: 'Barre' },
+    { id: 2, ad: 'Pilates' },
+    { id: 3, ad: 'Yoga' },
+  ])
+  const [instructorList, setInstructorList] = useState<{ id: number; ad: string }[]>([
+    { id: 1, ad: 'Ece Karaca' },
+    { id: 2, ad: 'Defne Yılmaz' },
+    { id: 3, ad: 'Can Tezcan' },
+  ])
+
+  const loadDropdowns = async () => {
+    try {
+      const [cts, ins] = await Promise.all([
+        admin.getClassTypes().catch(() => []),
+        admin.getInstructors().catch(() => []),
+      ])
+      if (cts && cts.length > 0) {
+        setClassList(cts)
+        setNewClassTypeId(cts[0].id)
+      }
+      if (ins && ins.length > 0) {
+        setInstructorList(ins)
+        setNewInstructorId(ins[0].id)
+      }
+    } catch (_) {}
+  }
+
   const fetchSessions = useCallback(async () => {
     setLoading(true)
     setError(null)
@@ -48,6 +76,7 @@ export default function AdminTodayPage() {
 
   useEffect(() => {
     fetchSessions()
+    loadDropdowns()
   }, [fetchSessions])
 
   const handleAddSession = async (e: React.FormEvent) => {
@@ -163,9 +192,11 @@ export default function AdminTodayPage() {
                     onChange={(e) => setNewClassTypeId(Number(e.target.value))}
                     className="w-full bg-ivory border-line text-ink rounded-xl h-11 px-3 text-xs font-medium focus:ring-2 focus:ring-espresso"
                   >
-                    <option value={1}>Barre</option>
-                    <option value={2}>Pilates</option>
-                    <option value={3}>Yoga</option>
+                    {classList.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.ad}
+                      </option>
+                    ))}
                   </select>
                 </div>
 
@@ -178,9 +209,11 @@ export default function AdminTodayPage() {
                     onChange={(e) => setNewInstructorId(Number(e.target.value))}
                     className="w-full bg-ivory border-line text-ink rounded-xl h-11 px-3 text-xs font-medium focus:ring-2 focus:ring-espresso"
                   >
-                    <option value={1}>Ece Karaca</option>
-                    <option value={2}>Defne Yılmaz</option>
-                    <option value={3}>Can Tezcan</option>
+                    {instructorList.map((i) => (
+                      <option key={i.id} value={i.id}>
+                        {i.ad}
+                      </option>
+                    ))}
                   </select>
                 </div>
 
