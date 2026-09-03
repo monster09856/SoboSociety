@@ -17,5 +17,4 @@ targets:
       CURRENT_PROJECT_VERSION: "1"
       GENERATE_INFOPLIST_FILE: false
       DEVELOPMENT_TEAM: "YR2KGFQ6H3"
-      CODE_SIGN_STYLE: Manual
-      CODE_SIGN_IDENTITY: "Apple Distribution"
+      CODE_SIGN_STYLE: Automatic
