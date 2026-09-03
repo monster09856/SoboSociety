@@ -24,9 +24,12 @@ workflows:
           pip3 install --break-system-packages pyjwt requests cryptography || pip3 install pyjwt requests cryptography || true
           python3 setup_signing.py
           xcode-project use-profiles
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "" ~/Library/Keychains/login.keychain-db || true
       - name: Build Xcode Archive & IPA
         script: |
           set -e
+          security unlock-keychain -p "" ~/Library/Keychains/login.keychain-db || true
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "" ~/Library/Keychains/login.keychain-db || true
           xcode-project build-ipa \
             --project SoboSociety.xcodeproj \
             --scheme SoboSociety

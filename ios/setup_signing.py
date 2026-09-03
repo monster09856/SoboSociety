@@ -111,7 +111,6 @@ def main():
 
     # Helper function to create legacy OpenSSL P12 for macOS compatibility
     def create_p12(key_p, pem_p, out_p):
-        # Try -legacy flag first for OpenSSL 3.0 on macOS
         r_legacy = subprocess.run([
             "openssl", "pkcs12", "-export", "-legacy",
             "-out", out_p, "-inkey", key_p, "-in", pem_p, "-passout", "pass:sobo123"
@@ -176,7 +175,7 @@ def main():
         else:
             print(f"ERROR: Failed to create certificate via API: {create_res.status_code} {create_res.text}")
 
-    # 4. Import PEM, Key, and P12 into Keychain
+    # 4. Import PEM, Key, and P12 into Keychain & Set Key Access Partition
     home_dir = os.path.expanduser("~")
     prov_dir = os.path.join(home_dir, "Library", "MobileDevice", "Provisioning Profiles")
     os.makedirs(prov_dir, exist_ok=True)
@@ -192,10 +191,16 @@ def main():
         create_p12(key_path, pem_path, p12_path)
 
         print("Importing PEM certificate and Private Key into Mac Keychain...")
+        subprocess.run(["security", "unlock-keychain", "-p", "", keychain_path], check=False)
         subprocess.run(["security", "import", pem_path, "-k", keychain_path, "-T", "/usr/bin/codesign"], check=False)
         subprocess.run(["security", "import", key_path, "-k", keychain_path, "-T", "/usr/bin/codesign"], check=False)
         subprocess.run(["security", "import", p12_path, "-k", keychain_path, "-P", "sobo123", "-T", "/usr/bin/codesign"], check=False)
         subprocess.run(["security", "import", p12_path, "-P", "sobo123"], check=False)
+        
+        # Grant non-interactive access to codesign tool
+        print("Granting headless codesign access to keychain keys...")
+        subprocess.run(["security", "set-key-partition-list", "-S", "apple-tool:,apple:,codesign:", "-s", "-k", "", keychain_path], check=False)
+        subprocess.run(["security", "set-key-partition-list", "-S", "apple-tool:,apple:,codesign:", "-s", "-k", "sobo123", keychain_path], check=False)
 
     # 5. Query or Create Provisioning Profile for com.sobosociety.app
     print(f"Fetching provisioning profiles for {bundle_id_name}...")
