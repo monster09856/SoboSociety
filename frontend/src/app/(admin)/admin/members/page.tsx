@@ -61,7 +61,7 @@ export default function AdminMembersPage() {
 
   // Assign Package Modal State
   const [pkgMember, setPkgMember] = useState<MemberDetail | null>(null)
-  const [selectedPkgId, setSelectedPkgId] = useState<number>(1)
+  const [selectedPkgId, setSelectedPkgId] = useState<number>(11)
   const [isCustomPkg, setIsCustomPkg] = useState(false)
   const [customPkgName, setCustomPkgName] = useState('')
   const [customCredits, setCustomCredits] = useState(10)
@@ -676,10 +676,16 @@ export default function AdminMembersPage() {
                         onChange={(e) => setSelectedPkgId(Number(e.target.value))}
                         className="w-full bg-ivory border-line text-ink rounded-xl h-11 px-3 text-xs font-medium focus:ring-2 focus:ring-espresso"
                       >
-                        <option value={1}>Sobo Trial (3 Ders / 14 Gün)</option>
-                        <option value={2}>Sobo Starter (8 Ders / 30 Gün)</option>
-                        <option value={3}>Sobo Core (12 Ders / 45 Gün)</option>
-                        <option value={4}>Society Pass (20 Ders / 90 Gün)</option>
+                        <option value={9}>Barre Class Tek Ders (1 Ders / 7 Gün)</option>
+                        <option value={10}>Barre Class 4 Ders (4 Ders / 28 Gün - 4 Hafta)</option>
+                        <option value={11}>Sobo Class (8 Ders / 42 Gün - 6 Hafta)</option>
+                        <option value={12}>Sobo Class (12 Ders / 56 Gün - 8 Hafta)</option>
+                        <option value={13}>Yoga Class Tek Ders (1 Ders / 7 Gün)</option>
+                        <option value={14}>Yoga Class 4 Ders (4 Ders / 35 Gün - 5 Hafta)</option>
+                        <option value={15}>Barre Class Bireysel (8 Ders / 42 Gün - 6 Hafta)</option>
+                        <option value={16}>Barre Class Bireysel Premium (12 Ders / 56 Gün - 8 Hafta)</option>
+                        <option value={17}>Reformer Class Bireysel (8 Ders / 42 Gün - 6 Hafta)</option>
+                        <option value={18}>Reformer Class Bireysel Elite (12 Ders / 56 Gün - 8 Hafta)</option>
                       </select>
                     </div>
                   ) : (
