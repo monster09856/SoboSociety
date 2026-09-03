@@ -143,7 +143,7 @@ public struct AccountView: View {
                             measurementField(label: "Sağlık & Hedef Notum", value: $saglikNotu, placeholder: "Varsa sakatlık veya hedefiniz...")
 
                             Button(action: saveMeasurements) {
-                                HStack {
+                                Group {
                                     if isSavingMeasurements {
                                         ProgressView().tint(.white)
                                     } else {
@@ -409,5 +409,71 @@ public struct AccountView: View {
                 }
             }
         }
+    }
+}
+
+public struct AttendanceRecordRow: View {
+    public let booking: BookingResponse
+
+    public init(booking: BookingResponse) {
+        self.booking = booking
+    }
+
+    private var statusColor: Color {
+        switch booking.durum {
+        case "attended":
+            return SoboTheme.sage
+        case "no_show":
+            return SoboTheme.clay
+        case "booked":
+            return SoboTheme.espresso
+        default:
+            return SoboTheme.secondary
+        }
+    }
+
+    private var statusTitle: String {
+        switch booking.durum {
+        case "attended":
+            return "Katıldı"
+        case "no_show":
+            return "Gelmedi"
+        case "booked":
+            return "Rezerve"
+        case "cancelled":
+            return "İptal Edildi"
+        default:
+            return booking.durum.capitalized
+        }
+    }
+
+    public var body: some View {
+        HStack(spacing: 12) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(booking.session?.ders_adi ?? "Ders Oturumu")
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundColor(SoboTheme.ink)
+                if let baslangic = booking.session?.baslangic_utc {
+                    Text(baslangic)
+                        .font(.system(size: 11))
+                        .foregroundColor(SoboTheme.secondary)
+                }
+            }
+            Spacer()
+            Text(statusTitle)
+                .font(.system(size: 11, weight: .bold))
+                .padding(.horizontal, 10)
+                .padding(.vertical, 5)
+                .background(statusColor.opacity(0.15))
+                .foregroundColor(statusColor)
+                .cornerRadius(8)
+        }
+        .padding(12)
+        .background(Color.white)
+        .cornerRadius(12)
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(SoboTheme.line, lineWidth: 1)
+        )
     }
 }
