@@ -21,7 +21,8 @@ workflows:
         script: |
           set -e
           keychain initialize
-          app-store-connect fetch-signing-files "$BUNDLE_ID" --type IOS_APP_STORE --create
+          app-store-connect certificates create --type IOS_APP_STORE || true
+          app-store-connect fetch-signing-files "$BUNDLE_ID" --type IOS_APP_STORE --create || true
           keychain add-certificates
           xcode-project use-profiles
       - name: Build Xcode Archive & IPA
