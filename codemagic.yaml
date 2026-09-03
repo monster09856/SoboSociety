@@ -18,46 +18,19 @@ workflows:
           set -e
           which xcodegen || brew install xcodegen
           xcodegen generate
-      - name: Set up App Store Connect API Key
+      - name: Set up App Store Connect API Key & Profiles
         script: |
           set -e
-          keychain initialize || true
-          mkdir -p ~/.appstoreconnect/private_keys
-          if [ -n "$APP_STORE_CONNECT_PRIVATE_KEY" ]; then
-            echo "$APP_STORE_CONNECT_PRIVATE_KEY" > ~/.appstoreconnect/private_keys/AuthKey_${APP_STORE_CONNECT_KEY_IDENTIFIER}.p8
-            echo "App Store Connect API Key saved successfully."
-          fi
+          keychain initialize
+          app-store-connect fetch-signing-files "$BUNDLE_ID" --type IOS_APP_STORE --create
+          keychain add-certificates
+          xcode-project use-profiles
       - name: Build Xcode Archive & IPA
         script: |
           set -e
-          KEY_PATH="$HOME/.appstoreconnect/private_keys/AuthKey_${APP_STORE_CONNECT_KEY_IDENTIFIER}.p8"
-          mkdir -p build/ios/ipa build/ios/xcarchive
-
-          echo "Archiving Xcode project with native App Store Connect API automatic signing..."
-          xcodebuild -project SoboSociety.xcodeproj \
-            -scheme SoboSociety \
-            -sdk iphoneos \
-            -configuration Release \
-            -archivePath build/ios/xcarchive/SoboSociety.xcarchive \
-            archive \
-            -allowProvisioningUpdates \
-            -authenticationKeyID "$APP_STORE_CONNECT_KEY_IDENTIFIER" \
-            -authenticationKeyIssuerID "$APP_STORE_CONNECT_ISSUER_ID" \
-            -authenticationKeyPath "$KEY_PATH" \
-            DEVELOPMENT_TEAM="YR2KGFQ6H3" \
-            CODE_SIGN_STYLE=Automatic
-
-          echo "Exporting IPA package for App Store distribution..."
-          xcodebuild -exportArchive \
-            -archivePath build/ios/xcarchive/SoboSociety.xcarchive \
-            -exportOptionsPlist export_options.plist \
-            -exportPath build/ios/ipa \
-            -allowProvisioningUpdates \
-            -authenticationKeyID "$APP_STORE_CONNECT_KEY_IDENTIFIER" \
-            -authenticationKeyIssuerID "$APP_STORE_CONNECT_ISSUER_ID" \
-            -authenticationKeyPath "$KEY_PATH"
-
-          cp build/ios/ipa/*.ipa . || true
+          xcode-project build-ipa \
+            --project SoboSociety.xcodeproj \
+            --scheme SoboSociety
     artifacts:
       - ios/build/ios/ipa/*.ipa
       - build/ios/ipa/*.ipa
