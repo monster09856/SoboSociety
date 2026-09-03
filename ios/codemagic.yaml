@@ -16,7 +16,7 @@ workflows:
           set -e
           which xcodegen || brew install xcodegen
           xcodegen generate
-      - name: Set up App Store Connect API Key
+      - name: Set up App Store Connect API Key & Profiles
         script: |
           set -e
           keychain initialize || true
@@ -34,8 +34,14 @@ workflows:
           KEY_PATH="$HOME/.appstoreconnect/private_keys/AuthKey_${APP_STORE_CONNECT_KEY_IDENTIFIER}.p8"
           mkdir -p build/ios/ipa build/ios/xcarchive
 
+          # Auto-detect Team ID from fetched Provisioning Profile if not set in env
+          DETECTED_TEAM_ID=$(grep -A1 "TeamIdentifier" ~/Library/MobileDevice/Provisioning\ Profiles/*.mobileprovision 2>/dev/null | grep "<string>" | sed -e 's/<[^>]*>//g' | tr -d ' \t\r\n' | head -n 1 || true)
+          TARGET_TEAM_ID="${DEVELOPMENT_TEAM:-$DETECTED_TEAM_ID}"
+
+          echo "Detected Team ID: '$TARGET_TEAM_ID'"
+
           if [ -f "$KEY_PATH" ]; then
-            echo "Building Xcode project with automatic team detection and App Store Connect API authentication..."
+            echo "Building Xcode project with automatic code signing and team parameters..."
             xcodebuild -project SoboSociety.xcodeproj \
               -scheme SoboSociety \
               -sdk iphoneos \
@@ -46,7 +52,7 @@ workflows:
               -authenticationKeyID "$APP_STORE_CONNECT_KEY_IDENTIFIER" \
               -authenticationKeyIssuerID "$APP_STORE_CONNECT_ISSUER_ID" \
               -authenticationKeyPath "$KEY_PATH" \
-              ${DEVELOPMENT_TEAM:+DEVELOPMENT_TEAM=$DEVELOPMENT_TEAM} \
+              ${TARGET_TEAM_ID:+DEVELOPMENT_TEAM=$TARGET_TEAM_ID} \
               CODE_SIGN_STYLE=Automatic
 
             echo "Exporting IPA package for App Store distribution..."
