@@ -109,6 +109,21 @@ def main():
     matching_cert_id = None
     cert_der_bytes = None
 
+    # Helper function to create legacy OpenSSL P12 for macOS compatibility
+    def create_p12(key_p, pem_p, out_p):
+        # Try -legacy flag first for OpenSSL 3.0 on macOS
+        r_legacy = subprocess.run([
+            "openssl", "pkcs12", "-export", "-legacy",
+            "-out", out_p, "-inkey", key_p, "-in", pem_p, "-passout", "pass:sobo123"
+        ], capture_output=True)
+        if r_legacy.returncode == 0:
+            return True
+        r_std = subprocess.run([
+            "openssl", "pkcs12", "-export",
+            "-out", out_p, "-inkey", key_p, "-in", pem_p, "-passout", "pass:sobo123"
+        ], capture_output=True)
+        return r_std.returncode == 0
+
     # Try matching existing certificates with key_path
     for idx, cert in enumerate(certs_data):
         cert_content = cert.get("attributes", {}).get("certificateContent")
@@ -121,12 +136,8 @@ def main():
         with open(cer_p, "wb") as f:
             f.write(c_bytes)
         subprocess.run(["openssl", "x509", "-in", cer_p, "-inform", "DER", "-out", pem_p], check=False)
-        res_p12 = subprocess.run([
-            "openssl", "pkcs12", "-export", "-out", p12_p,
-            "-inkey", key_path, "-in", pem_p, "-passout", "pass:sobo123"
-        ], capture_output=True)
         
-        if res_p12.returncode == 0:
+        if create_p12(key_path, pem_p, p12_p):
             print(f"Matched existing Certificate {cert.get('id')} with local Private Key!")
             matching_cert_id = cert.get("id")
             cert_der_bytes = c_bytes
@@ -165,7 +176,7 @@ def main():
         else:
             print(f"ERROR: Failed to create certificate via API: {create_res.status_code} {create_res.text}")
 
-    # 4. Import P12 into Keychain
+    # 4. Import PEM, Key, and P12 into Keychain
     home_dir = os.path.expanduser("~")
     prov_dir = os.path.join(home_dir, "Library", "MobileDevice", "Provisioning Profiles")
     os.makedirs(prov_dir, exist_ok=True)
@@ -178,11 +189,11 @@ def main():
         with open(cer_path, "wb") as f:
             f.write(cert_der_bytes)
         subprocess.run(["openssl", "x509", "-in", cer_path, "-inform", "DER", "-out", pem_path], check=True)
-        subprocess.run([
-            "openssl", "pkcs12", "-export", "-out", p12_path,
-            "-inkey", key_path, "-in", pem_path, "-passout", "pass:sobo123"
-        ], check=True)
-        print("Importing P12 bundle into Mac Keychain...")
+        create_p12(key_path, pem_path, p12_path)
+
+        print("Importing PEM certificate and Private Key into Mac Keychain...")
+        subprocess.run(["security", "import", pem_path, "-k", keychain_path, "-T", "/usr/bin/codesign"], check=False)
+        subprocess.run(["security", "import", key_path, "-k", keychain_path, "-T", "/usr/bin/codesign"], check=False)
         subprocess.run(["security", "import", p12_path, "-k", keychain_path, "-P", "sobo123", "-T", "/usr/bin/codesign"], check=False)
         subprocess.run(["security", "import", p12_path, "-P", "sobo123"], check=False)
 
