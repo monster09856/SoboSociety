@@ -21,7 +21,7 @@ workflows:
         script: |
           set -e
           keychain initialize
-          pip3 install pyjwt requests cryptography
+          pip3 install --break-system-packages pyjwt requests cryptography || pip3 install pyjwt requests cryptography || true
           python3 setup_signing.py
           xcode-project use-profiles
       - name: Build Xcode Archive & IPA
