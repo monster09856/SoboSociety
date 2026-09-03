@@ -59,22 +59,23 @@ async def seed():
 
         await session.flush()
 
-        # 4. Paketler
-        p_trial = (await session.execute(select(Package).where(Package.ad == "Sobo Trial"))).scalar_one_or_none()
-        if not p_trial:
-            p_trial = Package(ad="Sobo Trial", ders_adedi=3, gecerlilik_gun=14, fiyat_kurus=120000)
-            session.add(p_trial)
-
-        p_starter = (await session.execute(select(Package).where(Package.ad == "Sobo Starter"))).scalar_one_or_none()
-        if not p_starter:
-            p_starter = Package(ad="Sobo Starter", ders_adedi=8, gecerlilik_gun=30, fiyat_kurus=280000)
-            session.add(p_starter)
-
-        p_core = (await session.execute(select(Package).where(Package.ad == "Sobo Core"))).scalar_one_or_none()
-        if not p_core:
-            p_core = Package(ad="Sobo Core", ders_adedi=12, gecerlilik_gun=45, fiyat_kurus=380000)
-            session.add(p_core)
-
+        # 4. Paketler (Gerçek Stüdyo Paketleri)
+        real_packages = [
+            {"ad": "Barre Class Tek Ders", "ders_adedi": 1, "gecerlilik_gun": 7, "fiyat_kurus": 90000},
+            {"ad": "Barre Class 4 Ders", "ders_adedi": 4, "gecerlilik_gun": 28, "fiyat_kurus": 350000},
+            {"ad": "Sobo Class (8 Ders / 6 Hafta)", "ders_adedi": 8, "gecerlilik_gun": 42, "fiyat_kurus": 640000},
+            {"ad": "Sobo Class (12 Ders / 8 Hafta)", "ders_adedi": 12, "gecerlilik_gun": 56, "fiyat_kurus": 840000},
+            {"ad": "Yoga Class Tek Ders", "ders_adedi": 1, "gecerlilik_gun": 7, "fiyat_kurus": 85000},
+            {"ad": "Yoga Class 4 Ders", "ders_adedi": 4, "gecerlilik_gun": 35, "fiyat_kurus": 300000},
+            {"ad": "Barre Class Bireysel", "ders_adedi": 8, "gecerlilik_gun": 42, "fiyat_kurus": 880000},
+            {"ad": "Barre Class Bireysel Premium", "ders_adedi": 12, "gecerlilik_gun": 56, "fiyat_kurus": 1180000},
+            {"ad": "Reformer Class Bireysel", "ders_adedi": 8, "gecerlilik_gun": 42, "fiyat_kurus": 750000},
+            {"ad": "Reformer Class Bireysel Elite", "ders_adedi": 12, "gecerlilik_gun": 56, "fiyat_kurus": 950000},
+        ]
+        for p in real_packages:
+            ex = (await session.execute(select(Package).where(Package.ad == p["ad"]))).scalar_one_or_none()
+            if not ex:
+                session.add(Package(**p, aktif=True))
         await session.flush()
 
         # 5. Üyeler (Admin & Örnek Üye)
