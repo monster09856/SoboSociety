@@ -23,9 +23,10 @@ workflows:
           mkdir -p ~/.appstoreconnect/private_keys
           if [ -n "$APP_STORE_CONNECT_PRIVATE_KEY" ]; then
             echo "$APP_STORE_CONNECT_PRIVATE_KEY" > ~/.appstoreconnect/private_keys/AuthKey_${APP_STORE_CONNECT_KEY_IDENTIFIER}.p8
-            echo "App Store Connect API Key saved to ~/.appstoreconnect/private_keys/AuthKey_${APP_STORE_CONNECT_KEY_IDENTIFIER}.p8"
-          else
-            echo "WARNING: APP_STORE_CONNECT_PRIVATE_KEY is missing!"
+            echo "App Store Connect API Key saved."
+            app-store-connect fetch-signing-files "$BUNDLE_ID" --type IOS_APP_STORE --create || true
+            keychain add-certificates || true
+            xcode-project use-profiles || true
           fi
       - name: Build Xcode Archive & IPA
         script: |
@@ -34,7 +35,7 @@ workflows:
           mkdir -p build/ios/ipa build/ios/xcarchive
 
           if [ -f "$KEY_PATH" ]; then
-            echo "Building and archiving Xcode project with native App Store Connect API authentication..."
+            echo "Building Xcode project with automatic team detection and App Store Connect API authentication..."
             xcodebuild -project SoboSociety.xcodeproj \
               -scheme SoboSociety \
               -sdk iphoneos \
@@ -45,6 +46,7 @@ workflows:
               -authenticationKeyID "$APP_STORE_CONNECT_KEY_IDENTIFIER" \
               -authenticationKeyIssuerID "$APP_STORE_CONNECT_ISSUER_ID" \
               -authenticationKeyPath "$KEY_PATH" \
+              ${DEVELOPMENT_TEAM:+DEVELOPMENT_TEAM=$DEVELOPMENT_TEAM} \
               CODE_SIGN_STYLE=Automatic
 
             echo "Exporting IPA package for App Store distribution..."
