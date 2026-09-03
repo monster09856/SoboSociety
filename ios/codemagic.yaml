@@ -16,28 +16,53 @@ workflows:
           set -e
           which xcodegen || brew install xcodegen
           xcodegen generate
-      - name: Set up keychain + auto-signing via App Store Connect API
+      - name: Set up App Store Connect API Key
         script: |
           set -e
-          keychain initialize
+          keychain initialize || true
+          mkdir -p ~/.appstoreconnect/private_keys
           if [ -n "$APP_STORE_CONNECT_PRIVATE_KEY" ]; then
-            echo "App Store Connect credentials present. Fetching signing files for $BUNDLE_ID..."
-            app-store-connect fetch-signing-files "$BUNDLE_ID" --type IOS_APP_STORE --create
-            keychain add-certificates
-            xcode-project use-profiles
+            echo "$APP_STORE_CONNECT_PRIVATE_KEY" > ~/.appstoreconnect/private_keys/AuthKey_${APP_STORE_CONNECT_KEY_IDENTIFIER}.p8
+            echo "App Store Connect API Key saved to ~/.appstoreconnect/private_keys/AuthKey_${APP_STORE_CONNECT_KEY_IDENTIFIER}.p8"
           else
-            echo "=========================================================================="
-            echo "NOTICE: App Store Connect API key variables are missing in Codemagic UI!"
-            echo "Please add APP_STORE_CONNECT_PRIVATE_KEY, APP_STORE_CONNECT_KEY_IDENTIFIER,"
-            echo "and APP_STORE_CONNECT_ISSUER_ID to the 'app_store_credentials' group in Codemagic."
-            echo "=========================================================================="
+            echo "WARNING: APP_STORE_CONNECT_PRIVATE_KEY is missing!"
           fi
       - name: Build Xcode Archive & IPA
         script: |
           set -e
-          xcode-project build-ipa \
-            --project SoboSociety.xcodeproj \
-            --scheme SoboSociety
+          KEY_PATH="$HOME/.appstoreconnect/private_keys/AuthKey_${APP_STORE_CONNECT_KEY_IDENTIFIER}.p8"
+          mkdir -p build/ios/ipa build/ios/xcarchive
+
+          if [ -f "$KEY_PATH" ]; then
+            echo "Building and archiving Xcode project with native App Store Connect API authentication..."
+            xcodebuild -project SoboSociety.xcodeproj \
+              -scheme SoboSociety \
+              -sdk iphoneos \
+              -configuration Release \
+              -archivePath build/ios/xcarchive/SoboSociety.xcarchive \
+              archive \
+              -allowProvisioningUpdates \
+              -authenticationKeyID "$APP_STORE_CONNECT_KEY_IDENTIFIER" \
+              -authenticationKeyIssuerID "$APP_STORE_CONNECT_ISSUER_ID" \
+              -authenticationKeyPath "$KEY_PATH" \
+              CODE_SIGN_STYLE=Automatic
+
+            echo "Exporting IPA package for App Store distribution..."
+            xcodebuild -exportArchive \
+              -archivePath build/ios/xcarchive/SoboSociety.xcarchive \
+              -exportOptionsPlist export_options.plist \
+              -exportPath build/ios/ipa \
+              -allowProvisioningUpdates \
+              -authenticationKeyID "$APP_STORE_CONNECT_KEY_IDENTIFIER" \
+              -authenticationKeyIssuerID "$APP_STORE_CONNECT_ISSUER_ID" \
+              -authenticationKeyPath "$KEY_PATH"
+
+            cp build/ios/ipa/*.ipa . || true
+          else
+            xcode-project build-ipa \
+              --project SoboSociety.xcodeproj \
+              --scheme SoboSociety
+          fi
     artifacts:
       - build/ios/ipa/*.ipa
       - "*.ipa"
