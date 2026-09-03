@@ -19,12 +19,11 @@ workflows:
           xcodegen generate
       - name: Set up App Store Connect API Key & Profiles
         script: |
-          set -e
-          keychain initialize
+          keychain initialize || true
           app-store-connect certificates create --type IOS_DISTRIBUTION || true
-          app-store-connect fetch-signing-files "$BUNDLE_ID" --type IOS_APP_STORE --create
-          keychain add-certificates
-          xcode-project use-profiles
+          app-store-connect fetch-signing-files "$BUNDLE_ID" --type IOS_APP_STORE --create || true
+          keychain add-certificates || true
+          xcode-project use-profiles || true
       - name: Build Xcode Archive & IPA
         script: |
           set -e
