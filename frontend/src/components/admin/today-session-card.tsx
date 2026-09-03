@@ -179,8 +179,20 @@ export function TodaySessionCard({
     setUpdatingSession(true)
     setMessage(null)
 
+    if (!editDateTime) {
+      setMessage({ type: 'error', text: 'Lütfen geçerli bir tarih ve saat seçin.' })
+      setUpdatingSession(false)
+      return
+    }
+
     try {
-      const isoStart = new Date(editDateTime).toISOString()
+      const dt = new Date(editDateTime)
+      if (isNaN(dt.getTime())) {
+        setMessage({ type: 'error', text: 'Girilen tarih ve saat geçersiz.' })
+        setUpdatingSession(false)
+        return
+      }
+      const isoStart = dt.toISOString()
       await admin.updateSession(session.id, {
         class_type_id: Number(editClassTypeId),
         instructor_id: Number(editInstructorId),

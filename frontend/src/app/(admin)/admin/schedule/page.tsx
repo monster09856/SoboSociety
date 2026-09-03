@@ -186,14 +186,28 @@ export default function AdminSchedulePage() {
     }
   }
 
+  const [editModalError, setEditModalError] = useState<string | null>(null)
+
   const handleUpdateSession = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!editingSession) return
     setUpdatingSession(true)
-    setError(null)
+    setEditModalError(null)
+
+    if (!editDateTime) {
+      setEditModalError('Lütfen geçerli bir ders günü ve saati giriniz.')
+      setUpdatingSession(false)
+      return
+    }
 
     try {
-      const isoStart = new Date(editDateTime).toISOString()
+      const dt = new Date(editDateTime)
+      if (isNaN(dt.getTime())) {
+        setEditModalError('Girilen tarih ve saat geçersiz.')
+        setUpdatingSession(false)
+        return
+      }
+      const isoStart = dt.toISOString()
       await admin.updateSession(editingSession.id, {
         class_type_id: Number(editClassTypeId),
         instructor_id: Number(editInstructorId),
@@ -203,7 +217,7 @@ export default function AdminSchedulePage() {
       setEditingSession(null)
       loadSessions()
     } catch (err: any) {
-      setError(err?.message || 'Ders güncellenirken bir hata oluştu.')
+      setEditModalError(err?.message || 'Ders güncellenirken bir hata oluştu.')
     } finally {
       setUpdatingSession(false)
     }
@@ -600,6 +614,13 @@ export default function AdminSchedulePage() {
                       required
                     />
                   </div>
+
+                  {editModalError && (
+                    <div className="p-3 rounded-xl bg-clay/15 text-clay text-xs font-bold border border-clay/30 flex items-center gap-2">
+                      <AlertCircle className="w-4 h-4 text-clay shrink-0" />
+                      <span>{editModalError}</span>
+                    </div>
+                  )}
 
                   <div className="pt-2 flex justify-end gap-3">
                     <button
