@@ -4,8 +4,7 @@ import sys
 import time
 import base64
 import subprocess
-import jwt
-import requests
+import traceback
 
 def main():
     print("=== Sobo Society Automated REST API Signing Setup ===")
@@ -15,9 +14,26 @@ def main():
     private_key_str = os.environ.get("APP_STORE_CONNECT_PRIVATE_KEY")
     bundle_id_name = os.environ.get("BUNDLE_ID", "com.sobosociety.app")
 
+    print(f"Environment Check -> Key ID: {key_id is not None}, Issuer ID: {issuer_id is not None}, Private Key: {private_key_str is not None}")
+
     if not key_id or not issuer_id or not private_key_str:
         print("ERROR: Missing App Store Connect API Key environment variables.")
         sys.exit(1)
+
+    # Clean key string
+    if "\\n" in private_key_str:
+        private_key_str = private_key_str.replace("\\n", "\n")
+    if "-----BEGIN" not in private_key_str:
+        private_key_str = "-----BEGIN PRIVATE KEY-----\n" + private_key_str.strip() + "\n-----END PRIVATE KEY-----\n"
+
+    try:
+        import jwt
+        import requests
+    except ImportError:
+        print("Installing required python modules: pyjwt, requests, cryptography...")
+        subprocess.run(["pip3", "install", "--break-system-packages", "pyjwt", "requests", "cryptography"], check=False)
+        import jwt
+        import requests
 
     # 1. Generate JWT Token for App Store Connect API
     payload = {
@@ -34,7 +50,9 @@ def main():
         token = jwt.encode(payload, private_key_str, algorithm="ES256", headers=headers)
         if isinstance(token, bytes):
             token = token.decode("utf-8")
+        print("Successfully generated App Store Connect JWT token.")
     except Exception as e:
+        traceback.print_exc()
         print(f"ERROR: Failed to generate JWT token: {e}")
         sys.exit(1)
 
@@ -67,6 +85,7 @@ def main():
     print("Fetching existing certificates...")
     res = requests.get("https://api.appstoreconnect.apple.com/v1/certificates", headers=api_headers)
     certs_data = res.json().get("data", []) if res.status_code == 200 else []
+    print(f"API Certificate fetch status: {res.status_code}, Found: {len(certs_data)}")
 
     matching_cert_id = None
     cert_der_bytes = None
@@ -178,4 +197,9 @@ def main():
     print(f"=== Setup Signing Completed Successfully. Saved {saved_count} profiles. ===")
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except Exception as exc:
+        traceback.print_exc()
+        print(f"CRITICAL ERROR IN SIGNING SETUP: {exc}")
+        sys.exit(1)
