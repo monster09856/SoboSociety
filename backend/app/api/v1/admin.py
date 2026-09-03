@@ -1,11 +1,11 @@
 from datetime import date, datetime, time, timezone
 
 from fastapi import APIRouter, Depends, Query
-from sqlalchemy import select
+from sqlalchemy import select, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_admin, get_db
-from app.models import Booking, BookingDurumu, BookingKaynagi, ClassSession, Member
+from app.models import Booking, BookingDurumu, BookingKaynagi, ClassSession, Member, WaitlistEntry, CreditLedger, LedgerTipi
 from app.schemas.admin import (
     AttendanceSubmitRequest,
     AttendanceSubmitResponse,
@@ -18,7 +18,7 @@ from app.schemas.admin import (
     TodaySessionResponse,
 )
 from app.schemas.member import BookingResponse
-from app.services.kredi import paket_tanimla
+from app.services.kredi import paket_tanimla, hareket_ekle
 from app.services.program_uretimi import STUDYO_TZ, uret
 from app.services.rezervasyon import rezerve_et
 from app.services.telefon import normalize_telefon
@@ -325,6 +325,57 @@ async def update_session_endpoint(
     await db.commit()
     await db.refresh(session)
     return session
+
+
+@router.delete("/sessions/{session_id}")
+async def delete_session_endpoint(
+    session_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_admin: Member = Depends(get_current_admin),
+):
+    """Takvimdeki bir ders oturumunu siler/iptal eder ve varsa kayıtlı üyelerin kredilerini iade eder."""
+    res = await db.execute(select(ClassSession).where(ClassSession.id == session_id))
+    session = res.scalar_one_or_none()
+    if not session:
+        raise HTTPException(status_code=404, detail="Ders oturumu bulunamadı.")
+
+    # 1. Bu derse kayıtlı rezervasyonları bul
+    res_bookings = await db.execute(
+        select(Booking).where(Booking.session_id == session_id, Booking.durum == BookingDurumu.BOOKED)
+    )
+    bookings = res_bookings.scalars().all()
+
+    # 2. Kayıtlı üyelerin kredilerini iade et ve bildirim gönder
+    for b in bookings:
+        b.durum = BookingDurumu.CANCELLED
+        b.cancelled_at = datetime.now(timezone.utc)
+        await hareket_ekle(
+            db,
+            member_id=b.member_id,
+            tip=LedgerTipi.CANCEL_REFUND,
+            miktar=1,
+            sebep=f"Ders yönetici tarafından iptal edildi",
+            booking_id=b.id,
+        )
+        await bildirim_gonder(
+            db,
+            member_id=b.member_id,
+            baslik="ℹ️ Ders İptali Uyarısı",
+            mesaj=f"Kayıtlı olduğunuz ders stüdyo yönetimi tarafından iptal edilmiştir. Ders krediniz hesabınıza iade edildi.",
+            tip="DERS_IPTALI",
+        )
+
+    # 3. Bekleme listesini temizle
+    await db.execute(
+        delete(WaitlistEntry).where(WaitlistEntry.session_id == session_id)
+    )
+
+    # 4. Oturumu sil
+    await db.delete(session)
+    await db.commit()
+
+    return {"mesaj": "Ders oturumu başarıyla takvimden silindi.", "iptal_edilen_kayit": len(bookings)}
+
 
 
 
