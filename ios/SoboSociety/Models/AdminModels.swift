@@ -96,3 +96,29 @@ public struct AttendanceSubmitResponse: Decodable, Sendable {
     public let gelen: Int
     public let gelmeyen: Int
 }
+
+public struct MemberAdminDetailResponse: Codable, Identifiable, Sendable {
+    public let id: Int
+    public let ad: String
+    public let kullanici_adi: String?
+    public let telefon: String?
+    public let bakiye: Int
+    public let aktif: Bool
+    public let is_admin: Bool
+    public let bel: String?
+    public let kalca: String?
+    public let sag_ic_bacak: String?
+    public let sag_bacak: String?
+    public let sol_ic_bacak: String?
+    public let sol_bacak: String?
+    public let sag_kol: String?
+    public let sol_kol: String?
+    public let boy: String?
+    public let kilo: String?
+    public let saglik_notu: String?
+    public let aktif_member_package_id: Int?
+    public let aktif_paket_adi: String?
+    public let paket_bitis_tarihi: String?
+    public let kalan_gun_sayisi: Int?
+    public let tanimlanan_paketler: [String]?
+}
