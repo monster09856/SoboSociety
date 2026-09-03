@@ -649,18 +649,6 @@ async def update_admin_member(
     await db.refresh(m)
 
     return await _build_member_detail_response(db, m)
-        bel=m.bel,
-        kalca=m.kalca,
-        sag_ic_bacak=m.sag_ic_bacak,
-        sag_bacak=m.sag_bacak,
-        sol_ic_bacak=m.sol_ic_bacak,
-        sol_bacak=m.sol_bacak,
-        sag_kol=m.sag_kol,
-        sol_kol=m.sol_kol,
-        boy=m.boy,
-        kilo=m.kilo,
-        saglik_notu=m.saglik_notu,
-    )
 
 
 @router.post("/members/{member_id}/send-notification")
