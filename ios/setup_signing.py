@@ -96,6 +96,8 @@ def main():
             subprocess.run(["security", "import", p12_path, "-k", keychain_path, "-P", "sobo123", "-T", "/usr/bin/codesign"], check=False)
             subprocess.run(["security", "import", p12_path, "-P", "sobo123"], check=False)
             imported = True
+        else:
+            print(f"P12 creation result for cert {idx}: {res_p12.stderr.decode('utf-8')}")
 
     if not imported:
         print("WARNING: Could not match certs with P12 directly, proceeding to download profiles...")
@@ -110,7 +112,6 @@ def main():
     profiles_data = res_prof.json().get("data", [])
     print(f"Found {len(profiles_data)} total profiles on Apple Developer Account.")
 
-    saved_profile = False
     for prof in profiles_data:
         prof_name = prof.get("attributes", {}).get("name", "")
         prof_content = prof.get("attributes", {}).get("profileContent", "")
@@ -118,11 +119,15 @@ def main():
         
         if prof_content:
             prof_bytes = base64.b64decode(prof_content)
-            target_path = os.path.join(prov_dir, f"{prof_uuid}.mobileprovision")
-            with open(target_path, "wb") as f:
+            target_uuid_path = os.path.join(prov_dir, f"{prof_uuid}.mobileprovision")
+            target_name_path = os.path.join(prov_dir, f"{prof_name}.mobileprovision")
+            
+            with open(target_uuid_path, "wb") as f:
                 f.write(prof_bytes)
-            print(f"Saved Provisioning Profile '{prof_name}' ({prof_uuid}) to {target_path}")
-            saved_profile = True
+            with open(target_name_path, "wb") as f:
+                f.write(prof_bytes)
+                
+            print(f"Saved Provisioning Profile '{prof_name}' ({prof_uuid}) to {prov_dir}")
 
     print("=== Setup Signing Completed Successfully ===")
 
