@@ -33,20 +33,17 @@ workflows:
             -archivePath build/ios/xcarchive/SoboSociety.xcarchive \
             archive \
             -allowProvisioningUpdates \
-            CODE_SIGN_STYLE=Automatic || \
-          xcode-project build-ipa \
-            --project SoboSociety.xcodeproj \
-            --scheme SoboSociety
+            CODE_SIGN_STYLE=Automatic
 
-          if [ -d "build/ios/xcarchive/SoboSociety.xcarchive" ]; then
-            xcodebuild -exportArchive \
-              -archivePath build/ios/xcarchive/SoboSociety.xcarchive \
-              -exportOptionsPlist export_options.plist \
-              -exportPath build/ios/ipa || true
-          fi
+          xcodebuild -exportArchive \
+            -archivePath build/ios/xcarchive/SoboSociety.xcarchive \
+            -exportOptionsPlist export_options.plist \
+            -exportPath build/ios/ipa
+
+          cp build/ios/ipa/*.ipa . || true
     artifacts:
-      - build/ios/ipa/*.ipa
-      - build/ios/xcarchive/*.xcarchive
+      - build/**/*.ipa
+      - "*.ipa"
       - /tmp/xcodebuild_logs/*.log
     publishing:
       app_store_connect:
