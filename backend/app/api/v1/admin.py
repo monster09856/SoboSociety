@@ -1,4 +1,4 @@
-from datetime import date, datetime, time, timezone
+from datetime import date, datetime, time, timezone, timedelta
 
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy import select, delete
@@ -303,7 +303,8 @@ async def create_session(
     current_admin: Member = Depends(get_current_admin),
 ):
     """Admin paneli üzerinden tekil yeni ders oturumu ekler."""
-    from app.models.program import ClassType, Instructor, Room
+    from app.models.program import ClassType, Room
+    from app.models.uyelik import Instructor
 
     ct = (await db.execute(select(ClassType).where(ClassType.id == body.class_type_id))).scalar_one_or_none()
     if not ct:
