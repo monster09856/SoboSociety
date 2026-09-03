@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { admin, TodaySessionResponse, AttendeeResponse, ClassTypeResponse, InstructorResponse } from '@/lib/api'
+import { admin, api, TodaySessionResponse, AttendeeResponse, ClassTypeResponse, InstructorResponse } from '@/lib/api'
 import { buyukHarf } from '@/lib/utils'
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -18,6 +18,7 @@ import {
   Edit2,
   X,
   Plus,
+  Trash2,
 } from 'lucide-react'
 
 interface TodaySessionCardProps {
@@ -200,6 +201,17 @@ export function TodaySessionCard({
     }
   }
 
+  const handleCancelMemberBooking = async (bookingId: number, memberName: string) => {
+    if (!confirm(`${memberName} üyesinin bu dersteki kaydını iptal edip kredisini iade etmek istediğinizden emin misiniz?`)) return
+    try {
+      await api.bookings.cancel(bookingId)
+      setMessage({ type: 'success', text: `${memberName} üyesinin kaydı iptal edildi ve ders kredisi iade edildi.` })
+      if (onAttendanceSaved) onAttendanceSaved()
+    } catch (err: any) {
+      setMessage({ type: 'error', text: err?.message || 'İptal edilirken hata oluştu.' })
+    }
+  }
+
   const formatTime = (isoString: string) => {
     try {
       const date = new Date(isoString)
@@ -324,6 +336,15 @@ export function TodaySessionCard({
                     >
                       <UserX className="w-3.5 h-3.5" />
                       <span>Gelmedi</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => handleCancelMemberBooking(att.booking_id, att.ad)}
+                      className="p-1.5 rounded-xl text-clay hover:bg-clay/15 transition-all cursor-pointer border border-clay/30"
+                      title="Bu üyenin kaydını iptal et ve kredisini iade et"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
                     </button>
                   </div>
                 </div>
