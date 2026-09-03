@@ -18,4 +18,3 @@ targets:
       GENERATE_INFOPLIST_FILE: false
       DEVELOPMENT_TEAM: "YR2KGFQ6H3"
       CODE_SIGN_STYLE: Automatic
-      CODE_SIGN_IDENTITY: "Apple Distribution"

@@ -32,7 +32,7 @@ workflows:
           KEY_PATH="$HOME/.appstoreconnect/private_keys/AuthKey_${APP_STORE_CONNECT_KEY_IDENTIFIER}.p8"
           mkdir -p build/ios/ipa build/ios/xcarchive
 
-          echo "Archiving Xcode project for Apple Distribution with App Store Connect API..."
+          echo "Archiving Xcode project with automatic code signing..."
           xcodebuild -project SoboSociety.xcodeproj \
             -scheme SoboSociety \
             -sdk iphoneos \
@@ -44,8 +44,7 @@ workflows:
             -authenticationKeyIssuerID "$APP_STORE_CONNECT_ISSUER_ID" \
             -authenticationKeyPath "$KEY_PATH" \
             DEVELOPMENT_TEAM="YR2KGFQ6H3" \
-            CODE_SIGN_STYLE=Automatic \
-            CODE_SIGN_IDENTITY="Apple Distribution"
+            CODE_SIGN_STYLE=Automatic
 
           echo "Exporting IPA package for App Store distribution..."
           xcodebuild -exportArchive \
