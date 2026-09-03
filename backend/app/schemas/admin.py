@@ -129,6 +129,12 @@ class MemberAdminDetailResponse(BaseModel):
     kilo: str | None = None
     saglik_notu: str | None = None
 
+    # Aktif Paket Bilgileri & Paket Geçmişi
+    aktif_paket_adi: str | None = None
+    paket_bitis_tarihi: str | None = None
+    kalan_gun_sayisi: int | None = None
+    tanimlanan_paketler: list[str] = Field(default_factory=list)
+
     model_config = ConfigDict(from_attributes=True)
 
 

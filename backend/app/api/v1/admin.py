@@ -521,12 +521,64 @@ async def update_admin_credentials_endpoint(
 
 # --- Admin Member Management & Credit Intervention Endpoints ---
 
-from app.models import StudioEvent, CreditLedger, LedgerTipi
+from app.models import StudioEvent, CreditLedger, LedgerTipi, MemberPackage, Package
 from app.services.kredi import bakiye, hareket_ekle
 from app.schemas.admin import (
     MemberUpdateRequest, MemberAdminDetailResponse, MemberSinglePushRequest,
     EventCreateRequest, EventResponse,
 )
+
+async def _build_member_detail_response(db: AsyncSession, m: Member) -> MemberAdminDetailResponse:
+    current_bakiye = await bakiye(db, m.id)
+    is_adm = (m.telefon in ayarlar.admin_telefons) or (m.kullanici_adi == "admin")
+    
+    mp_res = await db.execute(
+        select(MemberPackage, Package)
+        .join(Package, MemberPackage.package_id == Package.id)
+        .where(MemberPackage.member_id == m.id)
+        .order_by(MemberPackage.id.desc())
+    )
+    mp_rows = mp_res.all()
+
+    aktif_pkg_ad = None
+    pkg_bitis_str = None
+    kalan_gun = None
+    pkg_history = []
+
+    today = date.today()
+    for mp, p in mp_rows:
+        pkg_name = mp.ozel_paket_adi or p.ad
+        pkg_history.append(f"{pkg_name} ({mp.ders_adedi} Ders / Bitiş: {mp.bitis.strftime('%d.%m.%Y')})")
+        if mp.baslangic <= today < mp.bitis and aktif_pkg_ad is None:
+            aktif_pkg_ad = pkg_name
+            pkg_bitis_str = mp.bitis.strftime('%d.%m.%Y')
+            kalan_gun = (mp.bitis - today).days
+
+    return MemberAdminDetailResponse(
+        id=m.id,
+        ad=m.ad,
+        kullanici_adi=m.kullanici_adi,
+        telefon=m.telefon,
+        bakiye=current_bakiye,
+        aktif=m.aktif,
+        is_admin=is_adm,
+        bel=m.bel,
+        kalca=m.kalca,
+        sag_ic_bacak=m.sag_ic_bacak,
+        sag_bacak=m.sag_bacak,
+        sol_ic_bacak=m.sol_ic_bacak,
+        sol_bacak=m.sol_bacak,
+        sag_kol=m.sag_kol,
+        sol_kol=m.sol_kol,
+        boy=m.boy,
+        kilo=m.kilo,
+        saglik_notu=m.saglik_notu,
+        aktif_paket_adi=aktif_pkg_ad,
+        paket_bitis_tarihi=pkg_bitis_str,
+        kalan_gun_sayisi=kalan_gun,
+        tanimlanan_paketler=pkg_history,
+    )
+
 
 @router.get("/members", response_model=list[MemberAdminDetailResponse])
 async def list_admin_members(
@@ -547,30 +599,8 @@ async def list_admin_members(
 
     response = []
     for m in members:
-        current_bakiye = await bakiye(db, m.id)
-        is_adm = (m.telefon in ayarlar.admin_telefons) or (m.kullanici_adi == "admin")
-        response.append(
-            MemberAdminDetailResponse(
-                id=m.id,
-                ad=m.ad,
-                kullanici_adi=m.kullanici_adi,
-                telefon=m.telefon,
-                bakiye=current_bakiye,
-                aktif=m.aktif,
-                is_admin=is_adm,
-                bel=m.bel,
-                kalca=m.kalca,
-                sag_ic_bacak=m.sag_ic_bacak,
-                sag_bacak=m.sag_bacak,
-                sol_ic_bacak=m.sol_ic_bacak,
-                sol_bacak=m.sol_bacak,
-                sag_kol=m.sag_kol,
-                sol_kol=m.sol_kol,
-                boy=m.boy,
-                kilo=m.kilo,
-                saglik_notu=m.saglik_notu,
-            )
-        )
+        detail = await _build_member_detail_response(db, m)
+        response.append(detail)
     return response
 
 
@@ -618,16 +648,7 @@ async def update_admin_member(
     await db.commit()
     await db.refresh(m)
 
-    new_bakiye = await bakiye(db, m.id)
-    is_adm = (m.telefon in ayarlar.admin_telefons) or (m.kullanici_adi == "admin")
-    return MemberAdminDetailResponse(
-        id=m.id,
-        ad=m.ad,
-        kullanici_adi=m.kullanici_adi,
-        telefon=m.telefon,
-        bakiye=new_bakiye,
-        aktif=m.aktif,
-        is_admin=is_adm,
+    return await _build_member_detail_response(db, m)
         bel=m.bel,
         kalca=m.kalca,
         sag_ic_bacak=m.sag_ic_bacak,

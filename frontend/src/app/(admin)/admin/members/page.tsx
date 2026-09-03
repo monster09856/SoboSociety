@@ -6,7 +6,7 @@ import { buyukHarf } from '@/lib/utils'
 import { AdminNav } from '@/components/admin/admin-nav'
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
-import { Users, Search, Plus, CreditCard, Send, Edit2, ShieldAlert, CheckCircle2, Loader2, Sparkles, UserCheck, AtSign, Phone, Ruler, X } from 'lucide-react'
+import { Users, Search, Plus, CreditCard, Send, Edit2, ShieldAlert, CheckCircle2, Loader2, Sparkles, UserCheck, AtSign, Phone, Ruler, X, Package } from 'lucide-react'
 
 interface MemberDetail {
   id: number
@@ -27,6 +27,10 @@ interface MemberDetail {
   boy?: string | null
   kilo?: string | null
   saglik_notu?: string | null
+  aktif_paket_adi?: string | null
+  paket_bitis_tarihi?: string | null
+  kalan_gun_sayisi?: number | null
+  tanimlanan_paketler?: string[]
 }
 
 export default function AdminMembersPage() {
@@ -306,6 +310,39 @@ export default function AdminMembersPage() {
                   </CardHeader>
 
                   <CardContent className="pt-4 space-y-3.5 text-xs font-medium">
+                    {/* Tanımlı Aktif Paket Rozeti */}
+                    <div className="p-3 rounded-xl bg-sand-light border border-espresso/30 space-y-1 text-[11px] shadow-2xs">
+                      <div className="flex items-center justify-between text-secondary font-bold border-b border-line/50 pb-1">
+                        <span className="flex items-center gap-1 text-espresso font-extrabold">
+                          <Package className="w-3.5 h-3.5 text-mocha" /> Tanımlı Aktif Paket
+                        </span>
+                        {m.aktif_paket_adi ? (
+                          <span className="text-[10px] text-sage font-bold bg-sage/15 px-2 py-0.5 rounded-full border border-sage/40">
+                            {m.kalan_gun_sayisi} Gün Kaldı
+                          </span>
+                        ) : (
+                          <span className="text-[10px] text-clay font-bold bg-clay/15 px-2 py-0.5 rounded-full border border-clay/40">
+                            Aktif Paket Yok
+                          </span>
+                        )}
+                      </div>
+                      <div className="text-secondary font-medium pt-1">
+                        {m.aktif_paket_adi ? (
+                          <div className="space-y-0.5">
+                            <div className="font-bold text-ink text-xs flex items-center gap-1.5">
+                              <CheckCircle2 className="w-3.5 h-3.5 text-sage shrink-0" />
+                              <span>{m.aktif_paket_adi}</span>
+                            </div>
+                            <div className="text-[10px] text-mocha font-semibold pl-5">
+                              Son Kullanma: {m.paket_bitis_tarihi}
+                            </div>
+                          </div>
+                        ) : (
+                          <span className="text-muted italic text-[11px] block">Henüz aktif paket tanımlanmamış.</span>
+                        )}
+                      </div>
+                    </div>
+
                     <div className="flex items-center justify-between p-3 rounded-xl bg-ivory border border-line">
                       <span className="text-secondary font-semibold">Kalan Ders Bakiyesi:</span>
                       <span className="font-serif text-xl font-bold text-espresso">{m.bakiye} Kredi</span>

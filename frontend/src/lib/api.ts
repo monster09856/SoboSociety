@@ -514,6 +514,10 @@ export const adminApi = {
         boy?: string | null
         kilo?: string | null
         saglik_notu?: string | null
+        aktif_paket_adi?: string | null
+        paket_bitis_tarihi?: string | null
+        kalan_gun_sayisi?: number | null
+        tanimlanan_paketler?: string[]
       }[]
     >(`/admin/members${search ? `?search=${encodeURIComponent(search)}` : ''}`),
   updateMember: (
