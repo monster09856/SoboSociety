@@ -1,17 +1,15 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState } from 'react'
 import Link from 'next/link'
-import { Check, Star, ShieldCheck, Zap, Users, Sparkles, UserCheck, Activity, MessageCircle, Lock } from 'lucide-react'
+import { Check, ShieldCheck, Zap, Users, Sparkles, UserCheck, MessageCircle, Lock, Clock } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
-import { isAuthenticated } from '@/lib/auth'
 
 interface PackageItem {
   title: string
   subtitle: string
-  price: string
   validity: string
   isPopular?: boolean
   popularTag?: string
@@ -21,22 +19,16 @@ interface PackageItem {
 
 export function Packages() {
   const [activeTab, setActiveTab] = useState<'grup' | 'bireysel'>('grup')
-  const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false)
 
-  useEffect(() => {
-    setIsLoggedIn(isAuthenticated())
-  }, [])
-
-  // Bireysel Ders Paketleri (Private / Individual)
+  // Bireysel Ders Paketleri (Private Class / Individual)
   const bireyselPackages: PackageItem[] = [
     {
-      title: 'Barre Bireysel',
+      title: 'Barre Class Bireysel',
       subtitle: '8 Derslik Bireysel Paket',
-      price: '8.800 ₺',
       validity: 'Kullanım Süresi: 6 Hafta',
       isPopular: false,
       features: [
-        '8 Bireysel Seans Hakkı',
+        '8 Bireysel Class Seansı',
         'Kişiye Özel Birebir Eğitmen',
         'Kullanım Süresi: 6 Hafta',
         'Tüm Mat & Ekipmanlar Dahil',
@@ -44,14 +36,13 @@ export function Packages() {
       buttonVariant: 'secondary',
     },
     {
-      title: 'Barre Bireysel Premium',
+      title: 'Barre Class Bireysel Premium',
       subtitle: '12 Derslik Bireysel Paket',
-      price: '11.800 ₺',
       validity: 'Kullanım Süresi: 8 Hafta',
       isPopular: true,
-      popularTag: 'En Çok Tercih Edilen 🏆',
+      popularTag: '12 Saat Önceden İade Hakkı ⏱️',
       features: [
-        '12 Bireysel Seans Hakkı',
+        '12 Bireysel Class Seansı',
         'Kişiye Özel Birebir Eğitmen',
         'Kullanım Süresi: 8 Hafta',
         'Esnek İptal & Öncelikli Randevu',
@@ -59,9 +50,8 @@ export function Packages() {
       buttonVariant: 'primary',
     },
     {
-      title: 'Reformer Bireysel',
+      title: 'Reformer Class Bireysel',
       subtitle: '8 Derslik Bireysel Reformer',
-      price: '7.500 ₺',
       validity: 'Kullanım Süresi: 6 Hafta',
       isPopular: false,
       features: [
@@ -73,9 +63,8 @@ export function Packages() {
       buttonVariant: 'secondary',
     },
     {
-      title: 'Reformer Bireysel Elite',
+      title: 'Reformer Class Bireysel Elite',
       subtitle: '12 Derslik Bireysel Reformer',
-      price: '9.500 ₺',
       validity: 'Kullanım Süresi: 8 Hafta',
       isPopular: false,
       features: [
@@ -91,41 +80,38 @@ export function Packages() {
   // Grup Ders Paketleri (Class Packages)
   const grupPackages: PackageItem[] = [
     {
-      title: 'Barre Tek Ders',
+      title: 'Barre Class Tek Ders',
       subtitle: 'Tek Derslik Katılım',
-      price: '900 ₺',
       validity: 'Tek Kullanımlık',
       isPopular: false,
       features: [
-        '1 Adet Barre Grup Dersi',
+        '1 Adet Barre Class Dersi',
         'Butik Sınıf (Maks. 5 Üye)',
         'Tüm Mat & Ekipmanlar Dahil',
       ],
       buttonVariant: 'secondary',
     },
     {
-      title: 'Barre 4 Ders',
+      title: 'Barre Class 4 Ders',
       subtitle: '4 Derslik Grup Paketi',
-      price: '3.500 ₺',
       validity: 'Kullanım Süresi: 4 Hafta',
       isPopular: false,
       features: [
-        '4 Adet Barre Grup Dersi',
+        '4 Adet Barre Class Dersi',
         'Butik Sınıf (Maks. 5 Üye)',
         'Kullanım Süresi: 4 Hafta',
-        'Esnek İptal Hakkı',
+        '12 Saat Önceden İade Hakkı',
       ],
       buttonVariant: 'secondary',
     },
     {
-      title: 'Barre 8 Ders',
+      title: 'Barre Class 8 Ders',
       subtitle: '8 Derslik Grup Paketi',
-      price: '6.400 ₺',
       validity: 'Kullanım Süresi: 6 Hafta',
       isPopular: true,
-      popularTag: 'En Çok Tercih Edilen 🏆',
+      popularTag: '12 Saat Önceden İade Hakkı ⏱️',
       features: [
-        '8 Adet Barre Grup Dersi',
+        '8 Adet Barre Class Dersi',
         'Butik Sınıf (Maks. 5 Üye)',
         'Kullanım Süresi: 6 Hafta',
         'Mobil İle Kolay Rezervasyon',
@@ -133,13 +119,12 @@ export function Packages() {
       buttonVariant: 'primary',
     },
     {
-      title: 'Barre 12 Ders',
+      title: 'Barre Class 12 Ders',
       subtitle: '12 Derslik Grup Paketi',
-      price: '8.400 ₺',
       validity: 'Kullanım Süresi: 8 Hafta',
       isPopular: false,
       features: [
-        '12 Adet Barre Grup Dersi',
+        '12 Adet Barre Class Dersi',
         'Butik Sınıf (Maks. 5 Üye)',
         'Kullanım Süresi: 8 Hafta',
         'Öncelikli Bekleme Sırası',
@@ -147,26 +132,24 @@ export function Packages() {
       buttonVariant: 'secondary',
     },
     {
-      title: 'Yoga Tek Ders',
+      title: 'Yoga Class Tek Ders',
       subtitle: 'Tek Derslik Katılım',
-      price: '850 ₺',
       validity: 'Tek Kullanımlık',
       isPopular: false,
       features: [
-        '1 Adet Yoga Seansı',
+        '1 Adet Yoga Class Seansı',
         'Nefes & Denge Odaklı',
         'Mat & Blok Kullanımı Dahil',
       ],
       buttonVariant: 'secondary',
     },
     {
-      title: 'Yoga 4 Ders',
+      title: 'Yoga Class 4 Ders',
       subtitle: '4 Derslik Yoga Paketi',
-      price: '3.000 ₺',
       validity: 'Kullanım Süresi: 5 Hafta',
       isPopular: false,
       features: [
-        '4 Adet Yoga Seansı',
+        '4 Adet Yoga Class Seansı',
         'Nefes & Denge Odaklı',
         'Kullanım Süresi: 5 Hafta',
         'Mobil İle Kolay Takip',
@@ -183,7 +166,7 @@ export function Packages() {
     },
     {
       icon: Zap,
-      title: 'İptal & Bakiye Koruma',
+      title: '12 Saat İptal & Bakiye Koruma',
       desc: 'Derse 12 saat kalana kadar tek tıkla iptal edin, kredinizi kaybetmeyin.',
     },
     {
@@ -206,10 +189,10 @@ export function Packages() {
         {/* Section Title */}
         <div className="text-center max-w-2xl mx-auto mb-12 space-y-4">
           <Badge variant="mocha" className="uppercase tracking-widest px-3.5 py-1 text-xs font-medium">
-            Üyelik & Fiyatlandırma
+            Üyelik & Ders Paketleri
           </Badge>
           <h2 className="font-serif text-3xl sm:text-4xl md:text-5xl font-medium text-ink tracking-tight">
-            Ders Paketleri
+            Sobo Class Paketleri
           </h2>
           <p className="text-secondary text-base leading-relaxed">
             İhtiyacınıza ve hedefinize en uygun ders paketini seçin, Sobo Society ayrıcalıklı topluluğuna katılın.
@@ -228,7 +211,7 @@ export function Packages() {
               }`}
             >
               <Users className="w-4 h-4" />
-              <span>Grup Ders Paketleri (Barre & Yoga)</span>
+              <span>Grup Class Paketleri (Barre & Yoga)</span>
             </button>
 
             <button
@@ -240,7 +223,7 @@ export function Packages() {
               }`}
             >
               <UserCheck className="w-4 h-4" />
-              <span>Bireysel Ders Paketleri (Birebir Seanslar)</span>
+              <span>Bireysel Class Paketleri (Birebir Seanslar)</span>
             </button>
           </div>
         </div>
@@ -258,7 +241,7 @@ export function Packages() {
             >
               {pkg.isPopular && (
                 <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-espresso text-white text-xs font-medium px-4 py-1.5 rounded-full uppercase tracking-wider shadow-sm flex items-center gap-1.5 whitespace-nowrap">
-                  <Star className="w-3.5 h-3.5 fill-white text-white" />
+                  <Clock className="w-3.5 h-3.5 fill-white text-white" />
                   <span>{pkg.popularTag}</span>
                 </div>
               )}
@@ -273,21 +256,15 @@ export function Packages() {
                   </div>
 
                   <div className="mt-5 mb-3">
-                    {isLoggedIn ? (
-                      <>
-                        <span className="font-serif text-3xl sm:text-4xl font-bold text-espresso">
-                          {pkg.price}
-                        </span>
-                        <span className="text-xs text-mocha font-bold block mt-1 tracking-wide">{pkg.validity}</span>
-                      </>
-                    ) : (
-                      <div className="py-2 px-3 bg-sand/60 rounded-xl border border-line flex items-center gap-2 text-espresso">
-                        <Lock className="w-4 h-4 shrink-0 text-clay" />
-                        <span className="text-xs font-bold uppercase tracking-wider text-ink">
+                    <div className="py-2.5 px-3.5 bg-sand/60 rounded-xl border border-line flex items-center gap-2.5 text-espresso">
+                      <Lock className="w-4 h-4 shrink-0 text-clay" />
+                      <div>
+                        <span className="text-xs font-bold uppercase tracking-wider text-ink block">
                           Fiyatlar Üyelere Özeldir
                         </span>
+                        <span className="text-[10px] text-mocha font-medium block">{pkg.validity}</span>
                       </div>
-                    )}
+                    </div>
                   </div>
 
                   <ul className="space-y-3 pt-5 border-t border-line/60">
@@ -301,28 +278,19 @@ export function Packages() {
                 </div>
 
                 <div className="pt-4">
-                  {isLoggedIn ? (
-                    <a
-                      href={`https://wa.me/905316033080?text=${encodeURIComponent(
-                        `Merhaba! Sobo Society'den ${pkg.title} (${pkg.price}) satın almak istiyorum. Yardımcı olabilir misiniz?`
-                      )}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="w-full block"
-                    >
-                      <Button variant={pkg.buttonVariant} className="w-full justify-center py-3 text-sm font-medium gap-2">
-                        <MessageCircle className="w-4 h-4" />
-                        <span>WhatsApp İle Satın Al</span>
-                      </Button>
-                    </a>
-                  ) : (
-                    <Link href="/giris" className="w-full block">
-                      <Button variant="primary" className="w-full justify-center py-3 text-sm font-medium gap-2 bg-espresso hover:bg-espresso-dark text-white">
-                        <Lock className="w-4 h-4" />
-                        <span>Fiyatları Görmek İçin Giriş Yapın</span>
-                      </Button>
-                    </Link>
-                  )}
+                  <a
+                    href={`https://wa.me/905316033080?text=${encodeURIComponent(
+                      `Merhaba! Sobo Society'den ${pkg.title} hakkında fiyat bilgisi almak ve satın almak istiyorum. Yardımcı olabilir misiniz?`
+                    )}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-full block"
+                  >
+                    <Button variant={pkg.buttonVariant} className="w-full justify-center py-3 text-sm font-medium gap-2">
+                      <MessageCircle className="w-4 h-4" />
+                      <span>Fiyat Bilgisi & Satın Al (WhatsApp)</span>
+                    </Button>
+                  </a>
                 </div>
               </CardContent>
             </Card>
@@ -435,11 +403,11 @@ export function Packages() {
               <ul className="space-y-2 text-xs text-ink/90 font-medium leading-relaxed">
                 <li className="flex items-start gap-2">
                   <span className="text-espresso font-bold">•</span>
-                  <span>Ders iptal/değişiklik bildirimleri en az <strong>12-24 saat önceden</strong> iletilmelidir.</span>
+                  <span>Ders iptal/değişiklik bildirimleri en geç <strong>12 saat önceden</strong> iletilmelidir.</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="text-espresso font-bold">•</span>
-                  <span>Son gün/saatlerde bildirilen iptallerde ders yapılmış sayılır.</span>
+                  <span>12 saatten az kala bildirilen iptallerde ders yapılmış sayılır.</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="text-espresso font-bold">•</span>

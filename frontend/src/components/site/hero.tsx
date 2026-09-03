@@ -47,7 +47,7 @@ export function Hero() {
               <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-sage"></span>
             </span>
             <span className="text-xs uppercase tracking-[0.2em] text-ink font-medium">
-              Uydukent • Afyonkarahisar Stüdyosu
+              Afyonkarahisar • Wellness Stüdyo
             </span>
           </div>
 
