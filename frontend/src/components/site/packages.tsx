@@ -1,11 +1,12 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { Check, Star, ShieldCheck, Zap, Users, Sparkles, UserCheck, Activity, MessageCircle } from 'lucide-react'
+import { Check, Star, ShieldCheck, Zap, Users, Sparkles, UserCheck, Activity, MessageCircle, Lock } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
+import { isAuthenticated } from '@/lib/auth'
 
 interface PackageItem {
   title: string
@@ -20,6 +21,11 @@ interface PackageItem {
 
 export function Packages() {
   const [activeTab, setActiveTab] = useState<'grup' | 'bireysel'>('grup')
+  const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false)
+
+  useEffect(() => {
+    setIsLoggedIn(isAuthenticated())
+  }, [])
 
   // Bireysel Ders Paketleri (Private / Individual)
   const bireyselPackages: PackageItem[] = [
@@ -267,10 +273,21 @@ export function Packages() {
                   </div>
 
                   <div className="mt-5 mb-3">
-                    <span className="font-serif text-3xl sm:text-4xl font-bold text-espresso">
-                      {pkg.price}
-                    </span>
-                    <span className="text-xs text-mocha font-bold block mt-1 tracking-wide">{pkg.validity}</span>
+                    {isLoggedIn ? (
+                      <>
+                        <span className="font-serif text-3xl sm:text-4xl font-bold text-espresso">
+                          {pkg.price}
+                        </span>
+                        <span className="text-xs text-mocha font-bold block mt-1 tracking-wide">{pkg.validity}</span>
+                      </>
+                    ) : (
+                      <div className="py-2 px-3 bg-sand/60 rounded-xl border border-line flex items-center gap-2 text-espresso">
+                        <Lock className="w-4 h-4 shrink-0 text-clay" />
+                        <span className="text-xs font-bold uppercase tracking-wider text-ink">
+                          Fiyatlar Üyelere Özeldir
+                        </span>
+                      </div>
+                    )}
                   </div>
 
                   <ul className="space-y-3 pt-5 border-t border-line/60">
@@ -284,19 +301,28 @@ export function Packages() {
                 </div>
 
                 <div className="pt-4">
-                  <a
-                    href={`https://wa.me/905316033080?text=${encodeURIComponent(
-                      `Merhaba! Sobo Society'den ${pkg.title} (${pkg.price}) satın almak istiyorum. Yardımcı olabilir misiniz?`
-                    )}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="w-full block"
-                  >
-                    <Button variant={pkg.buttonVariant} className="w-full justify-center py-3 text-sm font-medium gap-2">
-                      <MessageCircle className="w-4 h-4" />
-                      <span>WhatsApp İle Satın Al</span>
-                    </Button>
-                  </a>
+                  {isLoggedIn ? (
+                    <a
+                      href={`https://wa.me/905316033080?text=${encodeURIComponent(
+                        `Merhaba! Sobo Society'den ${pkg.title} (${pkg.price}) satın almak istiyorum. Yardımcı olabilir misiniz?`
+                      )}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="w-full block"
+                    >
+                      <Button variant={pkg.buttonVariant} className="w-full justify-center py-3 text-sm font-medium gap-2">
+                        <MessageCircle className="w-4 h-4" />
+                        <span>WhatsApp İle Satın Al</span>
+                      </Button>
+                    </a>
+                  ) : (
+                    <Link href="/giris" className="w-full block">
+                      <Button variant="primary" className="w-full justify-center py-3 text-sm font-medium gap-2 bg-espresso hover:bg-espresso-dark text-white">
+                        <Lock className="w-4 h-4" />
+                        <span>Fiyatları Görmek İçin Giriş Yapın</span>
+                      </Button>
+                    </Link>
+                  )}
                 </div>
               </CardContent>
             </Card>

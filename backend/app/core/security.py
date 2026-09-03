@@ -7,7 +7,26 @@ from app.services.telefon import normalize_telefon
 from app.settings import ayarlar
 from app.services.sms import generate_otp_code, send_sms_otp
 
+import hashlib
+import os
+
 _OTP_STORE: dict[str, str] = {}
+
+
+def hash_password(password: str) -> str:
+    """Şifreyi PBKDF2_SHA256 ile güvenli şekilde hash'ler."""
+    salt = os.urandom(16).hex()
+    key = hashlib.pbkdf2_hmac('sha256', password.encode('utf-8'), salt.encode('utf-8'), 100000).hex()
+    return f"{salt}:{key}"
+
+
+def verify_password(password: str, hashed: str | None) -> bool:
+    """Düz metin şifreyi saklanan hash ile doğrular."""
+    if not hashed or ":" not in hashed:
+        return False
+    salt, key = hashed.split(":", 1)
+    new_key = hashlib.pbkdf2_hmac('sha256', password.encode('utf-8'), salt.encode('utf-8'), 100000).hex()
+    return new_key == key
 
 
 def create_access_token(

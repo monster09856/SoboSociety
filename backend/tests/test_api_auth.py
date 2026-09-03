@@ -174,3 +174,45 @@ async def test_get_current_admin_dependency(db):
     with pytest.raises(Exception) as exc_info:
         await get_current_admin(db=db, current_member=normal_uye)
     assert "403" in str(exc_info.value)
+
+
+async def test_register_ve_login_basarili(client: AsyncClient, db):
+    # 1. Kayıt Ol
+    reg_res = await client.post(
+        "/api/v1/auth/register",
+        json={
+            "ad": "Elif Kaya",
+            "kullanici_adi": "elifkaya",
+            "sifre": "sifre123",
+            "telefon": "+905334445566",
+        },
+    )
+    assert reg_res.status_code == 200
+    assert "access_token" in reg_res.json()
+
+    # 2. Aynı kullanıcı adı tekrar kayıt olamaz
+    reg_again = await client.post(
+        "/api/v1/auth/register",
+        json={
+            "ad": "Elif Kaya",
+            "kullanici_adi": "elifkaya",
+            "sifre": "farklisifre",
+        },
+    )
+    assert reg_again.status_code == 400
+
+    # 3. Giriş Yap (Kullanıcı adı + Şifre)
+    login_res = await client.post(
+        "/api/v1/auth/login",
+        json={"kullanici_adi": "elifkaya", "sifre": "sifre123"},
+    )
+    assert login_res.status_code == 200
+    assert "access_token" in login_res.json()
+
+    # 4. Hatalı Şifre
+    wrong_pw = await client.post(
+        "/api/v1/auth/login",
+        json={"kullanici_adi": "elifkaya", "sifre": "yanlissifre"},
+    )
+    assert wrong_pw.status_code == 400
+

@@ -7,7 +7,9 @@ import { AdminNav } from '@/components/admin/admin-nav'
 import { TodaySessionCard } from '@/components/admin/today-session-card'
 import { QuickBookingSidebar } from '@/components/admin/quick-booking-sidebar'
 import { Button } from '@/components/ui/button'
-import { RefreshCw, Calendar as CalendarIcon, AlertCircle, Loader2, Zap, Sparkles } from 'lucide-react'
+import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { RefreshCw, Calendar as CalendarIcon, AlertCircle, Loader2, Zap, Sparkles, Plus, CheckCircle2 } from 'lucide-react'
 
 export default function AdminTodayPage() {
   const [sessions, setSessions] = useState<TodaySessionResponse[]>([])
@@ -18,6 +20,18 @@ export default function AdminTodayPage() {
     return today.toISOString().split('T')[0]
   })
   const [selectedSessionId, setSelectedSessionId] = useState<number | null>(null)
+
+  // New Class Modal / Toggle State
+  const [showAddForm, setShowAddForm] = useState(false)
+  const [newClassTypeId, setNewClassTypeId] = useState(1)
+  const [newInstructorId, setNewInstructorId] = useState(1)
+  const [newDateTime, setNewDateTime] = useState(() => {
+    const d = new Date()
+    d.setHours(10, 0, 0, 0)
+    return d.toISOString().slice(0, 16)
+  })
+  const [newCapacity, setNewCapacity] = useState(5)
+  const [addingSession, setAddingSession] = useState(false)
 
   const fetchSessions = useCallback(async () => {
     setLoading(true)
@@ -35,6 +49,28 @@ export default function AdminTodayPage() {
   useEffect(() => {
     fetchSessions()
   }, [fetchSessions])
+
+  const handleAddSession = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setAddingSession(true)
+    setError(null)
+
+    try {
+      const isoStart = new Date(newDateTime).toISOString()
+      await admin.createSession({
+        class_type_id: Number(newClassTypeId),
+        instructor_id: Number(newInstructorId),
+        baslangic: isoStart,
+        kontenjan: Number(newCapacity),
+      })
+      setShowAddForm(false)
+      fetchSessions()
+    } catch (err: any) {
+      setError(err?.message || 'Yeni ders eklenirken bir hata oluştu.')
+    } finally {
+      setAddingSession(false)
+    }
+  }
 
   const formatDateDisplay = (dateString: string) => {
     try {
@@ -54,9 +90,9 @@ export default function AdminTodayPage() {
     <div className="min-h-screen bg-ivory text-ink font-sans antialiased relative">
       <AdminNav />
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 relative z-10">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 relative z-10 space-y-8">
         {/* Başlık ve Tarih Seçimi */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <div className="flex items-center gap-2 mb-1.5">
               <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-sand text-espresso border border-line">
@@ -73,6 +109,14 @@ export default function AdminTodayPage() {
           </div>
 
           <div className="flex items-center gap-3">
+            <button
+              onClick={() => setShowAddForm(!showAddForm)}
+              className="px-4 py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider bg-espresso text-ivory hover:bg-espresso-dark transition-all flex items-center gap-2 cursor-pointer shadow-xs"
+            >
+              <Plus className="w-4 h-4" />
+              <span>{showAddForm ? 'Kapat' : 'Tekil Ders Ekle'}</span>
+            </button>
+
             <div className="flex items-center gap-2 bg-sand px-3.5 py-2 rounded-xl border border-line shadow-xs">
               <CalendarIcon className="w-4 h-4 text-espresso" />
               <input
@@ -95,6 +139,100 @@ export default function AdminTodayPage() {
             </Button>
           </div>
         </div>
+
+        {/* Tekil Ders Ekleme Formu */}
+        {showAddForm && (
+          <Card className="border border-espresso/30 shadow-md bg-sand rounded-2xl text-ink animate-in fade-in slide-in-from-top-2 duration-200">
+            <CardHeader className="border-b border-line/80 pb-4">
+              <CardTitle className="flex items-center gap-2 text-lg font-serif font-bold text-ink">
+                <Plus className="w-5 h-5 text-espresso" />
+                <span>Manuel Yeni Ders Oturumu Ekle</span>
+              </CardTitle>
+              <CardDescription className="text-secondary text-xs">
+                İstediğiniz tarih ve saati seçerek takvime yeni ders ekleyin.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="pt-6">
+              <form onSubmit={handleAddSession} className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 items-end">
+                <div>
+                  <label className="block text-xs font-bold text-secondary uppercase tracking-wider mb-1.5">
+                    Ders Tipi
+                  </label>
+                  <select
+                    value={newClassTypeId}
+                    onChange={(e) => setNewClassTypeId(Number(e.target.value))}
+                    className="w-full bg-ivory border-line text-ink rounded-xl h-11 px-3 text-xs font-medium focus:ring-2 focus:ring-espresso"
+                  >
+                    <option value={1}>Barre</option>
+                    <option value={2}>Pilates</option>
+                    <option value={3}>Yoga</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-secondary uppercase tracking-wider mb-1.5">
+                    Eğitmen
+                  </label>
+                  <select
+                    value={newInstructorId}
+                    onChange={(e) => setNewInstructorId(Number(e.target.value))}
+                    className="w-full bg-ivory border-line text-ink rounded-xl h-11 px-3 text-xs font-medium focus:ring-2 focus:ring-espresso"
+                  >
+                    <option value={1}>Ece Karaca</option>
+                    <option value={2}>Defne Yılmaz</option>
+                    <option value={3}>Can Tezcan</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-secondary uppercase tracking-wider mb-1.5">
+                    Ders Günü ve Saati
+                  </label>
+                  <Input
+                    type="datetime-local"
+                    value={newDateTime}
+                    onChange={(e) => setNewDateTime(e.target.value)}
+                    className="bg-ivory border-line text-ink rounded-xl h-11 px-3 text-xs font-medium cursor-pointer"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-secondary uppercase tracking-wider mb-1.5">
+                    Kontenjan (Max Üye)
+                  </label>
+                  <Input
+                    type="number"
+                    min={1}
+                    max={20}
+                    value={newCapacity}
+                    onChange={(e) => setNewCapacity(Number(e.target.value))}
+                    className="bg-ivory border-line text-ink rounded-xl h-11 px-3 text-xs font-medium"
+                    required
+                  />
+                </div>
+
+                <div className="sm:col-span-2 md:col-span-4 pt-2 flex justify-end gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setShowAddForm(false)}
+                    className="px-4 py-2.5 rounded-xl text-xs font-bold text-secondary hover:text-ink transition-colors cursor-pointer"
+                  >
+                    İptal
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={addingSession}
+                    className="px-6 py-2.5 rounded-xl font-extrabold text-xs uppercase tracking-wider bg-espresso text-ivory hover:bg-espresso-dark transition-all cursor-pointer shadow-xs flex items-center gap-2"
+                  >
+                    {addingSession ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+                    <span>Dersi Takvime Ekle</span>
+                  </button>
+                </div>
+              </form>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Ana İçerik Grid (Dersler + Hızlı Kayıt Çubuğu) */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -132,7 +270,7 @@ export default function AdminTodayPage() {
                   Seçilen Tarihte Ders Bulunmuyor
                 </h3>
                 <p className="text-sm text-secondary max-w-md mx-auto leading-relaxed">
-                  {selectedDate} tarihinde tanımlanmış bir ders oturumu yoktur. Şablondan yeni dersler türetmek için Ders Türetme sayfasını kullanabilirsiniz.
+                  {selectedDate} tarihinde tanımlanmış bir ders oturumu yoktur. Yukarıdaki &quot;Tekil Ders Ekle&quot; butonundan veya Ders Programı sayfasından ders ekleyebilirsiniz.
                 </p>
               </div>
             ) : (
@@ -140,7 +278,7 @@ export default function AdminTodayPage() {
                 <div className="flex items-center justify-between text-xs font-semibold text-secondary px-1">
                   <span>Toplam <strong>{sessions.length} ders oturumu</strong> listeleniyor</span>
                   <span className="flex items-center gap-1 text-mocha">
-                    <Sparkles className="w-3.5 h-3.5" /> Canlı Yoklama Modu
+                    <Sparkles className="w-3.5 h-3.5" /> Canlı Yoklama & Ders Düzenleme Modu
                   </span>
                 </div>
                 {sessions.map((session) => (

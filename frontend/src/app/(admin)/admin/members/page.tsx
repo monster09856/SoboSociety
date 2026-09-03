@@ -6,15 +6,27 @@ import { buyukHarf } from '@/lib/utils'
 import { AdminNav } from '@/components/admin/admin-nav'
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
-import { Users, Search, Plus, CreditCard, Send, Edit2, ShieldAlert, CheckCircle2, Loader2, Sparkles, UserCheck } from 'lucide-react'
+import { Users, Search, Plus, CreditCard, Send, Edit2, ShieldAlert, CheckCircle2, Loader2, Sparkles, UserCheck, AtSign, Phone, Ruler, X } from 'lucide-react'
 
 interface MemberDetail {
   id: number
   ad: string
-  telefon: string
+  kullanici_adi?: string | null
+  telefon?: string | null
   bakiye: number
   aktif: boolean
   is_admin: boolean
+  bel?: string | null
+  kalca?: string | null
+  sag_ic_bacak?: string | null
+  sag_bacak?: string | null
+  sol_ic_bacak?: string | null
+  sol_bacak?: string | null
+  sag_kol?: string | null
+  sol_kol?: string | null
+  boy?: string | null
+  kilo?: string | null
+  saglik_notu?: string | null
 }
 
 export default function AdminMembersPage() {
@@ -28,6 +40,17 @@ export default function AdminMembersPage() {
   const [editingMember, setEditingMember] = useState<MemberDetail | null>(null)
   const [newBakiye, setNewBakiye] = useState<number>(0)
   const [newName, setNewName] = useState<string>('')
+  const [editBel, setEditBel] = useState('')
+  const [editKalca, setEditKalca] = useState('')
+  const [editSagIcBacak, setEditSagIcBacak] = useState('')
+  const [editSagBacak, setEditSagBacak] = useState('')
+  const [editSolIcBacak, setEditSolIcBacak] = useState('')
+  const [editSolBacak, setEditSolBacak] = useState('')
+  const [editSagKol, setEditSagKol] = useState('')
+  const [editSolKol, setEditSolKol] = useState('')
+  const [editBoy, setEditBoy] = useState('')
+  const [editKilo, setEditKilo] = useState('')
+  const [editSaglikNotu, setEditSaglikNotu] = useState('')
   const [updating, setUpdating] = useState(false)
 
   // Single Push Notification Modal State
@@ -39,6 +62,10 @@ export default function AdminMembersPage() {
   // Assign Package Modal State
   const [pkgMember, setPkgMember] = useState<MemberDetail | null>(null)
   const [selectedPkgId, setSelectedPkgId] = useState<number>(1)
+  const [isCustomPkg, setIsCustomPkg] = useState(false)
+  const [customPkgName, setCustomPkgName] = useState('')
+  const [customCredits, setCustomCredits] = useState(10)
+  const [customDays, setCustomDays] = useState(45)
   const [assigningPkg, setAssigningPkg] = useState(false)
 
   const loadMembers = async (query?: string) => {
@@ -64,6 +91,23 @@ export default function AdminMembersPage() {
     loadMembers(search)
   }
 
+  const openEditModal = (m: MemberDetail) => {
+    setEditingMember(m)
+    setNewName(m.ad)
+    setNewBakiye(m.bakiye)
+    setEditBel(m.bel || '')
+    setEditKalca(m.kalca || '')
+    setEditSagIcBacak(m.sag_ic_bacak || '')
+    setEditSagBacak(m.sag_bacak || '')
+    setEditSolIcBacak(m.sol_ic_bacak || '')
+    setEditSolBacak(m.sol_bacak || '')
+    setEditSagKol(m.sag_kol || '')
+    setEditSolKol(m.sol_kol || '')
+    setEditBoy(m.boy || '')
+    setEditKilo(m.kilo || '')
+    setEditSaglikNotu(m.saglik_notu || '')
+  }
+
   const handleUpdateMember = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!editingMember) return
@@ -75,8 +119,19 @@ export default function AdminMembersPage() {
       await admin.updateMember(editingMember.id, {
         ad: newName,
         bakiye_override: Number(newBakiye),
+        bel: editBel,
+        kalca: editKalca,
+        sag_ic_bacak: editSagIcBacak,
+        sag_bacak: editSagBacak,
+        sol_ic_bacak: editSolIcBacak,
+        sol_bacak: editSolBacak,
+        sag_kol: editSagKol,
+        sol_kol: editSolKol,
+        boy: editBoy,
+        kilo: editKilo,
+        saglik_notu: editSaglikNotu,
       })
-      setSuccess(`${newName} üyesinin bilgileri ve bakiyesi güncellendi.`)
+      setSuccess(`${newName} üyesinin tüm bilgileri, vücut ölçüleri ve bakiyesi güncellendi.`)
       setEditingMember(null)
       loadMembers(search)
     } catch (err: any) {
@@ -117,11 +172,21 @@ export default function AdminMembersPage() {
     setSuccess(null)
 
     try {
-      await admin.assignPackage({
-        member_id: pkgMember.id,
-        package_id: selectedPkgId,
-      })
-      setSuccess(`${pkgMember.ad} üyesine yeni ders paketi tanımlandı.`)
+      if (isCustomPkg) {
+        await admin.assignPackage({
+          member_id: pkgMember.id,
+          ozel_paket_adi: customPkgName.trim() || 'Özel Üye Paketi',
+          ozel_ders_adedi: Number(customCredits),
+          ozel_gecerlilik_gun: Number(customDays),
+        })
+        setSuccess(`${pkgMember.ad} üyesine özel ${customPkgName || 'Özel Paket'} (${customCredits} Ders / ${customDays} Gün) tanımlandı.`)
+      } else {
+        await admin.assignPackage({
+          member_id: pkgMember.id,
+          package_id: selectedPkgId,
+        })
+        setSuccess(`${pkgMember.ad} üyesine ders paketi tanımlandı.`)
+      }
       setPkgMember(null)
       loadMembers(search)
     } catch (err: any) {
@@ -142,14 +207,14 @@ export default function AdminMembersPage() {
             <div className="flex items-center gap-2 mb-1.5">
               <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-sand text-espresso border border-line">
                 <Users className="w-3.5 h-3.5 text-mocha" />
-                <span>Yönetici Üye & Bakiye Konsolu</span>
+                <span>Yönetici Üye & Ölçü Konsolu</span>
               </span>
             </div>
             <h1 className="font-serif text-3xl sm:text-4xl font-extrabold tracking-tight text-ink">
-              {buyukHarf("Üye Yönetimi & Bakiye Müdahale")}
+              {buyukHarf("Üye Yönetimi & Detaylı Vücut Ölçüleri")}
             </h1>
             <p className="text-sm text-secondary font-medium mt-1">
-              Stüdyodaki tüm üyeleri listeleyin, bakiyelerine doğrudan müdahale edin veya üyeye özel duyuru gönderin.
+              Stüdyodaki tüm üyeleri listeleyin, bel, kalça, kol, bacak ölçülerini inceleyin veya özel paket tanımlayın.
             </p>
           </div>
         </div>
@@ -175,7 +240,7 @@ export default function AdminMembersPage() {
               <Search className="w-4 h-4 text-secondary absolute left-3.5 top-3.5" />
               <Input
                 type="text"
-                placeholder="Üye adı veya cep telefonu numarası ile ara..."
+                placeholder="Üye adı, kullanıcı adı veya cep telefonu ile ara..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 className="bg-ivory border-line pl-10 h-11 text-xs font-medium rounded-xl"
@@ -222,36 +287,67 @@ export default function AdminMembersPage() {
                         </span>
                       )}
                     </div>
-                    <CardDescription className="text-xs text-secondary font-mono">
-                      {m.telefon}
-                    </CardDescription>
+                    <div className="space-y-0.5 mt-1">
+                      {m.kullanici_adi && (
+                        <div className="flex items-center gap-1 text-xs text-espresso font-bold">
+                          <AtSign className="w-3 h-3 text-mocha" />
+                          <span>{m.kullanici_adi}</span>
+                        </div>
+                      )}
+                      {m.telefon ? (
+                        <div className="flex items-center gap-1 text-xs text-secondary font-mono">
+                          <Phone className="w-3 h-3 text-mocha" />
+                          <span>{m.telefon}</span>
+                        </div>
+                      ) : (
+                        <span className="text-[11px] text-muted italic block">Telefon Eklenmedi</span>
+                      )}
+                    </div>
                   </CardHeader>
 
-                  <CardContent className="pt-4 space-y-4 text-xs font-medium">
+                  <CardContent className="pt-4 space-y-3.5 text-xs font-medium">
                     <div className="flex items-center justify-between p-3 rounded-xl bg-ivory border border-line">
                       <span className="text-secondary font-semibold">Kalan Ders Bakiyesi:</span>
                       <span className="font-serif text-xl font-bold text-espresso">{m.bakiye} Kredi</span>
                     </div>
 
+                    {/* Vücut Ölçüleri Özet Rozeti */}
+                    <div className="p-3 rounded-xl bg-ivory/60 border border-line space-y-1 text-[11px]">
+                      <div className="flex items-center justify-between text-secondary font-bold border-b border-line/50 pb-1">
+                        <span className="flex items-center gap-1 text-espresso">
+                          <Ruler className="w-3 h-3" /> Ölçü Özeti
+                        </span>
+                        <span className="text-[10px] text-mocha font-semibold">
+                          {m.kilo ? `${m.kilo} kg` : ''} {m.boy ? `• ${m.boy} cm` : ''}
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-2 gap-x-2 gap-y-0.5 text-secondary font-medium pt-1">
+                        <span>Bel: <strong className="text-ink">{m.bel || '-'}</strong></span>
+                        <span>Kalça: <strong className="text-ink">{m.kalca || '-'}</strong></span>
+                        <span>Sağ Bacak: <strong className="text-ink">{m.sag_bacak || '-'}</strong></span>
+                        <span>Sol Bacak: <strong className="text-ink">{m.sol_bacak || '-'}</strong></span>
+                      </div>
+                    </div>
+
                     {/* Actions */}
                     <div className="grid grid-cols-3 gap-2 pt-1">
                       <button
-                        onClick={() => {
-                          setEditingMember(m)
-                          setNewName(m.ad)
-                          setNewBakiye(m.bakiye)
-                        }}
+                        onClick={() => openEditModal(m)}
                         className="p-2 rounded-xl bg-ivory border border-line hover:border-espresso text-ink hover:text-espresso text-[11px] font-bold flex flex-col items-center gap-1 transition-all cursor-pointer"
-                        title="Bakiye / İsim Müdahalesi"
+                        title="Tüm Bilgileri Gör / Düzenle"
                       >
                         <Edit2 className="w-3.5 h-3.5 text-mocha" />
-                        <span>Müdahale</span>
+                        <span>Müdahale & Ölçü</span>
                       </button>
 
                       <button
                         onClick={() => {
                           setPkgMember(m)
                           setSelectedPkgId(1)
+                          setIsCustomPkg(false)
+                          setCustomPkgName(`${m.ad} Özel Paket`)
+                          setCustomCredits(10)
+                          setCustomDays(45)
                         }}
                         className="p-2 rounded-xl bg-ivory border border-line hover:border-espresso text-ink hover:text-espresso text-[11px] font-bold flex flex-col items-center gap-1 transition-all cursor-pointer"
                         title="Paket Tanımla"
@@ -280,41 +376,174 @@ export default function AdminMembersPage() {
           )}
         </div>
 
-        {/* Modal 1: Member Edit / Credit Intervention */}
+        {/* Modal 1: Member Edit / Full Body Measurements & Credit Intervention */}
         {editingMember && (
           <div className="fixed inset-0 z-50 bg-ink/60 backdrop-blur-xs flex items-center justify-center p-4">
-            <Card className="max-w-md w-full bg-sand border border-line rounded-2xl shadow-xl animate-in fade-in zoom-in-95 duration-150">
-              <CardHeader className="border-b border-line pb-4">
+            <Card className="max-w-lg w-full bg-sand border border-line rounded-2xl shadow-xl animate-in fade-in zoom-in-95 duration-150 max-h-[90vh] overflow-y-auto">
+              <CardHeader className="border-b border-line pb-4 relative">
+                <button
+                  type="button"
+                  onClick={() => setEditingMember(null)}
+                  className="absolute top-4 right-4 text-secondary hover:text-ink p-1 rounded-full hover:bg-sand cursor-pointer"
+                >
+                  <X className="w-5 h-5" />
+                </button>
                 <CardTitle className="font-serif text-lg font-bold text-ink flex items-center gap-2">
-                  <Edit2 className="w-4 h-4 text-espresso" />
-                  <span>Üye Bilgisi & Bakiye Müdahalesi</span>
+                  <Ruler className="w-5 h-5 text-espresso" />
+                  <span>Üye Detayları & Vücut Ölçüleri Müdahalesi</span>
                 </CardTitle>
                 <CardDescription className="text-xs text-secondary">
-                  {editingMember.telefon} numaralı üye için bilgileri ve kredi bakiyesini doğrudan değiştirin.
+                  <strong>{editingMember.ad}</strong> üyesinin tüm ölçülerini, bakiyesini ve özel notlarını düzenleyin.
                 </CardDescription>
               </CardHeader>
-              <CardContent className="pt-6 space-y-4">
+              <CardContent className="pt-6 space-y-5">
                 <form onSubmit={handleUpdateMember} className="space-y-4">
-                  <div>
-                    <label className="block text-xs font-bold text-secondary uppercase mb-1">Üye Adı Soyadı</label>
-                    <Input
-                      value={newName}
-                      onChange={(e) => setNewName(e.target.value)}
-                      className="bg-ivory border-line text-xs font-medium rounded-xl h-11"
-                      required
-                    />
+                  {/* Temel Üye Bilgileri */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-bold text-secondary uppercase mb-1">Üye Adı Soyadı</label>
+                      <Input
+                        value={newName}
+                        onChange={(e) => setNewName(e.target.value)}
+                        className="bg-ivory border-line text-xs font-medium rounded-xl h-11"
+                        required
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-secondary uppercase mb-1">Kalan Ders Bakiyesi</label>
+                      <Input
+                        type="number"
+                        min={0}
+                        max={999}
+                        value={newBakiye}
+                        onChange={(e) => setNewBakiye(Number(e.target.value))}
+                        className="bg-ivory border-line text-lg font-bold text-espresso rounded-xl h-11"
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  {/* Vücut Ölçüleri Grid */}
+                  <div className="p-4 rounded-xl bg-ivory/70 border border-line space-y-3">
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-espresso flex items-center gap-1.5 border-b border-line pb-2">
+                      <Ruler className="w-4 h-4 text-mocha" />
+                      <span>Vücut Ölçüleri & Form Bilgileri</span>
+                    </h4>
+
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 pt-1">
+                      <div>
+                        <label className="block text-[11px] font-bold text-secondary uppercase mb-1">Bel</label>
+                        <Input
+                          placeholder="Örn: 68 cm"
+                          value={editBel}
+                          onChange={(e) => setEditBel(e.target.value)}
+                          className="bg-ivory border-line text-xs font-medium rounded-xl h-9"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] font-bold text-secondary uppercase mb-1">Kalça</label>
+                        <Input
+                          placeholder="Örn: 94 cm"
+                          value={editKalca}
+                          onChange={(e) => setEditKalca(e.target.value)}
+                          className="bg-ivory border-line text-xs font-medium rounded-xl h-9"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] font-bold text-secondary uppercase mb-1">Sağ İç Bacak</label>
+                        <Input
+                          placeholder="Örn: 52 cm"
+                          value={editSagIcBacak}
+                          onChange={(e) => setEditSagIcBacak(e.target.value)}
+                          className="bg-ivory border-line text-xs font-medium rounded-xl h-9"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] font-bold text-secondary uppercase mb-1">Sağ Bacak</label>
+                        <Input
+                          placeholder="Örn: 54 cm"
+                          value={editSagBacak}
+                          onChange={(e) => setEditSagBacak(e.target.value)}
+                          className="bg-ivory border-line text-xs font-medium rounded-xl h-9"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] font-bold text-secondary uppercase mb-1">Sol İç Bacak</label>
+                        <Input
+                          placeholder="Örn: 52 cm"
+                          value={editSolIcBacak}
+                          onChange={(e) => setEditSolIcBacak(e.target.value)}
+                          className="bg-ivory border-line text-xs font-medium rounded-xl h-9"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] font-bold text-secondary uppercase mb-1">Sol Bacak</label>
+                        <Input
+                          placeholder="Örn: 54 cm"
+                          value={editSolBacak}
+                          onChange={(e) => setEditSolBacak(e.target.value)}
+                          className="bg-ivory border-line text-xs font-medium rounded-xl h-9"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] font-bold text-secondary uppercase mb-1">Sağ Kol</label>
+                        <Input
+                          placeholder="Örn: 27 cm"
+                          value={editSagKol}
+                          onChange={(e) => setEditSagKol(e.target.value)}
+                          className="bg-ivory border-line text-xs font-medium rounded-xl h-9"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] font-bold text-secondary uppercase mb-1">Sol Kol</label>
+                        <Input
+                          placeholder="Örn: 27 cm"
+                          value={editSolKol}
+                          onChange={(e) => setEditSolKol(e.target.value)}
+                          className="bg-ivory border-line text-xs font-medium rounded-xl h-9"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] font-bold text-secondary uppercase mb-1">Boy</label>
+                        <Input
+                          placeholder="Örn: 168 cm"
+                          value={editBoy}
+                          onChange={(e) => setEditBoy(e.target.value)}
+                          className="bg-ivory border-line text-xs font-medium rounded-xl h-9"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] font-bold text-secondary uppercase mb-1">Kilo</label>
+                        <Input
+                          placeholder="Örn: 56 kg"
+                          value={editKilo}
+                          onChange={(e) => setEditKilo(e.target.value)}
+                          className="bg-ivory border-line text-xs font-medium rounded-xl h-9"
+                        />
+                      </div>
+                    </div>
                   </div>
 
                   <div>
-                    <label className="block text-xs font-bold text-secondary uppercase mb-1">Kalan Ders Bakiyesi (Kredi)</label>
-                    <Input
-                      type="number"
-                      min={0}
-                      max={999}
-                      value={newBakiye}
-                      onChange={(e) => setNewBakiye(Number(e.target.value))}
-                      className="bg-ivory border-line text-lg font-bold text-espresso rounded-xl h-11"
-                      required
+                    <label className="block text-xs font-bold text-secondary uppercase mb-1">
+                      Sağlık, Sakatlık veya Hedef Notları
+                    </label>
+                    <textarea
+                      rows={3}
+                      placeholder="Örn: Sol diz hassasiyeti var, hamstring esnetmesi önerilir."
+                      value={editSaglikNotu}
+                      onChange={(e) => setEditSaglikNotu(e.target.value)}
+                      className="w-full bg-ivory border border-line text-xs font-medium rounded-xl p-3 focus:ring-2 focus:ring-espresso text-ink"
                     />
                   </div>
 
@@ -332,7 +561,7 @@ export default function AdminMembersPage() {
                       className="px-5 py-2.5 rounded-xl text-xs font-extrabold uppercase bg-espresso text-ivory hover:bg-espresso-dark transition-all cursor-pointer shadow-xs flex items-center gap-2"
                     >
                       {updating && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-                      <span>KAYDET & GÜNCELLE</span>
+                      <span>TÜM BİLGİLERİ KAYDET</span>
                     </button>
                   </div>
                 </form>
@@ -372,7 +601,7 @@ export default function AdminMembersPage() {
                       rows={3}
                       value={notifBody}
                       onChange={(e) => setNotifBody(e.target.value)}
-                      placeholder="Örn: Merhaba Ayşe Hanım, yarınki Barre dersiniz saat 10:00'da başlayacaktır."
+                      placeholder="Örn: Merhaba Sedat Bey, yarınki Barre dersiniz saat 10:00'da başlayacaktır."
                       className="w-full bg-ivory border border-line text-xs font-medium rounded-xl p-3 focus:ring-2 focus:ring-espresso text-ink"
                       required
                     />
@@ -401,7 +630,7 @@ export default function AdminMembersPage() {
           </div>
         )}
 
-        {/* Modal 3: Assign Package */}
+        {/* Modal 3: Assign Custom / Standard Package */}
         {pkgMember && (
           <div className="fixed inset-0 z-50 bg-ink/60 backdrop-blur-xs flex items-center justify-center p-4">
             <Card className="max-w-md w-full bg-sand border border-line rounded-2xl shadow-xl animate-in fade-in zoom-in-95 duration-150">
@@ -411,24 +640,91 @@ export default function AdminMembersPage() {
                   <span>Üyeye Paket Tanımla</span>
                 </CardTitle>
                 <CardDescription className="text-xs text-secondary">
-                  <strong>{pkgMember.ad}</strong> üyesine yeni ders paketi yükleyin.
+                  <strong>{pkgMember.ad}</strong> üyesi için hazır veya kişiye özel paket tanımlayın.
                 </CardDescription>
               </CardHeader>
               <CardContent className="pt-6 space-y-4">
                 <form onSubmit={handleAssignPackage} className="space-y-4">
-                  <div>
-                    <label className="block text-xs font-bold text-secondary uppercase mb-1">Paket Seçimi</label>
-                    <select
-                      value={selectedPkgId}
-                      onChange={(e) => setSelectedPkgId(Number(e.target.value))}
-                      className="w-full bg-ivory border-line text-ink rounded-xl h-11 px-3 text-xs font-medium focus:ring-2 focus:ring-espresso"
+                  {/* Paket Tipi Seçimi (Hazır / Özel) */}
+                  <div className="flex rounded-xl bg-ivory p-1 border border-line">
+                    <button
+                      type="button"
+                      onClick={() => setIsCustomPkg(false)}
+                      className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+                        !isCustomPkg ? 'bg-espresso text-ivory shadow-xs' : 'text-secondary hover:text-ink'
+                      }`}
                     >
-                      <option value={1}>Sobo Trial (1 Ders / 14 Gün)</option>
-                      <option value={2}>Sobo Starter (5 Ders / 45 Gün)</option>
-                      <option value={3}>Sobo Core (10 Ders / 60 Gün)</option>
-                      <option value={4}>Society Pass (20 Ders / 90 Gün)</option>
-                    </select>
+                      Hazır Şablon Paketler
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setIsCustomPkg(true)}
+                      className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 cursor-pointer ${
+                        isCustomPkg ? 'bg-espresso text-ivory shadow-xs' : 'text-secondary hover:text-ink'
+                      }`}
+                    >
+                      <Sparkles className="w-3.5 h-3.5 text-mocha" />
+                      <span>Özel Paket Oluştur</span>
+                    </button>
                   </div>
+
+                  {!isCustomPkg ? (
+                    <div>
+                      <label className="block text-xs font-bold text-secondary uppercase mb-1">Hazır Paket Seçimi</label>
+                      <select
+                        value={selectedPkgId}
+                        onChange={(e) => setSelectedPkgId(Number(e.target.value))}
+                        className="w-full bg-ivory border-line text-ink rounded-xl h-11 px-3 text-xs font-medium focus:ring-2 focus:ring-espresso"
+                      >
+                        <option value={1}>Sobo Trial (3 Ders / 14 Gün)</option>
+                        <option value={2}>Sobo Starter (8 Ders / 30 Gün)</option>
+                        <option value={3}>Sobo Core (12 Ders / 45 Gün)</option>
+                        <option value={4}>Society Pass (20 Ders / 90 Gün)</option>
+                      </select>
+                    </div>
+                  ) : (
+                    <div className="space-y-3.5 p-3.5 rounded-xl bg-ivory/60 border border-line">
+                      <div>
+                        <label className="block text-xs font-bold text-secondary uppercase mb-1">Özel Paket Adı</label>
+                        <Input
+                          type="text"
+                          placeholder="Örn: Sedat Bey Özel VIP Paket veya Yaz Fırsatı"
+                          value={customPkgName}
+                          onChange={(e) => setCustomPkgName(e.target.value)}
+                          className="bg-ivory border-line text-xs font-medium rounded-xl h-10"
+                          required
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-xs font-bold text-secondary uppercase mb-1">Ders Hak Sayısı</label>
+                          <Input
+                            type="number"
+                            min={1}
+                            max={500}
+                            value={customCredits}
+                            onChange={(e) => setCustomCredits(Number(e.target.value))}
+                            className="bg-ivory border-line text-sm font-bold text-espresso rounded-xl h-10"
+                            required
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-xs font-bold text-secondary uppercase mb-1">Geçerlilik (Gün)</label>
+                          <Input
+                            type="number"
+                            min={1}
+                            max={365}
+                            value={customDays}
+                            onChange={(e) => setCustomDays(Number(e.target.value))}
+                            className="bg-ivory border-line text-sm font-bold text-espresso rounded-xl h-10"
+                            required
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
 
                   <div className="flex justify-end gap-2 pt-2">
                     <button

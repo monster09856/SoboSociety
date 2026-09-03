@@ -1,0 +1,18 @@
+name: SoboSociety
+options:
+  bundleIdPrefix: com.sobosociety
+  deploymentTarget:
+    iOS: "16.0"
+targets:
+  SoboSociety:
+    type: application
+    platform: iOS
+    deploymentTarget: "16.0"
+    sources:
+      - SoboSociety
+    settings:
+      PRODUCT_BUNDLE_IDENTIFIER: com.sobosociety.app
+      INFOPLIST_FILE: SoboSociety/Info.plist
+      MARKETING_VERSION: "1.0.0"
+      CURRENT_PROJECT_VERSION: "1"
+      GENERATE_INFOPLIST_FILE: false

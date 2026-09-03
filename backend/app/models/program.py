@@ -25,7 +25,7 @@ class ClassType(ZamanDamgali, Base):
     kontenjan: Mapped[int] = mapped_column(Integer)
     sure_dk: Mapped[int] = mapped_column(Integer)
     renk: Mapped[str] = mapped_column(String(9), default="#A2846F")
-    iptal_penceresi_saat: Mapped[int] = mapped_column(Integer, default=6)
+    iptal_penceresi_saat: Mapped[int] = mapped_column(Integer, default=12)
     aktif: Mapped[bool] = mapped_column(Boolean, default=True)
 
     __table_args__ = (

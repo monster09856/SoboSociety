@@ -67,9 +67,23 @@ public final class AuthViewModel: ObservableObject {
                 let user: MemberMeResponse = try await APIClient.shared.request(endpoint: "/auth/me")
                 self.currentUser = user
                 self.isAdmin = user.is_admin ?? false
+                self.registerDeviceToken()
             } catch {
                 // Ignore failure if me fails
             }
+        }
+    }
+
+    private func registerDeviceToken() {
+        Task {
+            struct DevTokenReq: Encodable {
+                let device_token: String
+                let platform: String
+            }
+            do {
+                let body = try JSONEncoder().encode(DevTokenReq(device_token: "apns-ios-device-token-sync", platform: "ios"))
+                let _: [String: String] = try await APIClient.shared.request(endpoint: "/my/device-token", method: "POST", body: body)
+            } catch {}
         }
     }
 

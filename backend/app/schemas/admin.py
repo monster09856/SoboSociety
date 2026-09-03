@@ -47,8 +47,11 @@ class AttendanceSubmitResponse(BaseModel):
 
 class PackageAssignRequest(BaseModel):
     member_id: int = Field(..., description="Paket tanımlanacak üye ID'si")
-    package_id: int = Field(..., description="Tanımlanacak paket ID'si")
+    package_id: int | None = Field(default=None, description="Tanımlanacak paket ID'si")
     baslangic: date | None = Field(default=None, description="Paket başlangıç tarihi (varsayılan bugün)")
+    ozel_paket_adi: str | None = Field(default=None, description="Özelleştirilmiş paket adı")
+    ozel_ders_adedi: int | None = Field(default=None, description="Özelleştirilmiş ders kredisi adedi")
+    ozel_gecerlilik_gun: int | None = Field(default=None, description="Özelleştirilmiş geçerlilik gün sayısı")
 
 
 class MemberPackageResponse(BaseModel):
@@ -78,21 +81,53 @@ class SessionCreateRequest(BaseModel):
     room_id: int = Field(default=1, description="Salon ID'si")
 
 
+class SessionUpdateRequest(BaseModel):
+    baslangic: datetime | None = Field(default=None, description="Ders başlangıç tarihi ve saati")
+    class_type_id: int | None = Field(default=None, description="Ders tipi ID'si")
+    instructor_id: int | None = Field(default=None, description="Eğitmen ID'si")
+    kontenjan: int | None = Field(default=None, description="Ders kontenjan sınırı")
+
+
 class MemberUpdateRequest(BaseModel):
     ad: str | None = None
     telefon: str | None = None
     aktif: bool | None = None
     bakiye_override: int | None = Field(default=None, description="Elle kural dışı bakiye tanımlama / düzeltme")
+    bel: str | None = None
+    kalca: str | None = None
+    sag_ic_bacak: str | None = None
+    sag_bacak: str | None = None
+    sol_ic_bacak: str | None = None
+    sol_bacak: str | None = None
+    sag_kol: str | None = None
+    sol_kol: str | None = None
+    boy: str | None = None
+    kilo: str | None = None
+    saglik_notu: str | None = None
 
 
 class MemberAdminDetailResponse(BaseModel):
     id: int
     ad: str
-    telefon: str
+    kullanici_adi: str | None = None
+    telefon: str | None = None
     bakiye: int
     aktif: bool
     is_admin: bool
     toplam_rezervasyon: int = 0
+
+    # Vücut Ölçüleri & Sağlık / Hedef Notları
+    bel: str | None = None
+    kalca: str | None = None
+    sag_ic_bacak: str | None = None
+    sag_bacak: str | None = None
+    sol_ic_bacak: str | None = None
+    sol_bacak: str | None = None
+    sag_kol: str | None = None
+    sol_kol: str | None = None
+    boy: str | None = None
+    kilo: str | None = None
+    saglik_notu: str | None = None
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -121,6 +156,10 @@ class EventResponse(BaseModel):
     ucret: str
     aktif: bool
 
-    model_config = ConfigDict(from_attributes=True)
+class AdminCredentialsUpdateRequest(BaseModel):
+    yeni_kullanici_adi: str | None = Field(default=None, description="Yeni Yönetici Kullanıcı Adı")
+    yeni_sifre: str = Field(..., description="Yeni Yönetici Şifresi")
+    mevcut_sifre: str | None = Field(default=None, description="Mevcut Şifre (Güvenlik doğrulaması için)")
+
 
 

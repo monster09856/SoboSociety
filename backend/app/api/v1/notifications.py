@@ -45,7 +45,7 @@ async def get_my_notifications(
             mesaj=item.mesaj,
             tip=item.tip,
             okundu=item.okundu,
-            olusturuldu_at=item.olusturuldu_at.isoformat(),
+            olusturuldu_at=item.created_at.isoformat() if item.created_at else "",
         )
         for item in items
     ]

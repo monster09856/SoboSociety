@@ -44,17 +44,17 @@ async def seed():
         # 3. Ders Tipleri
         barre = (await session.execute(select(ClassType).where(ClassType.ad == "Barre"))).scalar_one_or_none()
         if not barre:
-            barre = ClassType(ad="Barre", kontenjan=8, sure_dk=50, renk="#A2846F", iptal_penceresi_saat=6)
+            barre = ClassType(ad="Barre", kontenjan=5, sure_dk=50, renk="#A2846F", iptal_penceresi_saat=6)
             session.add(barre)
 
         pilates = (await session.execute(select(ClassType).where(ClassType.ad == "Pilates"))).scalar_one_or_none()
         if not pilates:
-            pilates = ClassType(ad="Pilates", kontenjan=8, sure_dk=50, renk="#6F5647", iptal_penceresi_saat=6)
+            pilates = ClassType(ad="Pilates", kontenjan=5, sure_dk=50, renk="#6F5647", iptal_penceresi_saat=6)
             session.add(pilates)
 
         functional = (await session.execute(select(ClassType).where(ClassType.ad == "Functional"))).scalar_one_or_none()
         if not functional:
-            functional = ClassType(ad="Functional", kontenjan=8, sure_dk=50, renk="#7D8B72", iptal_penceresi_saat=6)
+            functional = ClassType(ad="Functional", kontenjan=5, sure_dk=50, renk="#7D8B72", iptal_penceresi_saat=6)
             session.add(functional)
 
         await session.flush()

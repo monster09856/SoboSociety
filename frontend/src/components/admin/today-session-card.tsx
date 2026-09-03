@@ -1,9 +1,10 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { admin, TodaySessionResponse, AttendeeResponse } from '@/lib/api'
+import { admin, TodaySessionResponse, AttendeeResponse, ClassTypeResponse, InstructorResponse } from '@/lib/api'
 import { buyukHarf } from '@/lib/utils'
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
 import {
   Users,
   Clock,
@@ -14,6 +15,9 @@ import {
   Loader2,
   PlusCircle,
   Sparkles,
+  Edit2,
+  X,
+  Plus,
 } from 'lucide-react'
 
 interface TodaySessionCardProps {
@@ -32,7 +36,6 @@ export function TodaySessionCard({
       ? session.katilimcilar
       : session.attendees || []
 
-  // Track which members are marked as attended (set of member_id)
   const [attendedSet, setAttendedSet] = useState<Set<number>>(() => {
     const initial = new Set<number>()
     attendeesList.forEach((att) => {
@@ -43,7 +46,6 @@ export function TodaySessionCard({
     return initial
   })
 
-  // Sync state when session changes
   useEffect(() => {
     const nextSet = new Set<number>()
     attendeesList.forEach((att) => {
@@ -56,6 +58,80 @@ export function TodaySessionCard({
 
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
+
+  // Edit Modal State
+  const [showEditModal, setShowEditModal] = useState(false)
+  const [editClassTypeId, setEditClassTypeId] = useState(session.class_type?.id || 1)
+  const [editInstructorId, setEditInstructorId] = useState(session.instructor?.id || 1)
+  const [editDateTime, setEditDateTime] = useState('')
+  const [editCapacity, setEditCapacity] = useState(session.kontenjan || 5)
+  const [updatingSession, setUpdatingSession] = useState(false)
+
+  // Dynamic Lists for Class Types & Instructors
+  const [classList, setClassList] = useState<{ id: number; ad: string }[]>([
+    { id: 1, ad: 'Barre' },
+    { id: 2, ad: 'Pilates' },
+    { id: 3, ad: 'Yoga' },
+  ])
+  const [instructorList, setInstructorList] = useState<{ id: number; ad: string }[]>([
+    { id: 1, ad: 'Ece Karaca' },
+    { id: 2, ad: 'Defne Yılmaz' },
+    { id: 3, ad: 'Can Tezcan' },
+  ])
+
+  const loadDropdowns = async () => {
+    try {
+      const [cts, ins] = await Promise.all([
+        admin.getClassTypes().catch(() => []),
+        admin.getInstructors().catch(() => []),
+      ])
+      if (cts && cts.length > 0) setClassList(cts)
+      if (ins && ins.length > 0) setInstructorList(ins)
+    } catch (_) {}
+  }
+
+  useEffect(() => {
+    if (showEditModal) {
+      loadDropdowns()
+    }
+  }, [showEditModal])
+
+  useEffect(() => {
+    if (session.baslangic) {
+      try {
+        const dt = new Date(session.baslangic)
+        const tzOffset = dt.getTimezoneOffset() * 60000
+        const localISOTime = (new Date(dt.getTime() - tzOffset)).toISOString().slice(0, 16)
+        setEditDateTime(localISOTime)
+      } catch {
+        setEditDateTime('')
+      }
+    }
+  }, [session.baslangic])
+
+  const handleAddNewClassType = async () => {
+    const ad = prompt('Yeni Ders Tipi Adı (Örn: Reformer Pilates, Zumba, HIIT):')
+    if (!ad || !ad.trim()) return
+    try {
+      const created = await admin.addClassType({ ad: ad.trim() })
+      setClassList((prev) => [...prev.filter((c) => c.id !== created.id), created])
+      setEditClassTypeId(created.id)
+    } catch (err: any) {
+      alert(err?.message || 'Ders tipi eklenemedi.')
+    }
+  }
+
+  const handleAddNewInstructor = async () => {
+    const ad = prompt('Yeni Eğitmen Adı Soyadı (Örn: Selin Yılmaz):')
+    if (!ad || !ad.trim()) return
+    try {
+      const created = await admin.addInstructor({ ad: ad.trim() })
+      setInstructorList((prev) => [...prev.filter((i) => i.id !== created.id), created])
+      setEditInstructorId(created.id)
+    } catch (err: any) {
+      alert(err?.message || 'Eğitmen eklenemedi.')
+    }
+  }
 
   const toggleAttendance = (memberId: number, attended: boolean) => {
     setAttendedSet((prev) => {
@@ -97,6 +173,33 @@ export function TodaySessionCard({
     }
   }
 
+  const handleUpdateSession = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setUpdatingSession(true)
+    setMessage(null)
+
+    try {
+      const isoStart = new Date(editDateTime).toISOString()
+      await admin.updateSession(session.id, {
+        class_type_id: Number(editClassTypeId),
+        instructor_id: Number(editInstructorId),
+        baslangic: isoStart,
+        kontenjan: Number(editCapacity),
+      })
+      setShowEditModal(false)
+      if (onAttendanceSaved) {
+        onAttendanceSaved()
+      }
+    } catch (err: any) {
+      setMessage({
+        type: 'error',
+        text: err?.message || 'Ders saatleri güncellenirken hata oluştu.',
+      })
+    } finally {
+      setUpdatingSession(false)
+    }
+  }
+
   const formatTime = (isoString: string) => {
     try {
       const date = new Date(isoString)
@@ -112,7 +215,7 @@ export function TodaySessionCard({
   const capacityRatio = `${session.dolu_sayi}/${session.kontenjan}`
 
   return (
-    <Card className="border border-line shadow-xs bg-sand/60 hover:bg-sand rounded-2xl text-ink overflow-hidden transition-all duration-300">
+    <Card className="border border-line shadow-xs bg-sand/60 hover:bg-sand rounded-2xl text-ink overflow-hidden transition-all duration-300 relative">
       <CardHeader className="pb-4 border-b border-line/80">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
@@ -140,15 +243,26 @@ export function TodaySessionCard({
             </p>
           </div>
 
-          {onSelectForQuickBooking && (
+          <div className="flex items-center gap-2">
             <button
-              onClick={() => onSelectForQuickBooking(session.id)}
-              className="px-3.5 py-2 rounded-xl text-xs font-bold bg-ivory hover:bg-sand text-espresso border border-line transition-all flex items-center gap-1.5 cursor-pointer shadow-xs"
+              onClick={() => setShowEditModal(true)}
+              className="px-3 py-2 rounded-xl text-xs font-bold bg-ivory hover:bg-sand text-espresso border border-line transition-all flex items-center gap-1.5 cursor-pointer shadow-xs"
+              title="Ders Günü ve Saatini Değiştir"
             >
-              <PlusCircle className="w-4 h-4 text-mocha" />
-              <span>Hızlı Kayıt</span>
+              <Edit2 className="w-4 h-4 text-mocha" />
+              <span>Saat / Gün Düzenle</span>
             </button>
-          )}
+
+            {onSelectForQuickBooking && (
+              <button
+                onClick={() => onSelectForQuickBooking(session.id)}
+                className="px-3.5 py-2 rounded-xl text-xs font-bold bg-espresso hover:bg-espresso-dark text-ivory transition-all flex items-center gap-1.5 cursor-pointer shadow-xs"
+              >
+                <PlusCircle className="w-4 h-4 text-ivory" />
+                <span>+ Hızlı Kayıt</span>
+              </button>
+            )}
+          </div>
         </div>
       </CardHeader>
 
@@ -185,7 +299,6 @@ export function TodaySessionCard({
                     <p className="text-xs text-secondary font-mono">{att.telefon}</p>
                   </div>
 
-                  {/* Canlı Seçim Düğmeleri (Katıldı Adaçayı Yeşil, Gelmedi Kiremit Kırmızı) */}
                   <div className="flex items-center gap-2 shrink-0">
                     <button
                       type="button"
@@ -256,6 +369,133 @@ export function TodaySessionCard({
           )}
         </button>
       </CardFooter>
+
+      {/* Modal: Edit Class Hours & Details */}
+      {showEditModal && (
+        <div className="fixed inset-0 z-50 bg-ink/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <Card className="max-w-md w-full bg-sand border border-line rounded-2xl shadow-xl animate-in fade-in zoom-in-95 duration-150 text-ink">
+            <CardHeader className="border-b border-line pb-4 relative">
+              <button
+                type="button"
+                onClick={() => setShowEditModal(false)}
+                className="absolute top-4 right-4 text-secondary hover:text-ink p-1 rounded-full hover:bg-sand cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+              <CardTitle className="font-serif text-lg font-bold text-ink flex items-center gap-2">
+                <Edit2 className="w-5 h-5 text-espresso" />
+                <span>Ders Günü & Saatini Değiştir</span>
+              </CardTitle>
+              <p className="text-xs text-secondary mt-1">
+                <strong>{classTitle}</strong> dersinin yapılacağı tarihi, saati, eğitmeni ve kontenjanını güncelleyin.
+              </p>
+            </CardHeader>
+            <CardContent className="pt-6 space-y-4">
+              <form onSubmit={handleUpdateSession} className="space-y-4">
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="block text-xs font-bold text-secondary uppercase tracking-wider">
+                      Ders Tipi
+                    </label>
+                    <button
+                      type="button"
+                      onClick={handleAddNewClassType}
+                      className="text-[11px] font-bold text-espresso hover:underline flex items-center gap-1 cursor-pointer"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      <span>+ Yeni Tipi Ekle</span>
+                    </button>
+                  </div>
+                  <select
+                    value={editClassTypeId}
+                    onChange={(e) => setEditClassTypeId(Number(e.target.value))}
+                    className="w-full bg-ivory border-line text-ink rounded-xl h-11 px-3 text-xs font-medium focus:ring-2 focus:ring-espresso"
+                  >
+                    {classList.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.ad}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="block text-xs font-bold text-secondary uppercase tracking-wider">
+                      Eğitmen
+                    </label>
+                    <button
+                      type="button"
+                      onClick={handleAddNewInstructor}
+                      className="text-[11px] font-bold text-espresso hover:underline flex items-center gap-1 cursor-pointer"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      <span>+ Yeni Eğitmen Ekle</span>
+                    </button>
+                  </div>
+                  <select
+                    value={editInstructorId}
+                    onChange={(e) => setEditInstructorId(Number(e.target.value))}
+                    className="w-full bg-ivory border-line text-ink rounded-xl h-11 px-3 text-xs font-medium focus:ring-2 focus:ring-espresso"
+                  >
+                    {instructorList.map((i) => (
+                      <option key={i.id} value={i.id}>
+                        {i.ad}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-secondary uppercase tracking-wider mb-1.5">
+                    Ders Günü & Başlangıç Saati
+                  </label>
+                  <Input
+                    type="datetime-local"
+                    value={editDateTime}
+                    onChange={(e) => setEditDateTime(e.target.value)}
+                    className="bg-ivory border-line text-ink rounded-xl h-11 px-3 text-xs font-medium cursor-pointer"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-secondary uppercase tracking-wider mb-1.5">
+                    Kontenjan (Maksimum Üye Sayısı)
+                  </label>
+                  <Input
+                    type="number"
+                    min={1}
+                    max={20}
+                    value={editCapacity}
+                    onChange={(e) => setEditCapacity(Number(e.target.value))}
+                    className="bg-ivory border-line text-ink rounded-xl h-11 px-3 text-xs font-medium"
+                    required
+                  />
+                </div>
+
+                <div className="pt-2 flex justify-end gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setShowEditModal(false)}
+                    className="px-4 py-2.5 rounded-xl text-xs font-bold text-secondary hover:text-ink cursor-pointer"
+                  >
+                    İptal
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={updatingSession}
+                    className="px-5 py-2.5 rounded-xl font-extrabold text-xs uppercase tracking-wider bg-espresso text-ivory hover:bg-espresso-dark transition-all cursor-pointer shadow-xs flex items-center gap-2"
+                  >
+                    {updatingSession ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
+                    <span>DERSİ GÜNCELLE</span>
+                  </button>
+                </div>
+              </form>
+            </CardContent>
+          </Card>
+        </div>
+      )}
     </Card>
   )
 }

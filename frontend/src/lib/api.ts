@@ -143,6 +143,18 @@ export async function apiFetch<T>(
 }
 
 // Auth DTO Types
+export interface MemberRegisterRequest {
+  ad: string
+  kullanici_adi: string
+  sifre: string
+  telefon?: string
+}
+
+export interface MemberLoginRequest {
+  kullanici_adi: string
+  sifre: string
+}
+
 export interface OTPSendRequest {
   telefon: string
 }
@@ -155,6 +167,7 @@ export interface OTPSendResponse {
 export interface OTPVerifyRequest {
   telefon: string
   kod: string
+  ad?: string
 }
 
 export interface TokenResponse {
@@ -164,12 +177,26 @@ export interface TokenResponse {
 
 export interface MemberMeResponse {
   id: number
-  telefon: string
+  telefon?: string | null
+  kullanici_adi?: string | null
   ad: string
   kvkk_onay_at: string | null
   katilimci_gorunurluk_onay: boolean
   aktif: boolean
   is_admin: boolean
+
+  // Vücut Ölçüleri & Sağlık / Hedef Notları
+  bel?: string | null
+  kalca?: string | null
+  sag_ic_bacak?: string | null
+  sag_bacak?: string | null
+  sol_ic_bacak?: string | null
+  sol_bacak?: string | null
+  sag_kol?: string | null
+  sol_kol?: string | null
+  boy?: string | null
+  kilo?: string | null
+  saglik_notu?: string | null
 }
 
 // Session & Booking DTO Types
@@ -239,6 +266,16 @@ export interface MemberSummaryResponse {
 // API Endpoints Namespace
 export const api = {
   auth: {
+    register: (data: MemberRegisterRequest) =>
+      apiFetch<TokenResponse>('/auth/register', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+    login: (data: MemberLoginRequest) =>
+      apiFetch<TokenResponse>('/auth/login', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
     sendOtp: (data: OTPSendRequest) =>
       apiFetch<OTPSendResponse>('/auth/otp/send', {
         method: 'POST',
@@ -250,6 +287,11 @@ export const api = {
         body: JSON.stringify(data),
       }),
     getMe: () => apiFetch<MemberMeResponse>('/auth/me'),
+    updateMe: (data: Partial<MemberMeResponse>) =>
+      apiFetch<MemberMeResponse>('/auth/me', {
+        method: 'PUT',
+        body: JSON.stringify(data),
+      }),
   },
   sessions: {
     list: () => apiFetch<ClassSessionResponse[]>('/sessions'),
@@ -317,8 +359,11 @@ export interface AttendanceSubmitResponse {
 
 export interface PackageAssignRequest {
   member_id: number
-  package_id: number
+  package_id?: number
   baslangic?: string | null
+  ozel_paket_adi?: string
+  ozel_ders_adedi?: number
+  ozel_gecerlilik_gun?: number
 }
 
 export interface MemberPackageResponse {
@@ -338,11 +383,46 @@ export interface SessionGenerateResponse {
   uretilen_oturum_sayisi: number
 }
 
+export interface AdminCredentialsUpdateRequest {
+  yeni_kullanici_adi?: string
+  yeni_sifre: string
+  mevcut_sifre?: string
+}
+
+export interface SessionUpdateRequest {
+  baslangic?: string
+  class_type_id?: number
+  instructor_id?: number
+  kontenjan?: number
+}
+
 export const adminApi = {
   getToday: (tarih?: string) =>
     apiFetch<TodaySessionResponse[]>(
       `/admin/today${tarih ? `?tarih=${encodeURIComponent(tarih)}` : ''}`
     ),
+  getClassTypes: () => apiFetch<ClassTypeResponse[]>('/admin/class-types'),
+  addClassType: (data: { ad: string; kontenjan?: number; sure_dk?: number }) =>
+    apiFetch<ClassTypeResponse>('/admin/class-types', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  getInstructors: () => apiFetch<InstructorResponse[]>('/admin/instructors'),
+  addInstructor: (data: { ad: string; biyografi?: string }) =>
+    apiFetch<InstructorResponse>('/admin/instructors', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  updateSession: (sessionId: number, data: SessionUpdateRequest) =>
+    apiFetch<ClassSessionResponse>(`/admin/sessions/${sessionId}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+  updateCredentials: (data: AdminCredentialsUpdateRequest) =>
+    apiFetch<{ mesaj: string; kullanici_adi: string }>('/admin/credentials', {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
   quickBooking: (data: QuickBookingRequest) =>
     apiFetch<BookingResponse>('/admin/quick-booking', {
       method: 'POST',
@@ -418,10 +498,22 @@ export const adminApi = {
       {
         id: number
         ad: string
-        telefon: string
+        kullanici_adi?: string | null
+        telefon?: string | null
         bakiye: number
         aktif: boolean
         is_admin: boolean
+        bel?: string | null
+        kalca?: string | null
+        sag_ic_bacak?: string | null
+        sag_bacak?: string | null
+        sol_ic_bacak?: string | null
+        sol_bacak?: string | null
+        sag_kol?: string | null
+        sol_kol?: string | null
+        boy?: string | null
+        kilo?: string | null
+        saglik_notu?: string | null
       }[]
     >(`/admin/members${search ? `?search=${encodeURIComponent(search)}` : ''}`),
   updateMember: (
@@ -431,6 +523,17 @@ export const adminApi = {
       telefon?: string
       aktif?: boolean
       bakiye_override?: number
+      bel?: string
+      kalca?: string
+      sag_ic_bacak?: string
+      sag_bacak?: string
+      sol_ic_bacak?: string
+      sol_bacak?: string
+      sag_kol?: string
+      sol_kol?: string
+      boy?: string
+      kilo?: string
+      saglik_notu?: string
     }
   ) =>
     apiFetch<{
@@ -440,6 +543,16 @@ export const adminApi = {
       bakiye: number
       aktif: boolean
       is_admin: boolean
+      bel?: string | null
+      kalca?: string | null
+      sag_ic_bacak?: string | null
+      sag_bacak?: string | null
+      sol_ic_bacak?: string | null
+      sol_bacak?: string | null
+      sag_kol?: string | null
+      sol_kol?: string | null
+      boy?: string | null
+      kilo?: string | null
     }>(`/admin/members/${memberId}`, {
       method: 'PUT',
       body: JSON.stringify(data),

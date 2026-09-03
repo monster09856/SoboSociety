@@ -27,13 +27,15 @@ const config: Config = {
           DEFAULT: '#2B2522',
           soft: '#3D3531',
         },
-        secondary: '#6B5D52',
-        muted: '#8A7B6E',
-        mocha: '#A2846F',
+        mocha: {
+          DEFAULT: '#A47864',
+          light: '#F4EFEB',
+          dark: '#875C4A',
+        },
         espresso: {
-          DEFAULT: '#6F5647',
-          dark: '#584336',
-          hover: '#5A463A',
+          DEFAULT: '#7A5243',
+          dark: '#5D3B2F',
+          hover: '#6E483A',
         },
         sage: {
           DEFAULT: '#7D8B72',

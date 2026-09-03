@@ -17,7 +17,9 @@ class Member(ZamanDamgali, Base):
     __tablename__ = "members"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    telefon: Mapped[str] = mapped_column(String(16), unique=True, index=True)
+    kullanici_adi: Mapped[str | None] = mapped_column(String(60), unique=True, index=True, default=None)
+    sifre_hash: Mapped[str | None] = mapped_column(String(255), default=None)
+    telefon: Mapped[str | None] = mapped_column(String(16), unique=True, index=True, default=None)
     ad: Mapped[str] = mapped_column(String(120))
 
     # KVKK aydınlatma onayı — zaman damgası kanıttır, boolean yeterli değil
@@ -26,6 +28,19 @@ class Member(ZamanDamgali, Base):
     )
     # Ders katılımcı listesinde adının görünmesine rıza. AYRI ve varsayılan KAPALI.
     katilimci_gorunurluk_onay: Mapped[bool] = mapped_column(Boolean, default=False)
+
+    # Vücut Ölçüleri ve Sağlık / Hedef Notları
+    bel: Mapped[str | None] = mapped_column(String(40), default=None)
+    kalca: Mapped[str | None] = mapped_column(String(40), default=None)
+    sag_ic_bacak: Mapped[str | None] = mapped_column(String(40), default=None)
+    sag_bacak: Mapped[str | None] = mapped_column(String(40), default=None)
+    sol_ic_bacak: Mapped[str | None] = mapped_column(String(40), default=None)
+    sol_bacak: Mapped[str | None] = mapped_column(String(40), default=None)
+    sag_kol: Mapped[str | None] = mapped_column(String(40), default=None)
+    sol_kol: Mapped[str | None] = mapped_column(String(40), default=None)
+    boy: Mapped[str | None] = mapped_column(String(40), default=None)
+    kilo: Mapped[str | None] = mapped_column(String(40), default=None)
+    saglik_notu: Mapped[str | None] = mapped_column(Text, default=None)
 
     aktif: Mapped[bool] = mapped_column(Boolean, default=True)
 

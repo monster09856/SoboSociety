@@ -23,6 +23,7 @@ from app.services.program_uretimi import STUDYO_TZ, uret
 from app.services.rezervasyon import rezerve_et
 from app.services.telefon import normalize_telefon
 from app.services.yoklama import yoklama_al
+from app.settings import ayarlar
 
 router = APIRouter(
     prefix="/admin",
@@ -180,13 +181,34 @@ async def assign_package(
     db: AsyncSession = Depends(get_db),
     current_admin: Member = Depends(get_current_admin),
 ):
-    """Üyeye ders paketi tanımlar."""
+    """Üyeye özel veya hazır ders paketi tanımlar."""
     baslangic = body.baslangic or datetime.now(timezone.utc).date()
     try:
+        from app.models.kredi import Package
+        target_pkg_id = body.package_id
+        if body.ozel_paket_adi or body.ozel_ders_adedi:
+            custom_name = body.ozel_paket_adi.strip() if body.ozel_paket_adi else "Özel Üye Paketi"
+            custom_credits = body.ozel_ders_adedi if (body.ozel_ders_adedi and body.ozel_ders_adedi > 0) else 10
+            custom_days = body.ozel_gecerlilik_gun if (body.ozel_gecerlilik_gun and body.ozel_gecerlilik_gun > 0) else 45
+            
+            pkg = Package(
+                ad=custom_name,
+                ders_adedi=custom_credits,
+                gecerlilik_gun=custom_days,
+                fiyat_kurus=0,
+                aktif=True,
+            )
+            db.add(pkg)
+            await db.flush()
+            target_pkg_id = pkg.id
+        
+        if target_pkg_id is None:
+            target_pkg_id = 1
+
         uye_paketi = await paket_tanimla(
             db,
             member_id=body.member_id,
-            package_id=body.package_id,
+            package_id=target_pkg_id,
             baslangic=baslangic,
         )
         await db.commit()
@@ -274,6 +296,35 @@ async def delete_session(
     session.durum = "cancelled"
     await db.commit()
     return {"silindi": True, "session_id": session_id}
+
+
+from app.schemas.admin import SessionUpdateRequest
+
+@router.put("/sessions/{session_id}", response_model=ClassSessionResponse)
+async def update_session_endpoint(
+    session_id: int,
+    body: SessionUpdateRequest,
+    db: AsyncSession = Depends(get_db),
+    current_admin: Member = Depends(get_current_admin),
+):
+    """Mevcut bir ders oturumunun tarihini, saatini, eğitmenini veya kontenjanını günceller."""
+    res = await db.execute(select(ClassSession).where(ClassSession.id == session_id))
+    session = res.scalar_one_or_none()
+    if not session:
+        raise HTTPException(status_code=404, detail="Ders oturumu bulunamadı.")
+    
+    if body.baslangic is not None:
+        session.baslangic = body.baslangic
+    if body.class_type_id is not None:
+        session.class_type_id = body.class_type_id
+    if body.instructor_id is not None:
+        session.instructor_id = body.instructor_id
+    if body.kontenjan is not None:
+        session.kontenjan = body.kontenjan
+
+    await db.commit()
+    await db.refresh(session)
+    return session
 
 
 
@@ -382,6 +433,41 @@ async def delete_notification_campaign(
     return {"mesaj": "Kampanya silindi"}
 
 
+from app.schemas.admin import AdminCredentialsUpdateRequest
+from app.core.security import hash_password
+
+@router.put("/credentials")
+async def update_admin_credentials_endpoint(
+    body: AdminCredentialsUpdateRequest,
+    db: AsyncSession = Depends(get_db),
+    current_admin: Member = Depends(get_current_admin),
+):
+    """Yöneticinin kendi kullanıcı adı ve şifresini değiştirmesini sağlar."""
+    if body.yeni_kullanici_adi and body.yeni_kullanici_adi.strip():
+        new_username = body.yeni_kullanici_adi.strip().lower()
+        if len(new_username) < 3:
+            raise HTTPException(status_code=400, detail="Kullanıcı adı en az 3 karakter olmalıdır.")
+        
+        stmt = select(Member).where(Member.kullanici_adi.ilike(new_username), Member.id != current_admin.id)
+        res = await db.execute(stmt)
+        if res.scalar_one_or_none():
+            raise HTTPException(status_code=400, detail="Bu kullanıcı adı başka bir hesap tarafından kullanılıyor.")
+        
+        current_admin.kullanici_adi = new_username
+
+    if len(body.yeni_sifre.strip()) < 4:
+        raise HTTPException(status_code=400, detail="Yeni şifre en az 4 karakter olmalıdır.")
+
+    current_admin.sifre_hash = hash_password(body.yeni_sifre.strip())
+    await db.commit()
+    await db.refresh(current_admin)
+
+    return {
+        "mesaj": "Yönetici giriş bilgileri başarıyla güncellendi.",
+        "kullanici_adi": current_admin.kullanici_adi,
+    }
+
+
 # --- Admin Member Management & Credit Intervention Endpoints ---
 
 from app.models import StudioEvent, CreditLedger, LedgerTipi
@@ -401,7 +487,9 @@ async def list_admin_members(
     stmt = select(Member).order_by(Member.id.desc())
     if search:
         stmt = stmt.where(
-            (Member.ad.ilike(f"%{search}%")) | (Member.telefon.ilike(f"%{search}%"))
+            (Member.ad.ilike(f"%{search}%"))
+            | (Member.kullanici_adi.ilike(f"%{search}%"))
+            | (Member.telefon.ilike(f"%{search}%"))
         )
     res = await db.execute(stmt)
     members = res.scalars().all()
@@ -409,15 +497,27 @@ async def list_admin_members(
     response = []
     for m in members:
         current_bakiye = await bakiye(db, m.id)
-        is_adm = m.telefon in ayarlar.admin_telefons
+        is_adm = (m.telefon in ayarlar.admin_telefons) or (m.kullanici_adi == "admin")
         response.append(
             MemberAdminDetailResponse(
                 id=m.id,
                 ad=m.ad,
+                kullanici_adi=m.kullanici_adi,
                 telefon=m.telefon,
                 bakiye=current_bakiye,
                 aktif=m.aktif,
                 is_admin=is_adm,
+                bel=m.bel,
+                kalca=m.kalca,
+                sag_ic_bacak=m.sag_ic_bacak,
+                sag_bacak=m.sag_bacak,
+                sol_ic_bacak=m.sol_ic_bacak,
+                sol_bacak=m.sol_bacak,
+                sag_kol=m.sag_kol,
+                sol_kol=m.sol_kol,
+                boy=m.boy,
+                kilo=m.kilo,
+                saglik_notu=m.saglik_notu,
             )
         )
     return response
@@ -442,6 +542,16 @@ async def update_admin_member(
     if body.aktif is not None:
         m.aktif = body.aktif
 
+    measurement_fields = [
+        "bel", "kalca", "sag_ic_bacak", "sag_bacak",
+        "sol_ic_bacak", "sol_bacak", "sag_kol", "sol_kol",
+        "boy", "kilo", "saglik_notu"
+    ]
+    for f in measurement_fields:
+        val = getattr(body, f, None)
+        if val is not None:
+            setattr(m, f, val.strip() if isinstance(val, str) else val)
+
     if body.bakiye_override is not None:
         current_bakiye = await bakiye(db, member_id)
         fark = body.bakiye_override - current_bakiye
@@ -451,21 +561,33 @@ async def update_admin_member(
                 member_id=member_id,
                 tip=LedgerTipi.ADMIN_ADJUST,
                 miktar=fark,
-                sebep="Yönetici tarafından doğrudan bakiye müdahalesi",
+                sebep=f"Admin tarafından bakiye {current_bakiye} -> {body.bakiye_override} olarak manuel güncellendi.",
             )
 
     await db.commit()
     await db.refresh(m)
 
     new_bakiye = await bakiye(db, m.id)
-    is_adm = m.telefon in ayarlar.admin_telefons
+    is_adm = (m.telefon in ayarlar.admin_telefons) or (m.kullanici_adi == "admin")
     return MemberAdminDetailResponse(
         id=m.id,
         ad=m.ad,
+        kullanici_adi=m.kullanici_adi,
         telefon=m.telefon,
         bakiye=new_bakiye,
         aktif=m.aktif,
         is_admin=is_adm,
+        bel=m.bel,
+        kalca=m.kalca,
+        sag_ic_bacak=m.sag_ic_bacak,
+        sag_bacak=m.sag_bacak,
+        sol_ic_bacak=m.sol_ic_bacak,
+        sol_bacak=m.sol_bacak,
+        sag_kol=m.sag_kol,
+        sol_kol=m.sol_kol,
+        boy=m.boy,
+        kilo=m.kilo,
+        saglik_notu=m.saglik_notu,
     )
 
 
@@ -540,5 +662,90 @@ async def delete_admin_event(
     await db.delete(ev)
     await db.commit()
     return {"silindi": True, "event_id": event_id}
+
+
+# --- Dynamic Class Types & Instructors Endpoints ---
+
+from pydantic import BaseModel
+
+class ClassTypeCreateRequest(BaseModel):
+    ad: str
+    sure_dk: int = 50
+    kontenjan: int = 5
+    renk: str = "#A2846F"
+
+class InstructorCreateRequest(BaseModel):
+    ad: str
+    biyografi: str | None = None
+    foto_url: str | None = None
+
+@router.get("/class-types")
+async def list_class_types(
+    db: AsyncSession = Depends(get_db),
+    current_admin: Member = Depends(get_current_admin),
+):
+    """Tüm aktif ders tiplerini listeler."""
+    from app.models.program import ClassType
+    res = await db.execute(select(ClassType).where(ClassType.aktif == True).order_by(ClassType.id))
+    return list(res.scalars().all())
+
+@router.post("/class-types")
+async def create_class_type(
+    body: ClassTypeCreateRequest,
+    db: AsyncSession = Depends(get_db),
+    current_admin: Member = Depends(get_current_admin),
+):
+    """Yeni ders tipi ekler (ör. Reformer Pilates, Zumba, HIIT)."""
+    from app.models.program import ClassType
+    ad_clean = body.ad.strip()
+    existing = (await db.execute(select(ClassType).where(ClassType.ad.ilike(ad_clean)))).scalar_one_or_none()
+    if existing:
+        return existing
+    
+    ct = ClassType(
+        ad=ad_clean,
+        sure_dk=body.sure_dk,
+        kontenjan=body.kontenjan,
+        renk=body.renk,
+        aktif=True,
+    )
+    db.add(ct)
+    await db.commit()
+    await db.refresh(ct)
+    return ct
+
+@router.get("/instructors")
+async def list_instructors(
+    db: AsyncSession = Depends(get_db),
+    current_admin: Member = Depends(get_current_admin),
+):
+    """Tüm aktif eğitmenleri listeler."""
+    from app.models.uyelik import Instructor
+    res = await db.execute(select(Instructor).where(Instructor.aktif == True).order_by(Instructor.id))
+    return list(res.scalars().all())
+
+@router.post("/instructors")
+async def create_instructor(
+    body: InstructorCreateRequest,
+    db: AsyncSession = Depends(get_db),
+    current_admin: Member = Depends(get_current_admin),
+):
+    """Yeni eğitmen ekler (ör. Selin Yılmaz)."""
+    from app.models.uyelik import Instructor
+    ad_clean = body.ad.strip()
+    existing = (await db.execute(select(Instructor).where(Instructor.ad.ilike(ad_clean)))).scalar_one_or_none()
+    if existing:
+        return existing
+    
+    ins = Instructor(
+        ad=ad_clean,
+        biyografi=body.biyografi,
+        foto_url=body.foto_url,
+        aktif=True,
+    )
+    db.add(ins)
+    await db.commit()
+    await db.refresh(ins)
+    return ins
 
 

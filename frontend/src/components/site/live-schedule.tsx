@@ -373,7 +373,7 @@ export function LiveSchedule() {
         {/* Bottom Notice */}
         <div className="mt-12 text-center text-xs text-secondary flex items-center justify-center gap-2">
           <CheckCircle2 className="w-4 h-4 text-sage" />
-          <span>Rezervasyon iptalleri dersten en geç 4 saat öncesine kadar bakiye iadesiyle yapılabilir.</span>
+          <span>Rezervasyon iptalleri dersten en geç 12 saat öncesine kadar bakiye iadesiyle yapılabilir.</span>
         </div>
       </div>
     </section>

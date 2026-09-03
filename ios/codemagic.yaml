@@ -1,6 +1,6 @@
 workflows:
   ios-app-store:
-    name: Sobo Society iOS App Store & TestFlight Build
+    name: Sobo Society iOS TestFlight & App Store Build
     max_build_duration: 60
     instance_type: mac_mini_m2
     environment:
@@ -11,7 +11,11 @@ workflows:
         BUNDLE_ID: "com.sobosociety.app"
         XCODE_SCHEME: "SoboSociety"
     scripts:
-      - name: Set up keychain + auto-signing via ASC API
+      - name: Generate Xcode Project via XcodeGen
+        script: |
+          which xcodegen || brew install xcodegen
+          xcodegen generate
+      - name: Set up keychain + auto-signing via App Store Connect API
         script: |
           keychain initialize
           app-store-connect fetch-signing-files "$BUNDLE_ID" \
@@ -33,3 +37,5 @@ workflows:
         key_id: $APP_STORE_CONNECT_KEY_IDENTIFIER
         issuer_id: $APP_STORE_CONNECT_ISSUER_ID
         submit_to_testflight: true
+        beta_groups:
+          - Internal

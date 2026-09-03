@@ -39,7 +39,8 @@ export function Navigation() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-14">
           {/* Logo */}
-          <Link href="/" className="flex items-center space-x-2 group">
+          <Link href="/" className="flex items-center space-x-3 group">
+            <img src="/logo.png" alt="Sobo Society" className="h-9 w-auto rounded-lg shadow-xs" />
             <div className="flex flex-col">
               <span className="font-serif text-2xl sm:text-3xl font-medium tracking-[0.2em] text-ink group-hover:text-espresso transition-colors">
                 SOBO SOCIETY

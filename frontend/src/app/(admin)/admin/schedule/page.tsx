@@ -6,7 +6,7 @@ import { buyukHarf } from '@/lib/utils'
 import { AdminNav } from '@/components/admin/admin-nav'
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
-import { Calendar, Sparkles, CheckCircle2, AlertCircle, Loader2, Info, Plus, Trash2, Clock, Users, User, RefreshCw } from 'lucide-react'
+import { Calendar, Sparkles, CheckCircle2, AlertCircle, Loader2, Info, Plus, Trash2, Clock, Users, User, RefreshCw, Edit2, X } from 'lucide-react'
 
 export default function AdminSchedulePage() {
   const [startDate, setStartDate] = useState(() => {
@@ -26,6 +26,29 @@ export default function AdminSchedulePage() {
   const [sessions, setSessions] = useState<ClassSessionResponse[]>([])
   const [fetchingSessions, setFetchingSessions] = useState(false)
 
+  // Dynamic Lists for Class Types & Instructors
+  const [classList, setClassList] = useState<{ id: number; ad: string }[]>([
+    { id: 1, ad: 'Barre' },
+    { id: 2, ad: 'Pilates' },
+    { id: 3, ad: 'Yoga' },
+  ])
+  const [instructorList, setInstructorList] = useState<{ id: number; ad: string }[]>([
+    { id: 1, ad: 'Ece Karaca' },
+    { id: 2, ad: 'Defne Yılmaz' },
+    { id: 3, ad: 'Can Tezcan' },
+  ])
+
+  const loadDropdowns = async () => {
+    try {
+      const [cts, ins] = await Promise.all([
+        admin.getClassTypes().catch(() => []),
+        admin.getInstructors().catch(() => []),
+      ])
+      if (cts && cts.length > 0) setClassList(cts)
+      if (ins && ins.length > 0) setInstructorList(ins)
+    } catch (_) {}
+  }
+
   // New manual session form state
   const [showAddForm, setShowAddForm] = useState(false)
   const [newClassTypeId, setNewClassTypeId] = useState(1)
@@ -38,7 +61,14 @@ export default function AdminSchedulePage() {
   })
   const [newCapacity, setNewCapacity] = useState(5)
   const [addingSession, setAddingSession] = useState(false)
-  const [addSuccess, setAddSuccess] = useState(false)
+
+  // Edit Session State
+  const [editingSession, setEditingSession] = useState<ClassSessionResponse | null>(null)
+  const [editClassTypeId, setEditClassTypeId] = useState(1)
+  const [editInstructorId, setEditInstructorId] = useState(1)
+  const [editDateTime, setEditDateTime] = useState('')
+  const [editCapacity, setEditCapacity] = useState(5)
+  const [updatingSession, setUpdatingSession] = useState(false)
 
   const loadSessions = async () => {
     setFetchingSessions(true)
@@ -54,7 +84,40 @@ export default function AdminSchedulePage() {
 
   useEffect(() => {
     loadSessions()
+    loadDropdowns()
   }, [])
+
+  const handleAddNewClassType = async (isEdit: boolean = false) => {
+    const ad = prompt('Yeni Ders Tipi Adı (Örn: Reformer Pilates, Zumba, HIIT):')
+    if (!ad || !ad.trim()) return
+    try {
+      const created = await admin.addClassType({ ad: ad.trim() })
+      setClassList((prev) => [...prev.filter((c) => c.id !== created.id), created])
+      if (isEdit) {
+        setEditClassTypeId(created.id)
+      } else {
+        setNewClassTypeId(created.id)
+      }
+    } catch (err: any) {
+      alert(err?.message || 'Ders tipi eklenemedi.')
+    }
+  }
+
+  const handleAddNewInstructor = async (isEdit: boolean = false) => {
+    const ad = prompt('Yeni Eğitmen Adı Soyadı (Örn: Selin Yılmaz):')
+    if (!ad || !ad.trim()) return
+    try {
+      const created = await admin.addInstructor({ ad: ad.trim() })
+      setInstructorList((prev) => [...prev.filter((i) => i.id !== created.id), created])
+      if (isEdit) {
+        setEditInstructorId(created.id)
+      } else {
+        setNewInstructorId(created.id)
+      }
+    } catch (err: any) {
+      alert(err?.message || 'Eğitmen eklenemedi.')
+    }
+  }
 
   const setPresetRange = (days: number) => {
     const start = new Date()
@@ -99,7 +162,6 @@ export default function AdminSchedulePage() {
     e.preventDefault()
     setAddingSession(true)
     setError(null)
-    setAddSuccess(false)
 
     try {
       const isoStart = new Date(newDateTime).toISOString()
@@ -109,13 +171,35 @@ export default function AdminSchedulePage() {
         baslangic: isoStart,
         kontenjan: Number(newCapacity),
       })
-      setAddSuccess(true)
       setShowAddForm(false)
       loadSessions()
     } catch (err: any) {
       setError(err?.message || 'Yeni ders eklenirken bir hata oluştu.')
     } finally {
       setAddingSession(false)
+    }
+  }
+
+  const handleUpdateSession = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!editingSession) return
+    setUpdatingSession(true)
+    setError(null)
+
+    try {
+      const isoStart = new Date(editDateTime).toISOString()
+      await admin.updateSession(editingSession.id, {
+        class_type_id: Number(editClassTypeId),
+        instructor_id: Number(editInstructorId),
+        baslangic: isoStart,
+        kontenjan: Number(editCapacity),
+      })
+      setEditingSession(null)
+      loadSessions()
+    } catch (err: any) {
+      setError(err?.message || 'Ders güncellenirken bir hata oluştu.')
+    } finally {
+      setUpdatingSession(false)
     }
   }
 
@@ -153,6 +237,21 @@ export default function AdminSchedulePage() {
     }
   }
 
+  const openEditModal = (s: ClassSessionResponse) => {
+    setEditingSession(s)
+    setEditClassTypeId(s.class_type?.id || 1)
+    setEditInstructorId(s.instructor?.id || 1)
+    setEditCapacity(s.kontenjan || 5)
+    try {
+      const dt = new Date(s.baslangic)
+      const tzOffset = dt.getTimezoneOffset() * 60000
+      const localISOTime = (new Date(dt.getTime() - tzOffset)).toISOString().slice(0, 16)
+      setEditDateTime(localISOTime)
+    } catch {
+      setEditDateTime('')
+    }
+  }
+
   return (
     <div className="min-h-screen bg-ivory text-ink font-sans antialiased relative">
       <AdminNav />
@@ -171,7 +270,7 @@ export default function AdminSchedulePage() {
               {buyukHarf("Ders Programı & Oturum Yönetimi")}
             </h1>
             <p className="text-sm text-secondary font-medium mt-1">
-              Stüdyonuzdaki dersleri canlı olarak düzenleyin, yeni dersler ekleyin, silin veya haftalık şablondan otomatik üretin.
+              Stüdyonuzdaki derslerin gününü, saatini, eğitmenini ve ders tipini özgürce tanımlayın ve düzenleyin.
             </p>
           </div>
 
@@ -202,50 +301,74 @@ export default function AdminSchedulePage() {
                 <span>Manuel Yeni Ders Oturumu Ekle</span>
               </CardTitle>
               <CardDescription className="text-secondary text-xs">
-                Tarih, saat, ders tipi ve eğitmen seçerek takvime tekil ders ekleyin.
+                İstediğiniz gün ve saati seçerek takvime yeni ders ekleyin.
               </CardDescription>
             </CardHeader>
             <CardContent className="pt-6">
               <form onSubmit={handleAddSession} className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 items-end">
                 <div>
-                  <label className="block text-xs font-bold text-secondary uppercase tracking-wider mb-1.5">
-                    Ders Tipi
-                  </label>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="block text-xs font-bold text-secondary uppercase tracking-wider">
+                      Ders Tipi
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => handleAddNewClassType(false)}
+                      className="text-[11px] font-bold text-espresso hover:underline flex items-center gap-1 cursor-pointer"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      <span>+ Yeni Ekle</span>
+                    </button>
+                  </div>
                   <select
                     value={newClassTypeId}
                     onChange={(e) => setNewClassTypeId(Number(e.target.value))}
                     className="w-full bg-ivory border-line text-ink rounded-xl h-11 px-3 text-xs font-medium focus:ring-2 focus:ring-espresso"
                   >
-                    <option value={1}>Barre</option>
-                    <option value={2}>Pilates</option>
-                    <option value={3}>Yoga</option>
+                    {classList.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.ad}
+                      </option>
+                    ))}
                   </select>
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-secondary uppercase tracking-wider mb-1.5">
-                    Eğitmen
-                  </label>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="block text-xs font-bold text-secondary uppercase tracking-wider">
+                      Eğitmen
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => handleAddNewInstructor(false)}
+                      className="text-[11px] font-bold text-espresso hover:underline flex items-center gap-1 cursor-pointer"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      <span>+ Yeni Ekle</span>
+                    </button>
+                  </div>
                   <select
                     value={newInstructorId}
                     onChange={(e) => setNewInstructorId(Number(e.target.value))}
                     className="w-full bg-ivory border-line text-ink rounded-xl h-11 px-3 text-xs font-medium focus:ring-2 focus:ring-espresso"
                   >
-                    <option value={1}>Ece Karaca</option>
-                    <option value={2}>Defne Yılmaz</option>
-                    <option value={3}>Can Tezcan</option>
+                    {instructorList.map((i) => (
+                      <option key={i.id} value={i.id}>
+                        {i.ad}
+                      </option>
+                    ))}
                   </select>
                 </div>
 
                 <div>
                   <label className="block text-xs font-bold text-secondary uppercase tracking-wider mb-1.5">
-                    Tarih & Saat
+                    Ders Günü ve Saati
                   </label>
                   <Input
                     type="datetime-local"
                     value={newDateTime}
                     onChange={(e) => setNewDateTime(e.target.value)}
-                    className="bg-ivory border-line text-ink rounded-xl h-11 px-3 text-xs font-medium"
+                    className="bg-ivory border-line text-ink rounded-xl h-11 px-3 text-xs font-medium cursor-pointer"
                     required
                   />
                 </div>
@@ -294,7 +417,7 @@ export default function AdminSchedulePage() {
               <Calendar className="w-5 h-5 text-espresso" />
               <span>Takvimdeki Mevcut Dersler ({sessions.length})</span>
             </h2>
-            <span className="text-xs text-secondary font-medium">Her sınıfta varsayılan maks. 5 üye</span>
+            <span className="text-xs text-secondary font-medium">Her ders kartından tarihler & saatler değiştirilebilir</span>
           </div>
 
           {fetchingSessions ? (
@@ -345,13 +468,21 @@ export default function AdminSchedulePage() {
                     </div>
 
                     {/* Action buttons */}
-                    <div className="pt-2 border-t border-line/50 flex justify-end">
+                    <div className="pt-2 border-t border-line/50 flex justify-between items-center">
+                      <button
+                        onClick={() => openEditModal(s)}
+                        className="px-3 py-1.5 rounded-lg text-[11px] font-bold bg-ivory border border-line hover:border-espresso text-espresso transition-colors flex items-center gap-1.5 cursor-pointer shadow-xs"
+                      >
+                        <Edit2 className="w-3.5 h-3.5 text-mocha" />
+                        <span>Tarih/Saat Düzenle</span>
+                      </button>
+
                       <button
                         onClick={() => handleDeleteSession(s.id)}
                         className="px-3 py-1.5 rounded-lg text-[11px] font-bold text-clay hover:bg-clay/10 transition-colors flex items-center gap-1.5 cursor-pointer"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
-                        <span>Dersi İptal Et / Sil</span>
+                        <span>Sil</span>
                       </button>
                     </div>
                   </CardContent>
@@ -360,6 +491,132 @@ export default function AdminSchedulePage() {
             </div>
           )}
         </div>
+
+        {/* Modal: Edit Existing Session */}
+        {editingSession && (
+          <div className="fixed inset-0 z-50 bg-ink/60 backdrop-blur-xs flex items-center justify-center p-4">
+            <Card className="max-w-md w-full bg-sand border border-line rounded-2xl shadow-xl animate-in fade-in zoom-in-95 duration-150">
+              <CardHeader className="border-b border-line pb-4 relative">
+                <button
+                  onClick={() => setEditingSession(null)}
+                  className="absolute top-4 right-4 text-secondary hover:text-ink p-1 rounded-full hover:bg-sand cursor-pointer"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+                <CardTitle className="font-serif text-lg font-bold text-ink flex items-center gap-2">
+                  <Edit2 className="w-5 h-5 text-espresso" />
+                  <span>Ders Tarihi & Saatini Düzenle</span>
+                </CardTitle>
+                <CardDescription className="text-xs text-secondary">
+                  Dersin yapılacağı günü, saati, eğitmeni ve kontenjanı değiştirin.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="pt-6 space-y-4">
+                <form onSubmit={handleUpdateSession} className="space-y-4">
+                  <div>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <label className="block text-xs font-bold text-secondary uppercase tracking-wider">
+                        Ders Tipi
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => handleAddNewClassType(true)}
+                        className="text-[11px] font-bold text-espresso hover:underline flex items-center gap-1 cursor-pointer"
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                        <span>+ Yeni Tipi Ekle</span>
+                      </button>
+                    </div>
+                    <select
+                      value={editClassTypeId}
+                      onChange={(e) => setEditClassTypeId(Number(e.target.value))}
+                      className="w-full bg-ivory border-line text-ink rounded-xl h-11 px-3 text-xs font-medium focus:ring-2 focus:ring-espresso"
+                    >
+                      {classList.map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.ad}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <label className="block text-xs font-bold text-secondary uppercase tracking-wider">
+                        Eğitmen
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => handleAddNewInstructor(true)}
+                        className="text-[11px] font-bold text-espresso hover:underline flex items-center gap-1 cursor-pointer"
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                        <span>+ Yeni Eğitmen Ekle</span>
+                      </button>
+                    </div>
+                    <select
+                      value={editInstructorId}
+                      onChange={(e) => setEditInstructorId(Number(e.target.value))}
+                      className="w-full bg-ivory border-line text-ink rounded-xl h-11 px-3 text-xs font-medium focus:ring-2 focus:ring-espresso"
+                    >
+                      {instructorList.map((i) => (
+                        <option key={i.id} value={i.id}>
+                          {i.ad}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-secondary uppercase tracking-wider mb-1.5">
+                      Yeni Ders Günü & Saati
+                    </label>
+                    <Input
+                      type="datetime-local"
+                      value={editDateTime}
+                      onChange={(e) => setEditDateTime(e.target.value)}
+                      className="bg-ivory border-line text-ink rounded-xl h-11 px-3 text-xs font-medium cursor-pointer"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-secondary uppercase tracking-wider mb-1.5">
+                      Kontenjan (Max Üye)
+                    </label>
+                    <Input
+                      type="number"
+                      min={1}
+                      max={20}
+                      value={editCapacity}
+                      onChange={(e) => setEditCapacity(Number(e.target.value))}
+                      className="bg-ivory border-line text-ink rounded-xl h-11 px-3 text-xs font-medium"
+                      required
+                    />
+                  </div>
+
+                  <div className="pt-2 flex justify-end gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setEditingSession(null)}
+                      className="px-4 py-2.5 rounded-xl text-xs font-bold text-secondary hover:text-ink cursor-pointer"
+                    >
+                      İptal
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={updatingSession}
+                      className="px-5 py-2.5 rounded-xl font-extrabold text-xs uppercase tracking-wider bg-espresso text-ivory hover:bg-espresso-dark transition-all cursor-pointer shadow-xs flex items-center gap-2"
+                    >
+                      {updatingSession ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
+                      <span>DERSİ GÜNCELLE</span>
+                    </button>
+                  </div>
+                </form>
+              </CardContent>
+            </Card>
+          </div>
+        )}
 
         {/* Şablondan Toplu Ders Oturumu Türetme Engine */}
         <div className="pt-6 border-t border-line/80">
@@ -497,6 +754,8 @@ export default function AdminSchedulePage() {
                     Yönetici olarak stüdyonun tüm haftalık ve günlük ders programını tam yetkiyle yönetebilirsiniz:
                   </p>
                   <ul className="space-y-1.5 pl-4 list-disc text-ink font-semibold">
+                    <li>Ders günlerini ve saatlerini değiştirebilirsiniz</li>
+                    <li>Yeni ders tipleri ve eğitmenler tanımlayabilirsiniz</li>
                     <li>Tekil yeni ders ekleyebilirsiniz</li>
                     <li>İptal olan dersleri silebilirsiniz</li>
                     <li>Sınıf kontenjanını düzenleyebilirsiniz</li>

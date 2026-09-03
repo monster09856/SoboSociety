@@ -8,9 +8,8 @@
   --line: #DDD3C7;
   --ink: #2B2522;
   --secondary: #6B5D52;
-  --muted: #8A7B6E;
-  --mocha: #A2846F;
-  --espresso: #6F5647;
+  --mocha: #A47864; /* Pantone 17-1230 TCX Mocha Mousse */
+  --espresso: #7A5243;
   --sage: #7D8B72;
   --clay: #B5714E;
 }
