@@ -40,7 +40,6 @@ workflows:
             --project SoboSociety.xcodeproj \
             --scheme SoboSociety
     artifacts:
-      - ios/build/ios/ipa/*.ipa
       - build/ios/ipa/*.ipa
       - "*.ipa"
       - /tmp/xcodebuild_logs/*.log
