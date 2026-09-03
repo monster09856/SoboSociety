@@ -65,3 +65,8 @@ class KayitBulunamadi(SoboHata):
 
 class GecersizHareket(SoboHata):
     """Ledger satırı domain kurallarını çiğniyor (ör. boş sebep)."""
+
+
+class GecIptalEngellendi(SoboHata):
+    """Ders saatinize 12 saatten az kaldığı için iptal edilemez."""
+

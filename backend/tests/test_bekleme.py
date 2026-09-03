@@ -21,7 +21,7 @@ from app.services.rezervasyon import rezerve_et
 
 DERS_ANI = datetime(2026, 9, 1, 16, 0, tzinfo=UTC)
 # Rezervasyon/sıra anı dersten önce olmalı; başlamış derse kayıt alınmaz.
-REZERVASYON_ANI = DERS_ANI - timedelta(hours=8)
+REZERVASYON_ANI = DERS_ANI - timedelta(hours=14)
 
 
 async def _dolu_ders(db):
@@ -71,7 +71,7 @@ async def test_sira_numaralari_girilme_sirasina_gore_artar(db):
 
 async def test_dolu_olmayan_derse_siraya_girilemez(db):
     oturum, selin, ece, _, kayit = await _dolu_ders(db)
-    await iptal_et(db, booking_id=kayit.id, now=DERS_ANI - timedelta(hours=8))
+    await iptal_et(db, booking_id=kayit.id, now=DERS_ANI - timedelta(hours=14))
 
     with pytest.raises(DersDoluDegil):
         await siraya_gir(db, member_id=ece.id, session_id=oturum.id, now=REZERVASYON_ANI)
@@ -90,7 +90,7 @@ async def test_yer_acilinca_siradakine_teklif_verilir(db):
     await siraya_gir(db, member_id=ece.id, session_id=oturum.id, now=REZERVASYON_ANI)
     await siraya_gir(db, member_id=zeynep.id, session_id=oturum.id, now=REZERVASYON_ANI)
 
-    an = DERS_ANI - timedelta(hours=8)
+    an = DERS_ANI - timedelta(hours=14)
     await iptal_et(db, booking_id=kayit.id, now=an)
     teklif = await sirayi_ilerlet(db, session_id=oturum.id, now=an)
 
@@ -105,7 +105,7 @@ async def test_derse_yakinsa_teklif_suresi_kisalir(db):
     await siraya_gir(db, member_id=ece.id, session_id=oturum.id, now=REZERVASYON_ANI)
 
     an = DERS_ANI - timedelta(minutes=10)
-    await iptal_et(db, booking_id=kayit.id, now=an)
+    await iptal_et(db, booking_id=kayit.id, now=an, is_admin=True)
     teklif = await sirayi_ilerlet(db, session_id=oturum.id, now=an)
 
     assert teklif.teklif_bitis == DERS_ANI
@@ -115,7 +115,7 @@ async def test_teklif_kullanilinca_rezervasyon_olusur(db):
     oturum, _, ece, _, kayit = await _dolu_ders(db)
     await siraya_gir(db, member_id=ece.id, session_id=oturum.id, now=REZERVASYON_ANI)
 
-    an = DERS_ANI - timedelta(hours=8)
+    an = DERS_ANI - timedelta(hours=14)
     await iptal_et(db, booking_id=kayit.id, now=an)
     teklif = await sirayi_ilerlet(db, session_id=oturum.id, now=an)
 
@@ -131,7 +131,7 @@ async def test_suresi_dolmus_teklif_kullanilamaz(db):
     oturum, _, ece, _, kayit = await _dolu_ders(db)
     await siraya_gir(db, member_id=ece.id, session_id=oturum.id, now=REZERVASYON_ANI)
 
-    an = DERS_ANI - timedelta(hours=8)
+    an = DERS_ANI - timedelta(hours=14)
     await iptal_et(db, booking_id=kayit.id, now=an)
     teklif = await sirayi_ilerlet(db, session_id=oturum.id, now=an)
 
@@ -146,7 +146,7 @@ async def test_teklif_suresi_dolunca_sira_bir_sonrakine_gecer(db):
     await siraya_gir(db, member_id=ece.id, session_id=oturum.id, now=REZERVASYON_ANI)
     await siraya_gir(db, member_id=zeynep.id, session_id=oturum.id, now=REZERVASYON_ANI)
 
-    an = DERS_ANI - timedelta(hours=8)
+    an = DERS_ANI - timedelta(hours=14)
     await iptal_et(db, booking_id=kayit.id, now=an)
     await sirayi_ilerlet(db, session_id=oturum.id, now=an)
 
@@ -160,7 +160,7 @@ async def test_teklif_suresi_dolunca_sira_bir_sonrakine_gecer(db):
 
 async def test_bos_sirada_ilerletmek_none_doner(db):
     oturum, _, _, _, kayit = await _dolu_ders(db)
-    an = DERS_ANI - timedelta(hours=8)
+    an = DERS_ANI - timedelta(hours=14)
     await iptal_et(db, booking_id=kayit.id, now=an)
 
     assert await sirayi_ilerlet(db, session_id=oturum.id, now=an) is None
@@ -178,7 +178,7 @@ async def test_tam_sinirda_teklif_hala_gecerlidir(db):
     await siraya_gir(db, member_id=ece.id, session_id=oturum.id, now=REZERVASYON_ANI)
     await siraya_gir(db, member_id=zeynep.id, session_id=oturum.id, now=REZERVASYON_ANI)
 
-    an = DERS_ANI - timedelta(hours=8)
+    an = DERS_ANI - timedelta(hours=14)
     await iptal_et(db, booking_id=kayit.id, now=an)
     ilk_teklif = await sirayi_ilerlet(db, session_id=oturum.id, now=an)
 
@@ -198,7 +198,7 @@ async def test_ders_baslamissa_sira_ilerletilemez(db):
     oturum, _, ece, _, kayit = await _dolu_ders(db)
     await siraya_gir(db, member_id=ece.id, session_id=oturum.id, now=REZERVASYON_ANI)
 
-    an = DERS_ANI - timedelta(hours=8)
+    an = DERS_ANI - timedelta(hours=14)
     await iptal_et(db, booking_id=kayit.id, now=an)
 
     assert await sirayi_ilerlet(db, session_id=oturum.id, now=DERS_ANI) is None
@@ -309,7 +309,7 @@ async def test_iptal_edilmis_derste_sira_ilerletilmez(db):
     oturum, _, ece, _, kayit = await _dolu_ders(db)
     await siraya_gir(db, member_id=ece.id, session_id=oturum.id, now=REZERVASYON_ANI)
 
-    an = DERS_ANI - timedelta(hours=8)
+    an = DERS_ANI - timedelta(hours=14)
     await iptal_et(db, booking_id=kayit.id, now=an)
     oturum.durum = SessionDurumu.IPTAL
     await db.flush()
@@ -344,7 +344,7 @@ async def test_kullanilmis_teklif_ikinci_kez_kullanilamaz(db):
     oturum, _, ece, _, kayit = await _dolu_ders(db)
     await siraya_gir(db, member_id=ece.id, session_id=oturum.id, now=REZERVASYON_ANI)
 
-    an = DERS_ANI - timedelta(hours=8)
+    an = DERS_ANI - timedelta(hours=14)
     await iptal_et(db, booking_id=kayit.id, now=an)
     teklif = await sirayi_ilerlet(db, session_id=oturum.id, now=an)
 

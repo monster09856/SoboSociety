@@ -8,7 +8,7 @@ from app.models import (
     Booking, BookingDurumu, ClassSession, ClassType, CreditLedger,
     LedgerTipi, Member,
 )
-from app.services.hatalar import KayitBulunamadi, ZatenIptal
+from app.services.hatalar import GecIptalEngellendi, KayitBulunamadi, ZatenIptal
 from app.services.kredi import hareket_ekle
 
 
@@ -19,27 +19,23 @@ class IptalSonucu:
     bosalan_yer: bool
 
 
-async def iptal_et(db: AsyncSession, *, booking_id: int, now: datetime) -> IptalSonucu:
+async def iptal_et(
+    db: AsyncSession,
+    *,
+    booking_id: int,
+    now: datetime,
+    is_admin: bool = False,
+) -> IptalSonucu:
     """Rezervasyonu iptal eder.
 
-    Pencerede iptal: kredi iade edilir (CANCEL_REFUND, +1).
-    Geç iptal: kredi yanar (LATE_CANCEL, 0) — ama satır yine yazılır ki
-    üye "neden bir dersim eksik" diye sorduğunda cevap tarihçede olsun.
-
-    Her iki durumda da KONTENJAN BOŞALIR. Üye gelmeyecekse o yer başkasına
-    açılmalıdır; geç iptali cezalandırmanın yolu yeri boş tutmak değil,
-    krediyi yakmaktır.
+    Pencerede iptal (>= 12 saat): kredi iade edilir (CANCEL_REFUND, +1).
+    Geç iptal (< 12 saat): Üye için ENGELLENİR (GecIptalEngellendi hatası döner).
+    Yönetici (is_admin=True) ise her an iptal edebilir.
     """
     kayit = await db.get(Booking, booking_id)
     if kayit is None:
         raise KayitBulunamadi(f"Rezervasyon bulunamadı: {booking_id}")
 
-    # Global kilit sırasını koru: members -> class_sessions.
-    #
-    # Bu kilit olmadan sıra fiilen tersine dönüyordu: credit_ledger INSERT'i
-    # member_id FK'si yüzünden `members` üzerinde örtük FOR KEY SHARE alır ve
-    # bu, `siraya_gir`/`rezerve_et`'in FOR UPDATE'i ile çatışır. İnceleme bu
-    # döngüyle gerçek bir DeadlockDetectedError üretti.
     kilit = await db.execute(
         select(Member.id).where(Member.id == kayit.member_id).with_for_update()
     )
@@ -50,14 +46,14 @@ async def iptal_et(db: AsyncSession, *, booking_id: int, now: datetime) -> Iptal
     tip = await db.get(ClassType, oturum.class_type_id)
 
     son_iptal_ani = oturum.baslangic - timedelta(hours=tip.iptal_penceresi_saat)
-    # Sınır kullanıcı lehine: tam sınırda iptal hakkı vardır.
     pencerede = now <= son_iptal_ani
 
-    # Durumu ATOMIK olarak değiştir. ORM ataması yarışa açıktı: aynı
-    # rezervasyon için iki eşzamanlı iptal çağrısında ikisi de durumu
-    # BOOKED görür, ikisi de geçer ve kontenjan iki kişilik boşalırdı.
-    # Etkilenen satır 0 ise bu rezervasyon başka biri tarafından çoktan
-    # kapatılmıştır.
+    # Üye için 12 saat kuralı: 12 saatten az süre kaldıysa üyenin iptal etmesi engellenir.
+    if not pencerede and not is_admin:
+        raise GecIptalEngellendi(
+            "Ders saatinize 12 saatten az süre kaldığı için rezervasyon iptal edilemez. İptal hakkı dersten en geç 12 saat öncesine kadardır."
+        )
+
     kapatma = await db.execute(
         update(Booking)
         .where(Booking.id == booking_id, Booking.durum == BookingDurumu.BOOKED)
@@ -67,8 +63,6 @@ async def iptal_et(db: AsyncSession, *, booking_id: int, now: datetime) -> Iptal
     if kapatma.first() is None:
         raise ZatenIptal("Bu rezervasyon zaten kapatılmış")
 
-    # Kontenjanı atomik olarak azalt. dolu_sayi > 0 koşulu, çift iptalin
-    # sayacı eksiye düşürmesini veritabanı seviyesinde engeller.
     sonuc = await db.execute(
         update(ClassSession)
         .where(ClassSession.id == oturum.id, ClassSession.dolu_sayi > 0)
@@ -77,10 +71,6 @@ async def iptal_et(db: AsyncSession, *, booking_id: int, now: datetime) -> Iptal
     )
     bosalan_yer = sonuc.first() is not None
 
-    # İade/ceza satırı, kredinin DÜŞÜLDÜĞÜ paketle aynı pakete yazılmalı.
-    # Burada yeniden `aktif_paket_sec` çağırmak YANLIŞ olurdu: aradan geçen
-    # sürede yeni bir paket açılmış olabilir ve iade, krediyi hiç almamış
-    # bir pakete gider. Doğru kaynak, bu rezervasyonun BOOKING satırıdır.
     sonuc = await db.execute(
         select(CreditLedger.member_package_id).where(
             CreditLedger.booking_id == kayit.id,
@@ -89,10 +79,10 @@ async def iptal_et(db: AsyncSession, *, booking_id: int, now: datetime) -> Iptal
     )
     kaynak_paket_id = sonuc.scalar_one_or_none()
 
-    if pencerede:
+    if pencerede or is_admin:
         await hareket_ekle(
             db, member_id=kayit.member_id, tip=LedgerTipi.CANCEL_REFUND, miktar=1,
-            sebep=f"{tip.ad} — pencerede iptal",
+            sebep=f"{tip.ad} — iptal (bakiye iadesi)",
             member_package_id=kaynak_paket_id, booking_id=kayit.id,
         )
     else:
@@ -105,4 +95,4 @@ async def iptal_et(db: AsyncSession, *, booking_id: int, now: datetime) -> Iptal
 
     await db.flush()
     await db.refresh(kayit)
-    return IptalSonucu(booking=kayit, iade_edildi=pencerede, bosalan_yer=bosalan_yer)
+    return IptalSonucu(booking=kayit, iade_edildi=pencerede or is_admin, bosalan_yer=bosalan_yer)

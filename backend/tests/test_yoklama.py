@@ -106,7 +106,7 @@ async def test_iptal_edilmis_rezervasyon_yoklamaya_girmez(db):
         select(Booking).where(Booking.member_id == ece.id)
     )
     await iptal_et(
-        db, booking_id=kayitlar.scalar_one().id, now=DERS_ANI - td(hours=8)
+        db, booking_id=kayitlar.scalar_one().id, now=DERS_ANI - td(hours=14)
     )
 
     sonuc = await yoklama_al(
