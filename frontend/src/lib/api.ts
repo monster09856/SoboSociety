@@ -514,6 +514,7 @@ export const adminApi = {
         boy?: string | null
         kilo?: string | null
         saglik_notu?: string | null
+        aktif_member_package_id?: number | null
         aktif_paket_adi?: string | null
         paket_bitis_tarihi?: string | null
         kalan_gun_sayisi?: number | null
@@ -565,6 +566,10 @@ export const adminApi = {
     apiFetch<{ mesaj: string; member_id: number }>(`/admin/members/${memberId}/send-notification`, {
       method: 'POST',
       body: JSON.stringify(data),
+    }),
+  cancelPackage: (memberId: number, memberPackageId: number) =>
+    apiFetch<any>(`/admin/members/${memberId}/packages/${memberPackageId}/cancel`, {
+      method: 'POST',
     }),
 
   // Events & Workshops Console

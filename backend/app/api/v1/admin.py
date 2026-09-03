@@ -11,6 +11,7 @@ from app.schemas.admin import (
     AttendanceSubmitResponse,
     AttendeeResponse,
     MemberPackageResponse,
+    MemberAdminDetailResponse,
     PackageAssignRequest,
     QuickBookingRequest,
     SessionGenerateRequest,
@@ -217,6 +218,41 @@ async def assign_package(
     except Exception:
         await db.rollback()
         raise
+
+
+@router.post("/members/{member_id}/packages/{member_package_id}/cancel", response_model=MemberAdminDetailResponse)
+async def cancel_member_package_endpoint(
+    member_id: int,
+    member_package_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_admin: Member = Depends(get_current_admin),
+):
+    """Admin tarafından üyenin aktif paketini iptal eder ve kalan ders bakiyesini sıfırlar."""
+    m = await db.get(Member, member_id)
+    if not m:
+        raise HTTPException(status_code=404, detail="Üye bulunamadı.")
+
+    mp = await db.get(MemberPackage, member_package_id)
+    if not mp or mp.member_id != member_id:
+        raise HTTPException(status_code=404, detail="Paket kaydı bulunamadı.")
+
+    # 1. Paketin bitiş tarihini bugüne çekerek paketi sonlandır
+    mp.bitis = date.today()
+
+    # 2. Üyenin kalan bakiyesini sıfırla
+    current_b = await bakiye(db, member_id)
+    if current_b > 0:
+        await hareket_ekle(
+            db,
+            member_id=member_id,
+            tip=LedgerTipi.ADMIN_ADJUST,
+            miktar=-current_b,
+            sebep="Aktif ders paketi yönetici tarafından iptal edildi.",
+            member_package_id=member_package_id,
+        )
+
+    await db.commit()
+    return await _build_member_detail_response(db, m)
 
 
 @router.post("/sessions/generate", response_model=SessionGenerateResponse)
@@ -540,6 +576,7 @@ async def _build_member_detail_response(db: AsyncSession, m: Member) -> MemberAd
     )
     mp_rows = mp_res.all()
 
+    aktif_mp_id = None
     aktif_pkg_ad = None
     pkg_bitis_str = None
     kalan_gun = None
@@ -552,6 +589,7 @@ async def _build_member_detail_response(db: AsyncSession, m: Member) -> MemberAd
         bitis_str = mp.bitis.strftime('%d.%m.%Y') if mp.bitis else ""
         pkg_history.append(f"{pkg_name} ({ders_sayisi} Ders / Bitiş: {bitis_str})")
         if mp.baslangic and mp.bitis and mp.baslangic <= today < mp.bitis and aktif_pkg_ad is None:
+            aktif_mp_id = mp.id
             aktif_pkg_ad = pkg_name
             pkg_bitis_str = bitis_str
             kalan_gun = (mp.bitis - today).days
@@ -575,6 +613,7 @@ async def _build_member_detail_response(db: AsyncSession, m: Member) -> MemberAd
         boy=m.boy,
         kilo=m.kilo,
         saglik_notu=m.saglik_notu,
+        aktif_member_package_id=aktif_mp_id,
         aktif_paket_adi=aktif_pkg_ad,
         paket_bitis_tarihi=pkg_bitis_str,
         kalan_gun_sayisi=kalan_gun,

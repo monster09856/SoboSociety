@@ -130,6 +130,7 @@ class MemberAdminDetailResponse(BaseModel):
     saglik_notu: str | None = None
 
     # Aktif Paket Bilgileri & Paket Geçmişi
+    aktif_member_package_id: int | None = None
     aktif_paket_adi: str | None = None
     paket_bitis_tarihi: str | None = None
     kalan_gun_sayisi: int | None = None

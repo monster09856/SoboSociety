@@ -6,7 +6,7 @@ import { buyukHarf } from '@/lib/utils'
 import { AdminNav } from '@/components/admin/admin-nav'
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
-import { Users, Search, Plus, CreditCard, Send, Edit2, ShieldAlert, CheckCircle2, Loader2, Sparkles, UserCheck, AtSign, Phone, Ruler, X, Package } from 'lucide-react'
+import { Users, Search, Plus, CreditCard, Send, Edit2, ShieldAlert, CheckCircle2, Loader2, Sparkles, UserCheck, AtSign, Phone, Ruler, X, Package, Trash2 } from 'lucide-react'
 
 interface MemberDetail {
   id: number
@@ -27,6 +27,7 @@ interface MemberDetail {
   boy?: string | null
   kilo?: string | null
   saglik_notu?: string | null
+  aktif_member_package_id?: number | null
   aktif_paket_adi?: string | null
   paket_bitis_tarihi?: string | null
   kalan_gun_sayisi?: number | null
@@ -200,6 +201,18 @@ export default function AdminMembersPage() {
     }
   }
 
+  const handleCancelPackage = async (m: MemberDetail) => {
+    if (!m.aktif_member_package_id) return
+    if (!confirm(`${m.ad} üyesinin '${m.aktif_paket_adi}' paketini ve kalan ders kredisini iptal etmek istediğinizden emin misiniz?`)) return
+    try {
+      await admin.cancelPackage(m.id, m.aktif_member_package_id)
+      setSuccess(`${m.ad} üyesinin aktif paketi başarıyla iptal edildi ve ders kredisi sıfırlandı.`)
+      loadMembers(search)
+    } catch (err: any) {
+      setError(err?.message || 'Paket iptal edilirken hata oluştu.')
+    }
+  }
+
   return (
     <div className="min-h-screen bg-ivory text-ink font-sans antialiased relative">
       <AdminNav />
@@ -328,14 +341,25 @@ export default function AdminMembersPage() {
                       </div>
                       <div className="text-secondary font-medium pt-1">
                         {m.aktif_paket_adi ? (
-                          <div className="space-y-0.5">
-                            <div className="font-bold text-ink text-xs flex items-center gap-1.5">
-                              <CheckCircle2 className="w-3.5 h-3.5 text-sage shrink-0" />
-                              <span>{m.aktif_paket_adi}</span>
+                          <div className="flex items-center justify-between gap-2 pt-0.5">
+                            <div className="space-y-0.5">
+                              <div className="font-bold text-ink text-xs flex items-center gap-1.5">
+                                <CheckCircle2 className="w-3.5 h-3.5 text-sage shrink-0" />
+                                <span>{m.aktif_paket_adi}</span>
+                              </div>
+                              <div className="text-[10px] text-mocha font-semibold pl-5">
+                                Son Kullanma: {m.paket_bitis_tarihi}
+                              </div>
                             </div>
-                            <div className="text-[10px] text-mocha font-semibold pl-5">
-                              Son Kullanma: {m.paket_bitis_tarihi}
-                            </div>
+                            <button
+                              type="button"
+                              onClick={() => handleCancelPackage(m)}
+                              className="px-2.5 py-1 rounded-lg text-[10px] font-extrabold text-clay hover:bg-clay/10 border border-clay/30 transition-all flex items-center gap-1 cursor-pointer shrink-0 shadow-2xs"
+                              title="Bu aktif paketi ve ders kredisini iptal et"
+                            >
+                              <Trash2 className="w-3 h-3 text-clay" />
+                              <span>Paketi İptal Et</span>
+                            </button>
                           </div>
                         ) : (
                           <span className="text-muted italic text-[11px] block">Henüz aktif paket tanımlanmamış.</span>
