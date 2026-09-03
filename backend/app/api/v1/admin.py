@@ -547,11 +547,13 @@ async def _build_member_detail_response(db: AsyncSession, m: Member) -> MemberAd
 
     today = date.today()
     for mp, p in mp_rows:
-        pkg_name = mp.ozel_paket_adi or p.ad
-        pkg_history.append(f"{pkg_name} ({mp.ders_adedi} Ders / Bitiş: {mp.bitis.strftime('%d.%m.%Y')})")
-        if mp.baslangic <= today < mp.bitis and aktif_pkg_ad is None:
+        pkg_name = getattr(mp, "ozel_paket_adi", None) or (p.ad if p else "Stüdyo Ders Paketi")
+        ders_sayisi = getattr(mp, "ders_adedi", p.ders_adedi if p else 0)
+        bitis_str = mp.bitis.strftime('%d.%m.%Y') if mp.bitis else ""
+        pkg_history.append(f"{pkg_name} ({ders_sayisi} Ders / Bitiş: {bitis_str})")
+        if mp.baslangic and mp.bitis and mp.baslangic <= today < mp.bitis and aktif_pkg_ad is None:
             aktif_pkg_ad = pkg_name
-            pkg_bitis_str = mp.bitis.strftime('%d.%m.%Y')
+            pkg_bitis_str = bitis_str
             kalan_gun = (mp.bitis - today).days
 
     return MemberAdminDetailResponse(
