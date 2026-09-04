@@ -101,6 +101,7 @@ def main():
     else:
         print(f"Found existing matching RSA private key at: {key_path}")
     
+    csr_path = "/tmp/request.csr"
     print("Generating CSR from private key...")
     subprocess.run([
         "openssl", "req", "-new", "-key", key_path,
