@@ -46,7 +46,6 @@ workflows:
           cp build/ipa/*.ipa .
     artifacts:
       - build/ipa/*.ipa
-      - "*.ipa"
     publishing:
       app_store_connect:
         api_key: $APP_STORE_CONNECT_PRIVATE_KEY
