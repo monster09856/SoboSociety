@@ -1,23 +1,18 @@
 workflows:
   ios-app-store:
-    name: Sobo Society iOS TestFlight & App Store Build
+    name: Sobo Society Flutter iOS TestFlight & App Store Build
     max_build_duration: 60
     instance_type: mac_mini_m2
-    working_directory: ios
+    working_directory: android
     environment:
+      flutter: 3.29.0
       xcode: latest
       groups:
         - app_store_credentials
       vars:
         BUNDLE_ID: "com.sobosociety.app"
-        XCODE_SCHEME: "SoboSociety"
         DEVELOPMENT_TEAM: "YR2KGFQ6H3"
     scripts:
-      - name: Generate Xcode Project via XcodeGen
-        script: |
-          set -e
-          which xcodegen || brew install xcodegen
-          xcodegen generate
       - name: Set up App Store Connect API Key & Profiles
         script: |
           set -e
@@ -26,26 +21,21 @@ workflows:
           python3 setup_signing.py
           xcode-project use-profiles
           security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "" ~/Library/Keychains/login.keychain-db || true
-      - name: Build Xcode Archive & IPA
+      - name: Build Flutter iOS IPA
         script: |
           set -e
           security unlock-keychain -p "" ~/Library/Keychains/login.keychain-db || true
           security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "" ~/Library/Keychains/login.keychain-db || true
-          xcodebuild archive \
-            -project SoboSociety.xcodeproj \
-            -scheme SoboSociety \
-            -archivePath build/SoboSociety.xcarchive \
-            -configuration Release \
-            CODE_SIGN_STYLE=Manual \
-            DEVELOPMENT_TEAM=YR2KGFQ6H3 \
-            PROVISIONING_PROFILE_SPECIFIER="SoboSociety AppStore"
-          xcodebuild -exportArchive \
-            -archivePath build/SoboSociety.xcarchive \
-            -exportPath build/ipa \
-            -exportOptionsPlist ExportOptions.plist
-          cp build/ipa/*.ipa .
+          flutter packages get
+          flutter build ipa --release \
+            --build-name=1.0.0 \
+            --build-number=5 \
+            --export-options-plist=ios/ExportOptions.plist
     artifacts:
-      - build/ipa/*.ipa
+      - android/build/ios/ipa/*.ipa
+      - build/ios/ipa/*.ipa
+      - ios/build/ios/ipa/*.ipa
+      - "*.ipa"
     publishing:
       app_store_connect:
         api_key: $APP_STORE_CONNECT_PRIVATE_KEY
