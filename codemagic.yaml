@@ -31,14 +31,24 @@ workflows:
           set -e
           security unlock-keychain -p "" ~/Library/Keychains/login.keychain-db || true
           security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "" ~/Library/Keychains/login.keychain-db || true
-          xcode-project build-ipa \
-            --project SoboSociety.xcodeproj \
-            --scheme SoboSociety
+          xcodebuild archive \
+            -project SoboSociety.xcodeproj \
+            -scheme SoboSociety \
+            -archivePath build/SoboSociety.xcarchive \
+            -configuration Release \
+            CODE_SIGN_STYLE=Manual \
+            DEVELOPMENT_TEAM=YR2KGFQ6H3 \
+            PROVISIONING_PROFILE_SPECIFIER="SoboSociety AppStore"
+          xcodebuild -exportArchive \
+            -archivePath build/SoboSociety.xcarchive \
+            -exportPath build/ipa \
+            -exportOptionsPlist ExportOptions.plist
+          mkdir -p build/ios/ipa
+          cp build/ipa/*.ipa build/ios/ipa/
     artifacts:
+      - ios/build/ipa/*.ipa
       - ios/build/ios/ipa/*.ipa
-      - build/ios/ipa/*.ipa
       - "*.ipa"
-      - /tmp/xcodebuild_logs/*.log
     publishing:
       app_store_connect:
         api_key: $APP_STORE_CONNECT_PRIVATE_KEY
