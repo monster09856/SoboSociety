@@ -81,14 +81,25 @@ def main():
     }
 
     # 2. Ensure local RSA Private Key and CSR exist
-    key_path = "sobo_private_key.key"
-    if not os.path.exists(key_path):
-        key_path = os.path.join("ios", "sobo_private_key.key")
+    possible_keys = [
+        "sobo_private_key.key",
+        os.path.join("ios", "sobo_private_key.key"),
+        os.path.join("..", "ios", "sobo_private_key.key"),
+        os.path.join("..", "sobo_private_key.key"),
+        "/home/sobo/ios/sobo_private_key.key"
+    ]
+    key_path = None
+    for pk in possible_keys:
+        if os.path.exists(pk):
+            key_path = pk
+            break
     
-    csr_path = "/tmp/request.csr"
-    if not os.path.exists(key_path):
+    if not key_path:
+        key_path = "sobo_private_key.key"
         print("Generating fresh RSA 2048 private key...")
         subprocess.run(["openssl", "genrsa", "-out", key_path, "2048"], check=True)
+    else:
+        print(f"Found existing matching RSA private key at: {key_path}")
     
     print("Generating CSR from private key...")
     subprocess.run([

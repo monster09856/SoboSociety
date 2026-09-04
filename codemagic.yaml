@@ -32,8 +32,8 @@ workflows:
             --build-number=5 \
             --export-options-plist=ios/ExportOptions.plist
     artifacts:
-      - android/build/ios/ipa/*.ipa
       - build/ios/ipa/*.ipa
+      - android/build/ios/ipa/*.ipa
       - ios/build/ios/ipa/*.ipa
       - "*.ipa"
     publishing:
