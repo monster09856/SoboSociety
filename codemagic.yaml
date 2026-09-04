@@ -31,6 +31,14 @@ workflows:
             --build-name=1.0.0 \
             --build-number=5 \
             --export-options-plist=ios/ExportOptions.plist
+      - name: Publish IPA to App Store Connect TestFlight
+        script: |
+          set -e
+          app-store-connect publish \
+            --key-id "$APP_STORE_CONNECT_KEY_IDENTIFIER" \
+            --issuer-id "$APP_STORE_CONNECT_ISSUER_ID" \
+            --private-key "$APP_STORE_CONNECT_PRIVATE_KEY" \
+            --path build/ios/ipa/*.ipa
     artifacts:
       - build/ios/ipa/*.ipa
       - android/build/ios/ipa/*.ipa
