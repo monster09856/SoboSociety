@@ -78,7 +78,7 @@ class NotificationService {
     );
 
     await _notificationsPlugin.initialize(
-      settings: initSettings,
+      initSettings,
       onDidReceiveNotificationResponse: (NotificationResponse response) {
         if (kDebugMode) {
           print('[NotificationService] Notification tapped: ${response.payload}');
@@ -154,7 +154,7 @@ class NotificationService {
         'sobo_bg_notif_sync_task',
         'sobo_notification_sync_task',
         frequency: const Duration(minutes: 15),
-        existingWorkPolicy: ExistingPeriodicWorkPolicy.keep,
+        existingWorkPolicy: ExistingWorkPolicy.keep,
         constraints: Constraints(
           networkType: NetworkType.connected,
         ),
@@ -235,10 +235,10 @@ class NotificationService {
     );
 
     await _notificationsPlugin.show(
-      id: id,
-      title: title,
-      body: body,
-      notificationDetails: details,
+      id,
+      title,
+      body,
+      details,
       payload: payload,
     );
   }
