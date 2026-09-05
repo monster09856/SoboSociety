@@ -72,6 +72,18 @@ async def get_current_member(
     return member
 
 
+async def get_optional_current_member(
+    db: AsyncSession = Depends(get_db),
+    credentials: HTTPAuthorizationCredentials | None = Depends(security_scheme),
+    token: str | None = None,
+) -> Member | None:
+    """İsteğe bağlı üye doğrulaması. Token varsa üyeyi döner, yoksa veya geçersizse None döner."""
+    try:
+        return await get_current_member(db=db, credentials=credentials, token=token)
+    except HTTPException:
+        return None
+
+
 async def get_current_admin(
     db: AsyncSession = Depends(get_db),
     current_member: Member = Depends(get_current_member),
