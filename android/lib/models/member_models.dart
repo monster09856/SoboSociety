@@ -32,6 +32,7 @@ class BookingResponse {
 class MemberSummaryResponse {
   final int id;
   final String ad;
+  final String? kullaniciAdi;
   final String telefon;
   final int bakiye;
   final List<BookingResponse> aktifRezervasyonlar;
@@ -40,6 +41,7 @@ class MemberSummaryResponse {
   MemberSummaryResponse({
     required this.id,
     required this.ad,
+    this.kullaniciAdi,
     required this.telefon,
     required this.bakiye,
     required this.aktifRezervasyonlar,
@@ -64,6 +66,7 @@ class MemberSummaryResponse {
     return MemberSummaryResponse(
       id: json['id'] as int? ?? 0,
       ad: json['ad'] as String? ?? 'Üye',
+      kullaniciAdi: json['kullanici_adi'] as String?,
       telefon: json['telefon'] as String? ?? '',
       bakiye: json['bakiye'] as int? ?? 0,
       aktifRezervasyonlar: aktifList,

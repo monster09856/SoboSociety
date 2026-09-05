@@ -31,6 +31,7 @@ export default function AdminTodayPage() {
     return d.toISOString().slice(0, 16)
   })
   const [newCapacity, setNewCapacity] = useState(5)
+  const [newFiyatTl, setNewFiyatTl] = useState(900)
   const [addingSession, setAddingSession] = useState(false)
 
   const [classList, setClassList] = useState<{ id: number; ad: string }[]>([
@@ -91,6 +92,7 @@ export default function AdminTodayPage() {
         instructor_id: Number(newInstructorId),
         baslangic: isoStart,
         kontenjan: Number(newCapacity),
+        fiyat_tl: Number(newFiyatTl),
       })
       setShowAddForm(false)
       fetchSessions()
@@ -182,7 +184,7 @@ export default function AdminTodayPage() {
               </CardDescription>
             </CardHeader>
             <CardContent className="pt-6">
-              <form onSubmit={handleAddSession} className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 items-end">
+              <form onSubmit={handleAddSession} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 items-end">
                 <div>
                   <label className="block text-xs font-bold text-secondary uppercase tracking-wider mb-1.5">
                     Ders Tipi
@@ -245,7 +247,23 @@ export default function AdminTodayPage() {
                   />
                 </div>
 
-                <div className="sm:col-span-2 md:col-span-4 pt-2 flex justify-end gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-secondary uppercase tracking-wider mb-1.5">
+                    Tekil Ücret (₺ TL)
+                  </label>
+                  <Input
+                    type="number"
+                    min={0}
+                    step={50}
+                    value={newFiyatTl}
+                    onChange={(e) => setNewFiyatTl(Number(e.target.value))}
+                    className="bg-ivory border-line text-ink rounded-xl h-11 px-3 text-xs font-medium"
+                    placeholder="900"
+                    required
+                  />
+                </div>
+
+                <div className="sm:col-span-2 lg:col-span-5 pt-2 flex justify-end gap-3">
                   <button
                     type="button"
                     onClick={() => setShowAddForm(false)}

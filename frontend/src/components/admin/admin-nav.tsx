@@ -4,7 +4,7 @@ import React, { useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { buyukHarf } from '@/lib/utils'
-import { Calendar, Users, Zap, Bell, Sparkles, ShieldCheck, KeyRound, User, Loader2, CheckCircle2, AlertCircle, X } from 'lucide-react'
+import { Calendar, Users, Zap, Bell, Sparkles, ShieldCheck, KeyRound, User, Loader2, CheckCircle2, AlertCircle, X, Package } from 'lucide-react'
 import { adminApi, ApiError } from '@/lib/api'
 
 export function AdminNav() {
@@ -33,6 +33,16 @@ export function AdminNav() {
       href: '/admin/schedule',
       label: 'Ders Programı',
       icon: Calendar,
+    },
+    {
+      href: '/admin/single-bookings',
+      label: 'Tek Ders & Talepler',
+      icon: Sparkles,
+    },
+    {
+      href: '/admin/packages',
+      label: 'Ders Paketleri',
+      icon: Package,
     },
     {
       href: '/admin/events',

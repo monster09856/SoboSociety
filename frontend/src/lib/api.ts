@@ -207,6 +207,7 @@ export interface ClassTypeResponse {
   sure_dk: number
   renk: string
   iptal_penceresi_saat: number
+  tek_ders_acik?: boolean
 }
 
 export interface InstructorResponse {
@@ -222,6 +223,8 @@ export interface ClassSessionResponse {
   kontenjan: number
   dolu_sayi: number
   durum: string
+  fiyat_tl?: number | null
+  tek_ders_acik?: boolean
   class_type?: ClassTypeResponse | null
   instructor?: InstructorResponse | null
 }
@@ -302,6 +305,14 @@ export const api = {
         method: 'POST',
         body: JSON.stringify(data),
       }),
+    guestBooking: (data: { session_id: number; ad: string; telefon: string }) =>
+      apiFetch<{ booking_id: number; durum: string; mesaj: string; whatsapp_url: string }>(
+        '/guest-booking',
+        {
+          method: 'POST',
+          body: JSON.stringify(data),
+        }
+      ),
     cancel: (bookingId: number) =>
       apiFetch<BookingResponse>(`/bookings/${bookingId}/cancel`, {
         method: 'POST',
@@ -316,6 +327,9 @@ export const api = {
   },
   my: {
     getSummary: () => apiFetch<MemberSummaryResponse>('/my/summary'),
+  },
+  packages: {
+    list: () => apiFetch<PackageResponse[]>('/packages'),
   },
 }
 
@@ -334,10 +348,29 @@ export interface TodaySessionResponse {
   kontenjan: number
   dolu_sayi: number
   durum: string
+  fiyat_tl?: number | null
   class_type?: ClassTypeResponse | null
   instructor?: InstructorResponse | null
   katilimcilar: AttendeeResponse[]
   attendees?: AttendeeResponse[]
+}
+
+export interface PackageResponse {
+  id: number
+  ad: string
+  ders_adedi: number
+  gecerlilik_gun: number
+  fiyat_tl: number
+  fiyat_kurus: number
+  aktif: boolean
+}
+
+export interface PackageCreateUpdateRequest {
+  ad: string
+  ders_adedi: number
+  gecerlilik_gun: number
+  fiyat_tl: number
+  aktif?: boolean
 }
 
 export interface QuickBookingRequest {
@@ -394,6 +427,8 @@ export interface SessionUpdateRequest {
   class_type_id?: number
   instructor_id?: number
   kontenjan?: number
+  fiyat_tl?: number
+  tek_ders_acik?: boolean
 }
 
 export const adminApi = {
@@ -449,6 +484,8 @@ export const adminApi = {
     instructor_id: number
     baslangic: string
     kontenjan?: number
+    fiyat_tl?: number
+    tek_ders_acik?: boolean
   }) =>
     apiFetch<ClassSessionResponse>('/admin/sessions', {
       method: 'POST',
@@ -519,6 +556,7 @@ export const adminApi = {
         paket_bitis_tarihi?: string | null
         kalan_gun_sayisi?: number | null
         tanimlanan_paketler?: string[]
+        aktif_rezervasyonlar?: string[]
       }[]
     >(`/admin/members${search ? `?search=${encodeURIComponent(search)}` : ''}`),
   updateMember: (
@@ -615,6 +653,24 @@ export const adminApi = {
     apiFetch<{ silindi: boolean; event_id: number }>(`/admin/events/${eventId}`, {
       method: 'DELETE',
     }),
+
+  // Package Management
+  getPackages: () => apiFetch<PackageResponse[]>('/admin/packages'),
+  createPackage: (data: PackageCreateUpdateRequest) =>
+    apiFetch<PackageResponse>('/admin/packages', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  updatePackage: (packageId: number, data: PackageCreateUpdateRequest) =>
+    apiFetch<PackageResponse>(`/admin/packages/${packageId}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+  deletePackage: (packageId: number) =>
+    apiFetch<{ silindi: boolean; pasife_alindi?: boolean; mesaj: string }>(
+      `/admin/packages/${packageId}`,
+      { method: 'DELETE' }
+    ),
 }
 
 export const aiApi = {

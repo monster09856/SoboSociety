@@ -56,10 +56,10 @@ class SoboTheme {
       useMaterial3: true,
       scaffoldBackgroundColor: ivory,
       colorScheme: ColorScheme.fromSeed(
-        seedColor: espresso,
-        primary: espresso,
+        seedColor: mocha,
+        primary: mocha,
+        secondary: espresso,
         surface: ivory,
-        background: ivory,
       ),
       textTheme: TextTheme(
         headlineLarge: fontSerif(fontSize: 32, fontWeight: FontWeight.bold),

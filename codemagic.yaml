@@ -29,19 +29,31 @@ workflows:
           flutter packages get
           flutter build ipa --release \
             --build-name=1.0.0 \
-            --build-number=7 \
+            --build-number=8 \
             --export-options-plist=ios/ExportOptions.plist
       - name: Publish IPA to App Store Connect TestFlight
         script: |
           set -e
+          IPA_PATH=$(find /Users/builder/clone -name "*.ipa" 2>/dev/null | head -n 1)
+          if [ -z "$IPA_PATH" ]; then
+            IPA_PATH=$(find . -name "*.ipa" 2>/dev/null | head -n 1)
+          fi
+          echo "Publishing IPA found at: $IPA_PATH"
           app-store-connect publish \
             --key-id "$APP_STORE_CONNECT_KEY_IDENTIFIER" \
             --issuer-id "$APP_STORE_CONNECT_ISSUER_ID" \
             --private-key "$APP_STORE_CONNECT_PRIVATE_KEY" \
-            --path build/ios/ipa/*.ipa
+            --path "$IPA_PATH"
     artifacts:
       - build/ios/ipa/*.ipa
       - android/build/ios/ipa/*.ipa
       - ios/build/ios/ipa/*.ipa
       - "*.ipa"
+    publishing:
+      app_store_connect:
+        api_key: $APP_STORE_CONNECT_PRIVATE_KEY
+        key_id: $APP_STORE_CONNECT_KEY_IDENTIFIER
+        issuer_id: $APP_STORE_CONNECT_ISSUER_ID
+        submit_to_testflight: true
+
 

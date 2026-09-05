@@ -66,6 +66,8 @@ export default function AdminSchedulePage() {
     return tomorrow.toISOString().slice(0, 16)
   })
   const [newCapacity, setNewCapacity] = useState(5)
+  const [newFiyatTl, setNewFiyatTl] = useState(900)
+  const [newTekDersAcik, setNewTekDersAcik] = useState(false)
   const [addingSession, setAddingSession] = useState(false)
 
   // Edit Session State
@@ -74,6 +76,8 @@ export default function AdminSchedulePage() {
   const [editInstructorId, setEditInstructorId] = useState(1)
   const [editDateTime, setEditDateTime] = useState('')
   const [editCapacity, setEditCapacity] = useState(5)
+  const [editFiyatTl, setEditFiyatTl] = useState(900)
+  const [editTekDersAcik, setEditTekDersAcik] = useState(false)
   const [updatingSession, setUpdatingSession] = useState(false)
 
   const loadSessions = async () => {
@@ -176,6 +180,8 @@ export default function AdminSchedulePage() {
         instructor_id: Number(newInstructorId),
         baslangic: isoStart,
         kontenjan: Number(newCapacity),
+        fiyat_tl: Number(newFiyatTl),
+        tek_ders_acik: newTekDersAcik,
       })
       setShowAddForm(false)
       loadSessions()
@@ -213,6 +219,8 @@ export default function AdminSchedulePage() {
         instructor_id: Number(editInstructorId),
         baslangic: isoStart,
         kontenjan: Number(editCapacity),
+        fiyat_tl: Number(editFiyatTl),
+        tek_ders_acik: editTekDersAcik,
       })
       setEditingSession(null)
       loadSessions()
@@ -262,6 +270,8 @@ export default function AdminSchedulePage() {
     setEditClassTypeId(s.class_type?.id || 1)
     setEditInstructorId(s.instructor?.id || 1)
     setEditCapacity(s.kontenjan || 5)
+    setEditFiyatTl(s.fiyat_tl ?? 900)
+    setEditTekDersAcik(s.tek_ders_acik ?? false)
     try {
       const dt = new Date(s.baslangic)
       const tzOffset = dt.getTimezoneOffset() * 60000
@@ -325,7 +335,7 @@ export default function AdminSchedulePage() {
               </CardDescription>
             </CardHeader>
             <CardContent className="pt-6">
-              <form onSubmit={handleAddSession} className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 items-end">
+              <form onSubmit={handleAddSession} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 items-end">
                 <div>
                   <div className="flex items-center justify-between mb-1.5">
                     <label className="block text-xs font-bold text-secondary uppercase tracking-wider">
@@ -408,22 +418,50 @@ export default function AdminSchedulePage() {
                   />
                 </div>
 
-                <div className="sm:col-span-2 md:col-span-4 pt-2 flex justify-end gap-3">
-                  <button
-                    type="button"
-                    onClick={() => setShowAddForm(false)}
-                    className="px-4 py-2.5 rounded-xl text-xs font-bold text-secondary hover:text-ink transition-colors cursor-pointer"
-                  >
-                    İptal
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={addingSession}
-                    className="px-6 py-2.5 rounded-xl font-extrabold text-xs uppercase tracking-wider bg-espresso text-ivory hover:bg-espresso-dark transition-all cursor-pointer shadow-xs flex items-center gap-2"
-                  >
-                    {addingSession ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
-                    <span>Dersi Takvime Ekle</span>
-                  </button>
+                <div>
+                  <label className="block text-xs font-bold text-secondary uppercase tracking-wider mb-1.5">
+                    Tekil Ücret (₺ TL)
+                  </label>
+                  <Input
+                    type="number"
+                    min={0}
+                    step={50}
+                    value={newFiyatTl}
+                    onChange={(e) => setNewFiyatTl(Number(e.target.value))}
+                    className="bg-ivory border-line text-ink rounded-xl h-11 px-3 text-xs font-medium"
+                    placeholder="900"
+                    required
+                  />
+                </div>
+
+                <div className="sm:col-span-2 lg:col-span-5 pt-3 pb-1 border-t border-line/60 flex items-center justify-between flex-wrap gap-3">
+                  <label className="flex items-center gap-2.5 cursor-pointer text-xs font-bold text-ink bg-ivory/80 px-3 py-2 rounded-xl border border-line hover:border-espresso/40 transition-colors">
+                    <input
+                      type="checkbox"
+                      checked={newTekDersAcik}
+                      onChange={(e) => setNewTekDersAcik(e.target.checked)}
+                      className="w-4 h-4 text-espresso rounded border-line focus:ring-espresso cursor-pointer accent-espresso"
+                    />
+                    <span>Sitede Üyeliksiz Tek Ders Satışına Aç (&quot;Tek Ders Al&quot; Butonunu Göster)</span>
+                  </label>
+
+                  <div className="flex items-center gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setShowAddForm(false)}
+                      className="px-4 py-2.5 rounded-xl text-xs font-bold text-secondary hover:text-ink transition-colors cursor-pointer"
+                    >
+                      İptal
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={addingSession}
+                      className="px-6 py-2.5 rounded-xl font-extrabold text-xs uppercase tracking-wider bg-espresso text-ivory hover:bg-espresso-dark transition-all cursor-pointer shadow-xs flex items-center gap-2"
+                    >
+                      {addingSession ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+                      <span>Dersi Takvime Ekle</span>
+                    </button>
+                  </div>
                 </div>
               </form>
             </CardContent>
@@ -461,13 +499,30 @@ export default function AdminSchedulePage() {
                       <span className="inline-block px-2.5 py-0.5 rounded-full text-[10px] uppercase font-bold tracking-wider bg-espresso text-ivory">
                         {s.class_type?.ad || 'Ders'}
                       </span>
-                      <span className="text-xs font-extrabold text-espresso">
-                        {s.dolu_sayi} / {s.kontenjan} Üye (%{Math.round((s.dolu_sayi / (s.kontenjan || 1)) * 100)})
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className="inline-block px-2 py-0.5 rounded-md text-[11px] font-extrabold bg-ivory text-espresso border border-line">
+                          ₺{s.fiyat_tl ?? 900}
+                        </span>
+                        <span className="text-xs font-extrabold text-espresso">
+                          {s.dolu_sayi} / {s.kontenjan} Üye (%{Math.round((s.dolu_sayi / (s.kontenjan || 1)) * 100)})
+                        </span>
+                      </div>
                     </div>
                     <CardTitle className="font-serif text-lg font-bold text-ink mt-2">
                       {s.class_type?.ad} Seansı
                     </CardTitle>
+                    <div className="mt-1.5">
+                      {s.tek_ders_acik ? (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-sage/20 text-sage border border-sage/40">
+                          <CheckCircle2 className="w-3 h-3" />
+                          Sitede Üyeliksiz Satışa Açık
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-sand-dark/80 text-secondary border border-line">
+                          Sitede Üyeliksiz Kapalı
+                        </span>
+                      )}
+                    </div>
                   </CardHeader>
 
                   <CardContent className="pt-4 space-y-3 text-xs text-secondary font-medium">
@@ -528,7 +583,7 @@ export default function AdminSchedulePage() {
                   <span>Ders Tarihi & Saatini Düzenle</span>
                 </CardTitle>
                 <CardDescription className="text-xs text-secondary">
-                  Dersin yapılacağı günü, saati, eğitmeni ve kontenjanı değiştirin.
+                  Dersin yapılacağı günü, saati, eğitmeni, kontenjanı ve ücreti değiştirin.
                 </CardDescription>
               </CardHeader>
               <CardContent className="pt-6 space-y-4">
@@ -613,6 +668,34 @@ export default function AdminSchedulePage() {
                       className="bg-ivory border-line text-ink rounded-xl h-11 px-3 text-xs font-medium"
                       required
                     />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-secondary uppercase tracking-wider mb-1.5">
+                      Ders Ücreti (₺ TL)
+                    </label>
+                    <Input
+                      type="number"
+                      min={0}
+                      step={50}
+                      value={editFiyatTl}
+                      onChange={(e) => setEditFiyatTl(Number(e.target.value))}
+                      className="bg-ivory border-line text-ink rounded-xl h-11 px-3 text-xs font-medium"
+                      placeholder="900"
+                      required
+                    />
+                  </div>
+
+                  <div className="pt-2 pb-1 border-t border-line/60">
+                    <label className="flex items-center gap-2.5 cursor-pointer text-xs font-bold text-ink bg-ivory/80 px-3 py-2.5 rounded-xl border border-line hover:border-espresso/40 transition-colors">
+                      <input
+                        type="checkbox"
+                        checked={editTekDersAcik}
+                        onChange={(e) => setEditTekDersAcik(e.target.checked)}
+                        className="w-4 h-4 text-espresso rounded border-line focus:ring-espresso cursor-pointer accent-espresso"
+                      />
+                      <span>Sitede Üyeliksiz Tek Ders Satışına Aç (&quot;Tek Ders Al&quot; Butonunu Göster)</span>
+                    </label>
                   </div>
 
                   {editModalError && (

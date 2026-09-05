@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'services/notification_service.dart';
 import 'theme/sobo_theme.dart';
 import 'views/splash_screen_view.dart';
 
-void main() {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
@@ -11,6 +12,8 @@ void main() {
       statusBarIconBrightness: Brightness.dark,
     ),
   );
+
+  await NotificationService().initialize();
 
   runApp(const SoboSocietyApp());
 }

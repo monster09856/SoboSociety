@@ -5,12 +5,13 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_member, get_db
-from app.models.program import ClassSession, ClassType
+from app.models.program import ClassSession, ClassType, SessionDurumu
 from app.models.rezervasyon import Booking, BookingKaynagi
 from app.models.uyelik import Member
 from app.schemas.member import (
     BookingCreateRequest,
     BookingResponse,
+    GuestBookingRequest,
     WaitlistCreateRequest,
     WaitlistResponse,
 )
@@ -120,3 +121,103 @@ async def create_waitlist_entry(
     except Exception:
         await db.rollback()
         raise
+
+
+@router.post("/guest-booking")
+async def create_guest_booking(
+    body: GuestBookingRequest,
+    db: AsyncSession = Depends(get_db),
+):
+    """Üyeliksiz misafirlerin tek derslik rezervasyon talebi (Ödeme Bekliyor) oluşturması için uç nokta."""
+    from urllib.parse import quote
+    from app.services.telefon import normalize_telefon
+    from app.models.rezervasyon import BookingDurumu
+
+    norm_tel = normalize_telefon(body.telefon)
+    if not norm_tel:
+        raise HTTPException(status_code=400, detail="Lütfen geçerli bir cep telefonu numarası giriniz.")
+
+    ad_str = body.ad.strip()
+    if not ad_str:
+        raise HTTPException(status_code=400, detail="Lütfen Adınız ve Soyadınızı giriniz.")
+
+    session = await db.get(ClassSession, body.session_id)
+    if not session or session.durum != SessionDurumu.AKTIF:
+        stmt_active = select(ClassSession).where(ClassSession.durum == SessionDurumu.AKTIF).order_by(ClassSession.id.desc())
+        session = (await db.execute(stmt_active)).scalars().first()
+
+    if not session:
+        raise HTTPException(status_code=404, detail="Şu an için aktif ders oturumu bulunmuyor.")
+
+    # Telefon numarasıyla mevcut üye var mı kontrol et yoksa şifresiz misafir üye aç
+    stmt = select(Member).where(Member.telefon == norm_tel)
+    res = await db.execute(stmt)
+    member = res.scalar_one_or_none()
+    if not member:
+        member = Member(
+            ad=ad_str,
+            telefon=norm_tel,
+            kullanici_adi=None,
+            sifre_hash=None,
+        )
+        db.add(member)
+        await db.flush()
+
+    # Aynı derse beklemede veya onaylı aktif rezervasyonu var mı?
+    check_stmt = select(Booking).where(
+        Booking.member_id == member.id,
+        Booking.session_id == session.id,
+        Booking.durum.in_([BookingDurumu.BOOKED, BookingDurumu.PENDING_PAYMENT])
+    )
+    existing_b = (await db.execute(check_stmt)).scalar_one_or_none()
+    if existing_b:
+        if existing_b.durum == BookingDurumu.PENDING_PAYMENT:
+            raise HTTPException(status_code=400, detail="Bu ders için zaten ödeme beklemede olan bir rezervasyon talebiniz bulunmaktadır.")
+        else:
+            raise HTTPException(status_code=400, detail="Bu ders için zaten onaylı rezervasyonunuz bulunmaktadır.")
+
+    # Status: PENDING_PAYMENT
+    booking = Booking(
+        member_id=member.id,
+        session_id=session.id,
+        durum=BookingDurumu.PENDING_PAYMENT,
+        kaynak=BookingKaynagi.WEB,
+    )
+    db.add(booking)
+    await db.flush()
+
+    # Yöneticilere bildirim fırlat
+    ct_ad = "Ders"
+    if session.class_type_id:
+        ct = await db.get(ClassType, session.class_type_id)
+        if ct:
+            ct_ad = ct.ad
+
+    res_admins = await db.execute(
+        select(Member).where(
+            (Member.kullanici_adi == "admin") | (Member.telefon.in_(ayarlar.admin_telefons))
+        )
+    )
+    admins = res_admins.scalars().all()
+    for adm in admins:
+        await bildirim_gonder(
+            db,
+            member_id=adm.id,
+            baslik="⏳ Üyeliksiz Tek Ders Talebi!",
+            mesaj=f"{ad_str} ({norm_tel}) üyesi {ct_ad} dersi için ödeme bekleyen talep oluşturdu.",
+            tip="YENI_REZERVASYON",
+        )
+
+    await db.commit()
+    await db.refresh(booking)
+
+    class_title = ct_ad
+    wa_msg = quote(f"Merhaba, {class_title} dersi için tek derslik rezervasyon talebi oluşturdum ({ad_str} - {norm_tel}). Ödemeyi tamamlayıp onaylatmak istiyorum.")
+    wa_url = f"https://wa.me/905316033080?text={wa_msg}"
+
+    return {
+        "booking_id": booking.id,
+        "durum": booking.durum,
+        "mesaj": "Tek derslik rezervasyon talebiniz alındı! Ödemeyi tamamlamak için WhatsApp hattımıza yönlendiriliyorsunuz.",
+        "whatsapp_url": wa_url,
+    }

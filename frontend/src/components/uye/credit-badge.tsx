@@ -26,7 +26,7 @@ export const CreditBadge: React.FC<CreditBadgeProps> = ({ credits, className }) 
           {credits}
         </span>
         <span className="text-[11px] font-bold tracking-wider text-secondary uppercase">
-          Kredi
+          Ders Hakkı
         </span>
       </div>
     </div>

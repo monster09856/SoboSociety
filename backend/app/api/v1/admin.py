@@ -4,8 +4,11 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy import select, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import get_current_admin, get_db
-from app.models import Booking, BookingDurumu, BookingKaynagi, ClassSession, Member, WaitlistEntry, CreditLedger, LedgerTipi
+from app.api.deps import get_db, get_current_admin
+from app.models import (
+    Booking, BookingDurumu, BookingKaynagi, ClassSession, Member, WaitlistEntry, 
+    CreditLedger, LedgerTipi, MemberPackage, DeviceToken, Notification,
+)
 from app.schemas.admin import (
     AttendanceSubmitRequest,
     AttendanceSubmitResponse,
@@ -91,6 +94,7 @@ async def get_today_sessions(
     response_list = []
     for s in sessions:
         katilimcilar = attendees_by_session.get(s.id, [])
+        f_tl = s.fiyat_tl if s.fiyat_tl is not None else (s.class_type.fiyat_tl if (s.class_type and hasattr(s.class_type, 'fiyat_tl') and s.class_type.fiyat_tl is not None) else 900.0)
         response_list.append(
             TodaySessionResponse(
                 id=s.id,
@@ -98,6 +102,7 @@ async def get_today_sessions(
                 kontenjan=s.kontenjan,
                 dolu_sayi=s.dolu_sayi,
                 durum=s.durum,
+                fiyat_tl=f_tl,
                 class_type=s.class_type,
                 instructor=s.instructor,
                 katilimcilar=katilimcilar,
@@ -340,6 +345,8 @@ async def create_session(
         instructor_id=target_instructor_id,
         room_id=room.id,
         kontenjan=body.kontenjan,
+        fiyat_tl=body.fiyat_tl if body.fiyat_tl is not None else 900.0,
+        tek_ders_acik=body.tek_ders_acik,
         dolu_sayi=0,
         durum="active",
     )
@@ -358,7 +365,7 @@ async def update_session_endpoint(
     db: AsyncSession = Depends(get_db),
     current_admin: Member = Depends(get_current_admin),
 ):
-    """Mevcut bir ders oturumunun tarihini, saatini, eğitmenini veya kontenjanını günceller."""
+    """Mevcut bir ders oturumunun tarihini, saatini, eğitmenini, kontenjanını, fiyatını ve tek ders satış durumunu günceller."""
     res = await db.execute(select(ClassSession).where(ClassSession.id == session_id))
     session = res.scalar_one_or_none()
     if not session:
@@ -372,6 +379,10 @@ async def update_session_endpoint(
         session.instructor_id = body.instructor_id
     if body.kontenjan is not None:
         session.kontenjan = body.kontenjan
+    if body.fiyat_tl is not None:
+        session.fiyat_tl = body.fiyat_tl
+    if body.tek_ders_acik is not None:
+        session.tek_ders_acik = body.tek_ders_acik
 
     await db.commit()
     await db.refresh(session)
@@ -476,6 +487,27 @@ async def broadcast_push_notification(
     return {"mesaj": "Toplu bildirim gönderildi", "gonderilen_sayisi": gonderilen}
 
 
+@router.get("/notifications/stats")
+async def get_notification_stats(
+    db: AsyncSession = Depends(get_db),
+    current_admin: Member = Depends(get_current_admin),
+):
+    """Aktif üye ve cihaz token istatistiklerini getirir."""
+    from app.services.bildirim import _firebase_app
+    from app.models.bildirim import DeviceToken
+    res_m = await db.execute(select(Member).where(Member.aktif == True))
+    members_count = len(res_m.scalars().all())
+
+    res_t = await db.execute(select(DeviceToken))
+    tokens = res_t.scalars().all()
+
+    return {
+        "aktif_uye_sayisi": members_count,
+        "kayitli_cihaz_token_sayisi": len(tokens),
+        "fcm_aktif": _firebase_app is not None,
+    }
+
+
 @router.get("/notifications/campaigns")
 async def get_notification_campaigns(
     db: AsyncSession = Depends(get_db),
@@ -572,11 +604,15 @@ async def update_admin_credentials_endpoint(
 
 # --- Admin Member Management & Credit Intervention Endpoints ---
 
-from app.models import StudioEvent, CreditLedger, LedgerTipi, MemberPackage, Package, WaitlistEntry, Notification
+from app.models import (
+    Booking, BookingDurumu, BookingKaynagi, ClassSession, Member, WaitlistEntry, 
+    CreditLedger, LedgerTipi, MemberPackage, DeviceToken, Notification,
+    ClassType, Instructor, StudioEvent, Package,
+)
 from app.services.kredi import bakiye, hareket_ekle
 from app.schemas.admin import (
     MemberUpdateRequest, MemberAdminDetailResponse, MemberSinglePushRequest,
-    EventCreateRequest, EventResponse,
+    EventCreateRequest, EventResponse, PackageResponse, PackageCreateUpdateRequest,
 )
 
 async def _build_member_detail_response(db: AsyncSession, m: Member) -> MemberAdminDetailResponse:
@@ -609,6 +645,27 @@ async def _build_member_detail_response(db: AsyncSession, m: Member) -> MemberAd
             pkg_bitis_str = bitis_str
             kalan_gun = (mp.bitis - today).days
 
+    # Aktif Gelecek Ders Rezervasyonlarını Çek
+    now = datetime.now(timezone.utc)
+    res_bookings = await db.execute(
+        select(Booking, ClassSession, ClassType, Instructor)
+        .join(ClassSession, Booking.session_id == ClassSession.id)
+        .join(ClassType, ClassSession.class_type_id == ClassType.id)
+        .outerjoin(Instructor, ClassSession.instructor_id == Instructor.id)
+        .where(
+            Booking.member_id == m.id,
+            Booking.durum == "booked",
+            ClassSession.baslangic >= now - timedelta(hours=2),
+        )
+        .order_by(ClassSession.baslangic.asc())
+    )
+    booking_rows = res_bookings.all()
+    rezerve_ders_listesi = []
+    for b, cs, ct, inst in booking_rows:
+        tarih_str = cs.baslangic.strftime("%d.%m.%Y %H:%M")
+        inst_name = inst.ad if inst else "Eğitmen"
+        rezerve_ders_listesi.append(f"{ct.ad} • {tarih_str} ({inst_name})")
+
     return MemberAdminDetailResponse(
         id=m.id,
         ad=m.ad,
@@ -617,6 +674,7 @@ async def _build_member_detail_response(db: AsyncSession, m: Member) -> MemberAd
         bakiye=current_bakiye,
         aktif=m.aktif,
         is_admin=is_adm,
+        toplam_rezervasyon=len(rezerve_ders_listesi),
         bel=m.bel,
         kalca=m.kalca,
         sag_ic_bacak=m.sag_ic_bacak,
@@ -633,6 +691,7 @@ async def _build_member_detail_response(db: AsyncSession, m: Member) -> MemberAd
         paket_bitis_tarihi=pkg_bitis_str,
         kalan_gun_sayisi=kalan_gun,
         tanimlanan_paketler=pkg_history,
+        aktif_rezervasyonlar=rezerve_ders_listesi,
     )
 
 
@@ -744,17 +803,24 @@ async def delete_admin_member(
     if m.id == current_admin.id or m.kullanici_adi == "admin" or (m.telefon and m.telefon in ayarlar.admin_telefons):
         raise HTTPException(status_code=400, detail="Yönetici (Admin) hesabı veritabanından silinemez.")
 
-    # Bağımlı veritabanı kayıtlarını temizle
-    await db.execute(delete(Booking).where(Booking.member_id == member_id))
-    await db.execute(delete(WaitlistEntry).where(WaitlistEntry.member_id == member_id))
-    await db.execute(delete(CreditLedger).where(CreditLedger.member_id == member_id))
-    await db.execute(delete(MemberPackage).where(MemberPackage.member_id == member_id))
-    await db.execute(delete(Notification).where(Notification.member_id == member_id))
+    try:
+        # Bağımlı veritabanı kayıtlarını doğru FK sıralaması ile temizle
+        subq_booking_ids = select(Booking.id).where(Booking.member_id == member_id)
+        await db.execute(delete(CreditLedger).where(CreditLedger.booking_id.in_(subq_booking_ids)))
+        await db.execute(delete(CreditLedger).where(CreditLedger.member_id == member_id))
+        await db.execute(delete(DeviceToken).where(DeviceToken.member_id == member_id))
+        await db.execute(delete(Notification).where(Notification.member_id == member_id))
+        await db.execute(delete(WaitlistEntry).where(WaitlistEntry.member_id == member_id))
+        await db.execute(delete(Booking).where(Booking.member_id == member_id))
+        await db.execute(delete(MemberPackage).where(MemberPackage.member_id == member_id))
 
-    member_name = m.ad
-    await db.delete(m)
-    await db.commit()
-    return {"mesaj": f"{member_name} isimli üye ve tüm geçmiş kayıtları veritabanından tamamen silindi.", "member_id": member_id}
+        member_name = m.ad
+        await db.delete(m)
+        await db.commit()
+        return {"mesaj": f"{member_name} isimli üye ve tüm geçmiş kayıtları veritabanından tamamen silindi.", "member_id": member_id}
+    except Exception as e:
+        await db.rollback()
+        raise HTTPException(status_code=500, detail=f"Üye silinirken bir hata oluştu: {str(e)}")
 
 
 # --- Admin Events & Workshops Endpoints ---
@@ -890,5 +956,258 @@ async def create_instructor(
     await db.commit()
     await db.refresh(ins)
     return ins
+
+
+# --- Studio Package Management Endpoints ---
+
+@router.get("/packages", response_model=list[PackageResponse])
+async def list_admin_packages(
+    db: AsyncSession = Depends(get_db),
+    current_admin: Member = Depends(get_current_admin),
+):
+    """Admin paneli için tüm hazır stüdyo ders paketlerini ve detaylarını listeler."""
+    res = await db.execute(select(Package).order_by(Package.id.asc()))
+    pkgs = res.scalars().all()
+    return [
+        PackageResponse(
+            id=p.id,
+            ad=p.ad,
+            ders_adedi=p.ders_adedi,
+            gecerlilik_gun=p.gecerlilik_gun,
+            fiyat_tl=p.fiyat_kurus / 100.0,
+            fiyat_kurus=p.fiyat_kurus,
+            aktif=p.aktif,
+        )
+        for p in pkgs
+    ]
+
+
+@router.post("/packages", response_model=PackageResponse)
+async def create_admin_package(
+    body: PackageCreateUpdateRequest,
+    db: AsyncSession = Depends(get_db),
+    current_admin: Member = Depends(get_current_admin),
+):
+    """Yeni stüdyo ders paketi oluşturur."""
+    fiyat_k = int((body.fiyat_tl or 0) * 100)
+    pkg = Package(
+        ad=body.ad.strip(),
+        ders_adedi=body.ders_adedi,
+        gecerlilik_gun=body.gecerlilik_gun,
+        fiyat_kurus=fiyat_k,
+        aktif=body.aktif,
+    )
+    db.add(pkg)
+    await db.commit()
+    await db.refresh(pkg)
+    return PackageResponse(
+        id=pkg.id,
+        ad=pkg.ad,
+        ders_adedi=pkg.ders_adedi,
+        gecerlilik_gun=pkg.gecerlilik_gun,
+        fiyat_tl=pkg.fiyat_kurus / 100.0,
+        fiyat_kurus=pkg.fiyat_kurus,
+        aktif=pkg.aktif,
+    )
+
+
+@router.put("/packages/{package_id}", response_model=PackageResponse)
+async def update_admin_package(
+    package_id: int,
+    body: PackageCreateUpdateRequest,
+    db: AsyncSession = Depends(get_db),
+    current_admin: Member = Depends(get_current_admin),
+):
+    """Stüdyo ders paketinin adını, ders adedini, geçerlilik gün sayısını veya fiyatını günceller."""
+    pkg = await db.get(Package, package_id)
+    if not pkg:
+        raise HTTPException(status_code=404, detail="Ders paketi bulunamadı.")
+    
+    pkg.ad = body.ad.strip()
+    pkg.ders_adedi = body.ders_adedi
+    pkg.gecerlilik_gun = body.gecerlilik_gun
+    pkg.fiyat_kurus = int((body.fiyat_tl or 0) * 100)
+    pkg.aktif = body.aktif
+
+    await db.commit()
+    await db.refresh(pkg)
+    return PackageResponse(
+        id=pkg.id,
+        ad=pkg.ad,
+        ders_adedi=pkg.ders_adedi,
+        gecerlilik_gun=pkg.gecerlilik_gun,
+        fiyat_tl=pkg.fiyat_kurus / 100.0,
+        fiyat_kurus=pkg.fiyat_kurus,
+        aktif=pkg.aktif,
+    )
+
+
+@router.delete("/packages/{package_id}")
+async def delete_admin_package(
+    package_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_admin: Member = Depends(get_current_admin),
+):
+    """Stüdyo ders paketini siler veya üyelere tanımlıysa pasif konuma alır."""
+    pkg = await db.get(Package, package_id)
+    if not pkg:
+        raise HTTPException(status_code=404, detail="Ders paketi bulunamadı.")
+
+    res = await db.execute(select(MemberPackage).where(MemberPackage.package_id == package_id))
+    if res.scalars().first():
+        pkg.aktif = False
+        await db.commit()
+        return {"silindi": False, "pasife_alindi": True, "mesaj": "Paket üyelere tanımlı olduğu için tamamen silinmedi, pasif duruma alındı."}
+
+    await db.delete(pkg)
+    await db.commit()
+    return {"silindi": True, "package_id": package_id, "mesaj": "Ders paketi başarıyla silindi."}
+
+
+@router.post("/bookings/{booking_id}/approve")
+async def approve_admin_booking(
+    booking_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_admin: Member = Depends(get_current_admin),
+):
+    """Admin ödemesi alınan üyeliksiz veya beklemedeki rezervasyonu onaylar."""
+    booking = await db.get(Booking, booking_id)
+    if not booking:
+        raise HTTPException(status_code=404, detail="Rezervasyon bulunamadı.")
+
+    if booking.durum == BookingDurumu.BOOKED:
+        return {"booking_id": booking.id, "durum": booking.durum, "mesaj": "Rezervasyon zaten onaylı."}
+
+    session = await db.get(ClassSession, booking.session_id)
+    if not session:
+        raise HTTPException(status_code=404, detail="Ders oturumu bulunamadı.")
+
+    session.dolu_sayi += 1
+    booking.durum = BookingDurumu.BOOKED
+    await db.commit()
+
+    await bildirim_gonder(
+        db,
+        member_id=booking.member_id,
+        baslik="✅ Ödemeniz Onaylandı!",
+        mesaj="Ders rezervasyonunuz başarıyla kesinleşti. Harika bir ders dileriz!",
+        tip="REZERVE_ONAY",
+    )
+    return {"booking_id": booking.id, "durum": booking.durum, "mesaj": "Rezervasyon talebi onaylandı ve derse kesin kayıt yapıldı."}
+
+
+@router.post("/bookings/{booking_id}/reject")
+async def reject_admin_booking(
+    booking_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_admin: Member = Depends(get_current_admin),
+):
+    """Admin ödemesi yapılmayan rezervasyon talebini reddeder veya iptal eder."""
+    booking = await db.get(Booking, booking_id)
+    if not booking:
+        raise HTTPException(status_code=404, detail="Rezervasyon bulunamadı.")
+
+    if booking.durum == BookingDurumu.BOOKED:
+        session = await db.get(ClassSession, booking.session_id)
+        if session and session.dolu_sayi > 0:
+            session.dolu_sayi -= 1
+
+    booking.durum = BookingDurumu.CANCELLED
+    booking.cancelled_at = datetime.now(timezone.utc)
+    await db.commit()
+    return {"booking_id": booking.id, "durum": booking.durum, "mesaj": "Rezervasyon talebi reddedildi/iptal edildi."}
+
+
+@router.get("/single-bookings")
+async def list_admin_single_bookings(
+    db: AsyncSession = Depends(get_db),
+    current_admin: Member = Depends(get_current_admin),
+):
+    """Admin için tüm tek derslik rezervasyon ve ödeme taleplerini listeler."""
+    stmt = (
+        select(Booking, Member, ClassSession, ClassType)
+        .join(Member, Booking.member_id == Member.id)
+        .join(ClassSession, Booking.session_id == ClassSession.id)
+        .outerjoin(ClassType, ClassSession.class_type_id == ClassType.id)
+        .order_by(Booking.id.desc())
+    )
+    res = await db.execute(stmt)
+    rows = res.all()
+
+    items = []
+    for b, m, cs, ct in rows:
+        items.append({
+            "id": b.id,
+            "durum": b.durum,
+            "kaynak": b.kaynak,
+            "olusturuldu_utc": b.created_at.isoformat() if hasattr(b, 'created_at') and b.created_at else None,
+            "member": {
+                "id": m.id,
+                "ad": m.ad,
+                "telefon": m.telefon or "",
+                "kullanici_adi": m.kullanici_adi,
+            },
+            "session": {
+                "id": cs.id,
+                "baslangic": cs.baslangic.isoformat(),
+                "fiyat_tl": ct.fiyat_tl if ct and ct.fiyat_tl else 900.0,
+                "class_type_ad": ct.ad if ct else "Ders",
+            }
+        })
+    return items
+
+
+class AdminSingleBookingCreateRequest(BaseModel):
+    session_id: int
+    ad: str
+    telefon: str
+    durum: str = "booked"
+
+
+@router.post("/single-bookings")
+async def create_admin_single_booking(
+    body: AdminSingleBookingCreateRequest,
+    db: AsyncSession = Depends(get_db),
+    current_admin: Member = Depends(get_current_admin),
+):
+    """Admin panelinden manuel tek derslik kayıt ekler."""
+    norm_phone = normalize_telefon(body.telefon)
+    if not norm_phone:
+        raise HTTPException(status_code=400, detail="Geçerli bir telefon numarası giriniz.")
+
+    ad_str = body.ad.strip()
+    if not ad_str:
+        raise HTTPException(status_code=400, detail="Ad ve Soyad zorunludur.")
+
+    session = await db.get(ClassSession, body.session_id)
+    if not session:
+        raise HTTPException(status_code=404, detail="Ders oturumu bulunamadı.")
+
+    stmt = select(Member).where(Member.telefon == norm_phone)
+    res = await db.execute(stmt)
+    member = res.scalar_one_or_none()
+    if not member:
+        member = Member(ad=ad_str, telefon=norm_phone, kullanici_adi=None, sifre_hash=None)
+        db.add(member)
+        await db.flush()
+
+    status_val = BookingDurumu.BOOKED if body.durum == "booked" else BookingDurumu.PENDING_PAYMENT
+
+    if status_val == BookingDurumu.BOOKED:
+        session.dolu_sayi += 1
+
+    booking = Booking(
+        member_id=member.id,
+        session_id=session.id,
+        durum=status_val,
+        kaynak=BookingKaynagi.ADMIN,
+    )
+    db.add(booking)
+    await db.commit()
+    await db.refresh(booking)
+
+    return {"booking_id": booking.id, "durum": booking.durum, "mesaj": "Tek ders kaydı başarıyla eklendi."}
+
+
 
 

@@ -20,6 +20,7 @@ class TodaySessionResponse(BaseModel):
     kontenjan: int
     dolu_sayi: int
     durum: str
+    fiyat_tl: float | None = 900.0
     class_type: ClassTypeResponse | None = None
     instructor: InstructorResponse | None = None
     katilimcilar: list[AttendeeResponse] = Field(default_factory=list)
@@ -78,6 +79,8 @@ class SessionCreateRequest(BaseModel):
     instructor_id: int = Field(..., description="Eğitmen ID'si")
     baslangic: datetime = Field(..., description="Ders başlangıç tarihi ve saati")
     kontenjan: int = Field(default=5, ge=1, description="Ders kontenjan sınırı (varsayılan 5)")
+    fiyat_tl: float | None = Field(default=900.0, description="Ders tekil fiyatı TL")
+    tek_ders_acik: bool = Field(default=False, description="Sitede üyeliksiz tek ders satışına açık mı?")
     room_id: int = Field(default=1, description="Salon ID'si")
 
 
@@ -86,6 +89,8 @@ class SessionUpdateRequest(BaseModel):
     class_type_id: int | None = Field(default=None, description="Ders tipi ID'si")
     instructor_id: int | None = Field(default=None, description="Eğitmen ID'si")
     kontenjan: int | None = Field(default=None, description="Ders kontenjan sınırı")
+    fiyat_tl: float | None = Field(default=None, description="Ders tekil fiyatı TL")
+    tek_ders_acik: bool | None = Field(default=None, description="Sitede üyeliksiz tek ders satışına açık mı?")
 
 
 class MemberUpdateRequest(BaseModel):
@@ -129,12 +134,13 @@ class MemberAdminDetailResponse(BaseModel):
     kilo: str | None = None
     saglik_notu: str | None = None
 
-    # Aktif Paket Bilgileri & Paket Geçmişi
+    # Aktif Paket Bilgileri & Paket Geçmişi & Aktif Ders Rezervasyonları
     aktif_member_package_id: int | None = None
     aktif_paket_adi: str | None = None
     paket_bitis_tarihi: str | None = None
     kalan_gun_sayisi: int | None = None
     tanimlanan_paketler: list[str] = Field(default_factory=list)
+    aktif_rezervasyonlar: list[str] = Field(default_factory=list)
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -167,6 +173,27 @@ class AdminCredentialsUpdateRequest(BaseModel):
     yeni_kullanici_adi: str | None = Field(default=None, description="Yeni Yönetici Kullanıcı Adı")
     yeni_sifre: str = Field(..., description="Yeni Yönetici Şifresi")
     mevcut_sifre: str | None = Field(default=None, description="Mevcut Şifre (Güvenlik doğrulaması için)")
+
+
+class PackageResponse(BaseModel):
+    id: int
+    ad: str
+    ders_adedi: int
+    gecerlilik_gun: int
+    fiyat_tl: float
+    fiyat_kurus: int
+    aktif: bool
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class PackageCreateUpdateRequest(BaseModel):
+    ad: str
+    ders_adedi: int
+    gecerlilik_gun: int
+    fiyat_tl: float | None = 0.0
+    aktif: bool = True
+
 
 
 

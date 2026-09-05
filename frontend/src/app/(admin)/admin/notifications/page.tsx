@@ -36,22 +36,27 @@ export default function AdminNotificationsPage() {
   const [schedLoading, setSchedLoading] = useState(false)
 
   const [campaigns, setCampaigns] = useState<CampaignItem[]>([])
+  const [membersList, setMembersList] = useState<{ id: number; ad: string; kullanici_adi?: string | null; telefon?: string | null }[]>([])
   const [loadingList, setLoadingList] = useState(true)
 
-  const loadCampaigns = async () => {
+  const loadData = async () => {
     try {
       setLoadingList(true)
-      const data = await adminApi.getCampaigns()
-      setCampaigns(data)
+      const [cData, mData] = await Promise.all([
+        adminApi.getCampaigns(),
+        adminApi.getMembers().catch(() => []),
+      ])
+      setCampaigns(cData || [])
+      setMembersList(mData || [])
     } catch (err) {
-      console.error('Kampanyalar yüklenemedi:', err)
+      console.error('Veriler yüklenemedi:', err)
     } finally {
       setLoadingList(false)
     }
   }
 
   useEffect(() => {
-    loadCampaigns()
+    loadData()
   }, [])
 
   const handleInstantSend = async (e: React.FormEvent) => {
@@ -65,7 +70,7 @@ export default function AdminNotificationsPage() {
         mesaj: instantMesaj,
         hedef_kitle: instantKitle,
       })
-      setInstantResult(`Toplu bildirim ${res.gonderilen_sayisi} üyeye başarıyla gönderildi! 🚀`)
+      setInstantResult(`Bildirim ${res.gonderilen_sayisi} alıcıya başarıyla gönderildi! 🚀`)
       setInstantBaslik('')
       setInstantMesaj('')
     } catch (err) {
@@ -89,7 +94,7 @@ export default function AdminNotificationsPage() {
       })
       setSchedBaslik('')
       setSchedMesaj('')
-      await loadCampaigns()
+      await loadData()
       alert('Otomatik günlük kampanya başarıyla oluşturuldu!')
     } catch (err) {
       alert('Kampanya oluşturulurken hata oluştu.')
@@ -102,7 +107,7 @@ export default function AdminNotificationsPage() {
     if (!confirm('Bu kampanyayı silmek istediğinize emin misiniz?')) return
     try {
       await adminApi.deleteCampaign(id)
-      await loadCampaigns()
+      await loadData()
     } catch (err) {
       alert('Kampanya silinemedi.')
     }
@@ -205,10 +210,21 @@ export default function AdminNotificationsPage() {
                       <select
                         value={instantKitle}
                         onChange={(e) => setInstantKitle(e.target.value)}
-                        className="w-full px-4 py-3 bg-ivory border border-line rounded-input text-xs text-ink focus:outline-none focus:border-espresso transition-colors"
+                        className="w-full px-4 py-3 bg-ivory border border-line rounded-input text-xs text-ink focus:outline-none focus:border-espresso transition-colors font-medium"
                       >
-                        <option value="TUM_UYELER">Tüm Aktif Üyeler (Varsayılan)</option>
-                        <option value="AKTIF_PAKETLI">Aktif Paketi Olanlar</option>
+                        <optgroup label="Genel Bildirim Grupları">
+                          <option value="TUM_UYELER">Tüm Aktif Üyeler (Toplu)</option>
+                          <option value="AKTIF_PAKETLI">Aktif Paketi Olanlar</option>
+                        </optgroup>
+                        {membersList.length > 0 && (
+                          <optgroup label="Kişiye Özel Bildirim (Tek Üye)">
+                            {membersList.map((m) => (
+                              <option key={m.id} value={`MEMBER_${m.id}`}>
+                                Kişiye Özel: {m.ad} {m.kullanici_adi ? `(@${m.kullanici_adi})` : ''} {m.telefon ? `[${m.telefon}]` : ''}
+                              </option>
+                            ))}
+                          </optgroup>
+                        )}
                       </select>
                     </div>
 

@@ -32,6 +32,7 @@ interface MemberDetail {
   paket_bitis_tarihi?: string | null
   kalan_gun_sayisi?: number | null
   tanimlanan_paketler?: string[]
+  aktif_rezervasyonlar?: string[]
 }
 
 export default function AdminMembersPage() {
@@ -203,18 +204,18 @@ export default function AdminMembersPage() {
 
   const handleCancelPackage = async (m: MemberDetail) => {
     if (!m.aktif_member_package_id) return
-    if (!confirm(`${m.ad} üyesinin '${m.aktif_paket_adi}' paketini ve kalan ders kredisini iptal etmek istediğinizden emin misiniz?`)) return
+    if (!confirm(`${m.ad} üyesinin '${m.aktif_paket_adi}' paketini ve kalan ders hakkını iptal etmek istediğinizden emin misiniz?`)) return
     try {
       await admin.cancelPackage(m.id, m.aktif_member_package_id)
-      setSuccess(`${m.ad} üyesinin aktif paketi başarıyla iptal edildi ve ders kredisi sıfırlandı.`)
-      loadMembers(search)
+      setSuccess(`${m.ad} üyesinin aktif paketi başarıyla iptal edildi ve kalan ders hakkı sıfırlandı.`)
+      await loadMembers(search)
     } catch (err: any) {
-      setError(err?.message || 'Paket iptal edilirken hata oluştu.')
+      setError(err?.message || 'Paket iptal edilirken bir hata oluştu.')
     }
   }
 
   const handleDeleteMember = async (m: MemberDetail) => {
-    if (!confirm(`${m.ad} (${m.telefon || 'Telefon Yok'}) isimli üyeyi ve tüm geçmiş ders/kredi kayıtlarını veritabanından kalıcı olarak silmek istediğinizden emin misiniz?`)) return
+    if (!confirm(`${m.ad} (${m.telefon || 'Telefon Yok'}) isimli üyeyi ve tüm geçmiş ders kayıtlarını veritabanından kalıcı olarak silmek istediğinizden emin misiniz?`)) return
     try {
       await admin.deleteMember(m.id)
       setSuccess(`${m.ad} isimli üye ve tüm geçmiş kayıtları veritabanından silindi.`)
@@ -366,7 +367,7 @@ export default function AdminMembersPage() {
                               type="button"
                               onClick={() => handleCancelPackage(m)}
                               className="px-2.5 py-1 rounded-lg text-[10px] font-extrabold text-clay hover:bg-clay/10 border border-clay/30 transition-all flex items-center gap-1 cursor-pointer shrink-0 shadow-2xs"
-                              title="Bu aktif paketi ve ders kredisini iptal et"
+                              title="Bu aktif paketi ve kalan ders hakkını iptal et"
                             >
                               <Trash2 className="w-3 h-3 text-clay" />
                               <span>Paketi İptal Et</span>
@@ -379,8 +380,29 @@ export default function AdminMembersPage() {
                     </div>
 
                     <div className="flex items-center justify-between p-3 rounded-xl bg-ivory border border-line">
-                      <span className="text-secondary font-semibold">Kalan Ders Bakiyesi:</span>
-                      <span className="font-serif text-xl font-bold text-espresso">{m.bakiye} Kredi</span>
+                      <span className="text-secondary font-semibold">Kalan Ders Hakkı:</span>
+                      <span className="font-serif text-xl font-bold text-espresso">{m.bakiye} Ders</span>
+                    </div>
+
+                    {/* Rezerve Ettiği Dersler Rozeti */}
+                    <div className="p-3 rounded-xl bg-sand-light border border-sage/30 space-y-1 text-[11px] shadow-2xs">
+                      <div className="flex items-center justify-between text-secondary font-bold border-b border-line/50 pb-1">
+                        <span className="flex items-center gap-1 text-espresso font-extrabold">
+                          <CheckCircle2 className="w-3.5 h-3.5 text-sage" /> Rezerve Ettiği Dersler ({m.aktif_rezervasyonlar?.length || 0})
+                        </span>
+                      </div>
+                      {m.aktif_rezervasyonlar && m.aktif_rezervasyonlar.length > 0 ? (
+                        <div className="space-y-1 pt-1">
+                          {m.aktif_rezervasyonlar.map((ders, idx) => (
+                            <div key={idx} className="font-bold text-ink text-[11px] flex items-center gap-1.5">
+                              <span className="w-1.5 h-1.5 rounded-full bg-sage shrink-0" />
+                              <span>{ders}</span>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <span className="text-muted italic text-[10px] block pt-0.5">Rezerve edilmiş aktif ders bulunmuyor.</span>
+                      )}
                     </div>
 
                     {/* Vücut Ölçüleri Özet Rozeti */}

@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
-from sqlalchemy import select, update
+from sqlalchemy import select, update, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_member, get_db
@@ -22,7 +22,7 @@ class NotificationResponse(BaseModel):
 
 class DeviceTokenRequest(BaseModel):
     device_token: str
-    platform: str = "ios"
+    platform: str = "android"
 
 
 @router.get("/my/notifications", response_model=list[NotificationResponse])
@@ -30,7 +30,7 @@ async def get_my_notifications(
     member: Member = Depends(get_current_member),
     db: AsyncSession = Depends(get_db),
 ):
-    """Giriş yapmış üyenin tüm ve okunmamış bildirimlerini getirir."""
+    """Giriş yapmış üyenin tüm bildirimlerini getirir."""
     res = await db.execute(
         select(Notification)
         .where(Notification.member_id == member.id)
@@ -63,7 +63,37 @@ async def mark_notification_read(
         .where(Notification.id == notification_id, Notification.member_id == member.id)
         .values(okundu=True)
     )
+    await db.commit()
     return {"mesaj": "Okundu işaretlendi"}
+
+
+@router.delete("/my/notifications/{notification_id}")
+async def delete_single_notification(
+    notification_id: int,
+    member: Member = Depends(get_current_member),
+    db: AsyncSession = Depends(get_db),
+):
+    """Belirtilen bildirimi siler."""
+    await db.execute(
+        delete(Notification)
+        .where(Notification.id == notification_id, Notification.member_id == member.id)
+    )
+    await db.commit()
+    return {"mesaj": "Bildirim silindi"}
+
+
+@router.delete("/my/notifications")
+async def delete_all_notifications(
+    member: Member = Depends(get_current_member),
+    db: AsyncSession = Depends(get_db),
+):
+    """Üyenin tüm bildirimlerini siler."""
+    await db.execute(
+        delete(Notification)
+        .where(Notification.member_id == member.id)
+    )
+    await db.commit()
+    return {"mesaj": "Tüm bildirimler silindi"}
 
 
 @router.post("/my/device-token")
@@ -72,7 +102,7 @@ async def register_device_token(
     member: Member = Depends(get_current_member),
     db: AsyncSession = Depends(get_db),
 ):
-    """APNs (iOS) veya Web Push cihaz token'ını kaydeder."""
+    """APNs veya FCM cihaz token'ını kaydeder."""
     dt = await device_token_kaydet(
         db, member_id=member.id, device_token=body.device_token, platform=body.platform
     )

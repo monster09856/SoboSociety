@@ -41,7 +41,8 @@ async def get_my_summary(
     return MemberSummaryResponse(
         id=current_member.id,
         ad=current_member.ad,
-        telefon=current_member.telefon,
+        kullanici_adi=current_member.kullanici_adi,
+        telefon=current_member.telefon or "",
         bakiye=kredi_bakiye,
         aktif_rezervasyonlar=aktif,
         gecmis_rezervasyonlar=gecmis,

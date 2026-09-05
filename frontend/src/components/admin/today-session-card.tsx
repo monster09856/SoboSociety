@@ -66,6 +66,7 @@ export function TodaySessionCard({
   const [editInstructorId, setEditInstructorId] = useState(session.instructor?.id || 1)
   const [editDateTime, setEditDateTime] = useState('')
   const [editCapacity, setEditCapacity] = useState(session.kontenjan || 5)
+  const [editFiyatTl, setEditFiyatTl] = useState(session.fiyat_tl ?? 900)
   const [updatingSession, setUpdatingSession] = useState(false)
 
   // Dynamic Lists for Class Types & Instructors
@@ -94,8 +95,9 @@ export function TodaySessionCard({
   useEffect(() => {
     if (showEditModal) {
       loadDropdowns()
+      setEditFiyatTl(session.fiyat_tl ?? 900)
     }
-  }, [showEditModal])
+  }, [showEditModal, session])
 
   useEffect(() => {
     if (session.baslangic) {
@@ -147,28 +149,19 @@ export function TodaySessionCard({
   }
 
   const handleSaveAttendance = async () => {
-    setMessage(null)
     setLoading(true)
+    setMessage(null)
     try {
-      const gelenIds = Array.from(attendedSet)
-      const res = await admin.submitAttendance({
+      await admin.submitAttendance({
         session_id: session.id,
-        gelen_member_ids: gelenIds,
+        gelen_member_ids: Array.from(attendedSet),
       })
-
-      setMessage({
-        type: 'success',
-        text: `Yoklama kaydedildi: ${res.gelen} Katılan, ${res.gelmeyen} Gelmeyen`,
-      })
-
+      setMessage({ type: 'success', text: 'Yoklama başarıyla kaydedildi!' })
       if (onAttendanceSaved) {
         onAttendanceSaved()
       }
     } catch (err: any) {
-      setMessage({
-        type: 'error',
-        text: err?.message || 'Yoklama kaydedilirken bir hata oluştu.',
-      })
+      setMessage({ type: 'error', text: err?.message || 'Yoklama kaydedilirken bir hata oluştu.' })
     } finally {
       setLoading(false)
     }
@@ -198,6 +191,7 @@ export function TodaySessionCard({
         instructor_id: Number(editInstructorId),
         baslangic: isoStart,
         kontenjan: Number(editCapacity),
+        fiyat_tl: Number(editFiyatTl),
       })
       setShowEditModal(false)
       if (onAttendanceSaved) {
@@ -214,10 +208,10 @@ export function TodaySessionCard({
   }
 
   const handleCancelMemberBooking = async (bookingId: number, memberName: string) => {
-    if (!confirm(`${memberName} üyesinin bu dersteki kaydını iptal edip kredisini iade etmek istediğinizden emin misiniz?`)) return
+    if (!confirm(`${memberName} üyesinin bu dersteki kaydını iptal edip ders hakkını iade etmek istediğinizden emin misiniz?`)) return
     try {
       await api.bookings.cancel(bookingId)
-      setMessage({ type: 'success', text: `${memberName} üyesinin kaydı iptal edildi ve ders kredisi iade edildi.` })
+      setMessage({ type: 'success', text: `${memberName} üyesinin kaydı iptal edildi ve ders hakkı iade edildi.` })
       if (onAttendanceSaved) onAttendanceSaved()
     } catch (err: any) {
       setMessage({ type: 'error', text: err?.message || 'İptal edilirken hata oluştu.' })
@@ -247,6 +241,9 @@ export function TodaySessionCard({
               <span className="inline-flex items-center gap-1 px-3 py-0.5 rounded-full text-xs font-bold bg-espresso/10 text-espresso border border-line">
                 <Clock className="w-3.5 h-3.5" />
                 {startTime}
+              </span>
+              <span className="inline-flex items-center gap-1 px-3 py-0.5 rounded-full text-xs font-extrabold bg-sand text-espresso border border-line">
+                ₺{session.fiyat_tl ?? 900}
               </span>
               <span
                 className={`inline-flex items-center gap-1 px-3 py-0.5 rounded-full text-xs font-bold ${
@@ -354,7 +351,7 @@ export function TodaySessionCard({
                       type="button"
                       onClick={() => handleCancelMemberBooking(att.booking_id, att.ad)}
                       className="p-1.5 rounded-xl text-clay hover:bg-clay/15 transition-all cursor-pointer border border-clay/30"
-                      title="Bu üyenin kaydını iptal et ve kredisini iade et"
+                      title="Bu üyenin kaydını iptal et ve ders hakkını iade et"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
@@ -503,6 +500,22 @@ export function TodaySessionCard({
                     value={editCapacity}
                     onChange={(e) => setEditCapacity(Number(e.target.value))}
                     className="bg-ivory border-line text-ink rounded-xl h-11 px-3 text-xs font-medium"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-secondary uppercase tracking-wider mb-1.5">
+                    Tekil Seans Ücreti (₺ TL)
+                  </label>
+                  <Input
+                    type="number"
+                    min={0}
+                    step={50}
+                    value={editFiyatTl}
+                    onChange={(e) => setEditFiyatTl(Number(e.target.value))}
+                    className="bg-ivory border-line text-ink rounded-xl h-11 px-3 text-xs font-medium"
+                    placeholder="900"
                     required
                   />
                 </div>

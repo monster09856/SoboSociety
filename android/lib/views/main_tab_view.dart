@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../services/notification_service.dart';
 import '../theme/sobo_theme.dart';
 import 'admin/admin_today_view.dart';
 import 'ai/ai_chat_view.dart';
@@ -15,6 +16,12 @@ class MainTabView extends StatefulWidget {
 
 class _MainTabViewState extends State<MainTabView> {
   int _currentIndex = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    NotificationService().registerDeviceToken();
+  }
 
   @override
   Widget build(BuildContext context) {

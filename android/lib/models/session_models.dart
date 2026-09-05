@@ -44,6 +44,7 @@ class ClassSessionDTO {
   final int kontenjan;
   final int doluSayi;
   final String durum;
+  final double? fiyatTl;
   final ClassTypeDTO? classType;
   final InstructorDTO? instructor;
 
@@ -53,6 +54,7 @@ class ClassSessionDTO {
     required this.kontenjan,
     required this.doluSayi,
     required this.durum,
+    this.fiyatTl,
     this.classType,
     this.instructor,
   });
@@ -64,6 +66,7 @@ class ClassSessionDTO {
       kontenjan: json['kontenjan'] as int? ?? 5,
       doluSayi: json['dolu_sayi'] as int? ?? 0,
       durum: json['durum'] as String? ?? 'active',
+      fiyatTl: (json['fiyat_tl'] != null) ? (json['fiyat_tl'] as num).toDouble() : 900.0,
       classType: json['class_type'] != null ? ClassTypeDTO.fromJson(json['class_type']) : null,
       instructor: json['instructor'] != null ? InstructorDTO.fromJson(json['instructor']) : null,
     );
@@ -71,4 +74,33 @@ class ClassSessionDTO {
 
   bool get isFull => doluSayi >= kontenjan;
   int get spotsLeft => (kontenjan - doluSayi).clamp(0, kontenjan);
+}
+
+class PackageDTO {
+  final int id;
+  final String ad;
+  final int dersAdedi;
+  final int gecerlilikGun;
+  final double fiyatTl;
+  final bool aktif;
+
+  PackageDTO({
+    required this.id,
+    required this.ad,
+    required this.dersAdedi,
+    required this.gecerlilikGun,
+    required this.fiyatTl,
+    required this.aktif,
+  });
+
+  factory PackageDTO.fromJson(Map<String, dynamic> json) {
+    return PackageDTO(
+      id: json['id'] as int,
+      ad: json['ad'] as String? ?? 'Ders Paketi',
+      dersAdedi: json['ders_adedi'] as int? ?? 1,
+      gecerlilikGun: json['gecerlilik_gun'] as int? ?? 30,
+      fiyatTl: (json['fiyat_tl'] != null) ? (json['fiyat_tl'] as num).toDouble() : 0.0,
+      aktif: json['aktif'] as bool? ?? true,
+    );
+  }
 }

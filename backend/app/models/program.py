@@ -2,7 +2,7 @@ from datetime import date, datetime
 from enum import StrEnum
 
 from sqlalchemy import (
-    Boolean, CheckConstraint, Date, DateTime, ForeignKey,
+    Boolean, CheckConstraint, Date, DateTime, ForeignKey, Float,
     Integer, String, UniqueConstraint,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -26,6 +26,8 @@ class ClassType(ZamanDamgali, Base):
     sure_dk: Mapped[int] = mapped_column(Integer)
     renk: Mapped[str] = mapped_column(String(9), default="#A2846F")
     iptal_penceresi_saat: Mapped[int] = mapped_column(Integer, default=12)
+    fiyat_tl: Mapped[float | None] = mapped_column(Float, default=900.0)
+    tek_ders_acik: Mapped[bool] = mapped_column(Boolean, default=False)
     aktif: Mapped[bool] = mapped_column(Boolean, default=True)
 
     __table_args__ = (
@@ -89,6 +91,8 @@ class ClassSession(ZamanDamgali, Base):
     # (iki reformer arızalandı). Snapshot bu yüzden.
     kontenjan: Mapped[int] = mapped_column(Integer)
     dolu_sayi: Mapped[int] = mapped_column(Integer, default=0)
+    fiyat_tl: Mapped[float | None] = mapped_column(Float, default=900.0)
+    tek_ders_acik: Mapped[bool] = mapped_column(Boolean, default=False)
 
     durum: Mapped[str] = mapped_column(String(16), default=SessionDurumu.AKTIF)
     template_id: Mapped[int | None] = mapped_column(

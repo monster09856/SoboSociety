@@ -9,6 +9,7 @@ from app.models.base import Base, ZamanDamgali
 
 class BookingDurumu(StrEnum):
     BOOKED = "booked"
+    PENDING_PAYMENT = "pending_payment"
     CANCELLED = "cancelled"
     ATTENDED = "attended"
     NO_SHOW = "no_show"

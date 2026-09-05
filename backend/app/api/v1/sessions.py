@@ -15,9 +15,8 @@ router = APIRouter(prefix="/sessions", tags=["sessions"])
 @router.get("", response_model=list[ClassSessionResponse])
 async def list_sessions(
     db: AsyncSession = Depends(get_db),
-    current_member: Member = Depends(get_current_member),
 ):
-    """Gelecekteki aktif ders oturumlarını listeler."""
+    """Gelecekteki aktif tüm ders oturumlarını kamuya açık listeler."""
     now = datetime.now(timezone.utc)
     stmt = (
         select(ClassSession)

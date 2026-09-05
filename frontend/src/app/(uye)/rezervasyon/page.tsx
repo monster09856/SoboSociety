@@ -250,9 +250,9 @@ export default function RezervasyonPage() {
               <p className="font-serif text-lg font-bold text-ink">{summary.ad}</p>
             </div>
             <div className="text-right">
-              <span className="text-[11px] uppercase font-bold text-secondary block">Kullanılabilir Bakiye</span>
+              <span className="text-[11px] uppercase font-bold text-secondary block">Kullanılabilir Ders Hakkı</span>
               <span className="font-serif text-xl font-extrabold text-espresso">
-                {summary.bakiye} Ders Kredisi
+                {summary.bakiye} Ders Hakkı
               </span>
             </div>
           </div>

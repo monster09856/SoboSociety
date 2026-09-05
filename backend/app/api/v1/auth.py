@@ -56,7 +56,12 @@ async def register_endpoint(
         res_tel = await db.execute(stmt_tel)
         existing_tel = res_tel.scalar_one_or_none()
         if existing_tel:
-            # Var olan kayıtla eşleştir (DM hızlı kayıt ile açılmış üye)
+            if existing_tel.sifre_hash:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Bu telefon numarası ile kayıtlı aktif bir üyelik bulunmaktadır. Lütfen kullanıcı adınız ile giriş yapınız."
+                )
+            # DM hızlı kayıt ile açılmış ve henüz şifresi oluşturulmamış üye
             existing_tel.kullanici_adi = username
             existing_tel.sifre_hash = hash_password(body.sifre)
             existing_tel.ad = body.ad.strip()
@@ -97,7 +102,7 @@ async def login_endpoint(
     if (username in ["admin", "05316033080", "+905316033080"]) and (password in ["345678", "admin"]):
         stmt_admin = select(Member).where(or_(Member.kullanici_adi.ilike("admin"), Member.telefon == "+905316033080"))
         res_admin = await db.execute(stmt_admin)
-        admin_member = res_admin.scalar_one_or_none()
+        admin_member = res_admin.scalars().first()
         if not admin_member:
             admin_member = Member(
                 ad="Stüdyo Yöneticisi",
