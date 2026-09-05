@@ -86,3 +86,66 @@ class MemberSummaryResponse(BaseModel):
     gecmis_rezervasyonlar: list[BookingResponse] = []
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class StudioEventResponse(BaseModel):
+    id: int
+    baslik: str
+    turu: str
+    tarih_saat: datetime
+    aciklama: str
+    kontenjan: int
+    dolu_sayi: int = 0
+    ucret: str
+    tek_katilim_acik: bool = True
+    tek_katilim_ucret_tl: float | None = 0.0
+    aktif: bool = True
+    is_registered: bool = False
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class StudioEventCreateRequest(BaseModel):
+    baslik: str
+    turu: str = "WORKSHOP"
+    tarih_saat: datetime
+    aciklama: str = ""
+    kontenjan: int = 15
+    ucret: str = "Ücretsiz / Üyelere Özel"
+    tek_katilim_acik: bool = True
+    tek_katilim_ucret_tl: float | None = 0.0
+
+
+class MeasurementCreateRequest(BaseModel):
+    bel: str | None = None
+    kalca: str | None = None
+    kilo: str | None = None
+    boy: str | None = None
+    sag_bacak: str | None = None
+    sol_bacak: str | None = None
+    sag_kol: str | None = None
+    sol_kol: str | None = None
+    saglik_notu: str | None = None
+
+
+class MeasurementHistoryResponse(BaseModel):
+    id: int
+    tarih: datetime
+    bel: str | None = None
+    kalca: str | None = None
+    kilo: str | None = None
+    boy: str | None = None
+    sag_bacak: str | None = None
+    sol_bacak: str | None = None
+    sag_kol: str | None = None
+    sol_kol: str | None = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class MemberStatsResponse(BaseModel):
+    completed_this_month: int = 0
+    total_attended: int = 0
+    current_streak_weeks: int = 0
+    badges: list[str] = []
+

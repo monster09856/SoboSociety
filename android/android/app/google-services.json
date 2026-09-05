@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "133894492281",
+    "project_id": "ilac-bilgi",
+    "storage_bucket": "ilac-bilgi.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:133894492281:android:4a04407ffaef69806d44a8",
+        "android_client_info": {
+          "package_name": "com.sobosociety.app.android"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA51fnm4ZnL6hqb-JWURVEHhtKrNF8cmAc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:133894492281:android:4a04407ffaef69806d44a8",
+        "android_client_info": {
+          "package_name": "com.ilacbilgi.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA51fnm4ZnL6hqb-JWURVEHhtKrNF8cmAc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

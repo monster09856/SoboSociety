@@ -124,6 +124,24 @@ class StudioEvent(ZamanDamgali, Base):
     tarih_saat: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     aciklama: Mapped[str] = mapped_column(String(500), default="")
     kontenjan: Mapped[int] = mapped_column(Integer, default=15)
+    dolu_sayi: Mapped[int] = mapped_column(Integer, default=0)
     ucret: Mapped[str] = mapped_column(String(40), default="Ücretsiz / Üyelere Özel")
+    tek_katilim_acik: Mapped[bool] = mapped_column(Boolean, default=True)
+    tek_katilim_ucret_tl: Mapped[float | None] = mapped_column(Float, default=0.0)
     aktif: Mapped[bool] = mapped_column(Boolean, default=True)
+
+
+class EventRSVP(ZamanDamgali, Base):
+    """Workshop / Etkinlik üye katılım kaydı (Tek katılımlı veya paketsiz LCV)."""
+
+    __tablename__ = "event_rsvps"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    event_id: Mapped[int] = mapped_column(ForeignKey("studio_events.id"), index=True)
+    member_id: Mapped[int] = mapped_column(ForeignKey("members.id"), index=True)
+    tek_katilim: Mapped[bool] = mapped_column(Boolean, default=True)
+    durum: Mapped[str] = mapped_column(String(20), default="registered")  # "registered" | "cancelled"
+
+    event: Mapped["StudioEvent"] = relationship("StudioEvent", lazy="selectin")
+
 

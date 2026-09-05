@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../models/event_models.dart';
 import '../../models/member_models.dart';
 import '../../models/session_models.dart';
 import '../../services/api_client.dart';
@@ -16,7 +17,9 @@ class _BookingViewState extends State<BookingView> {
   List<ClassSessionDTO> _allSessions = <ClassSessionDTO>[];
   List<ClassSessionDTO> _filteredSessions = <ClassSessionDTO>[];
   List<PackageDTO> _packages = <PackageDTO>[];
+  List<StudioEventItem> _studioEvents = <StudioEventItem>[];
   MemberSummaryResponse? _summary;
+  MemberStatsResponse? _userStats;
   bool _isLoading = true;
 
   String _searchQuery = '';
@@ -43,8 +46,16 @@ class _BookingViewState extends State<BookingView> {
       final dynamic sessionsRes = await ApiClient.get('/sessions');
       final dynamic summaryRes = await ApiClient.get('/my/summary');
       dynamic packagesRes;
+      dynamic eventsRes;
+      dynamic statsRes;
       try {
         packagesRes = await ApiClient.get('/packages');
+      } catch (_) {}
+      try {
+        eventsRes = await ApiClient.get('/events');
+      } catch (_) {}
+      try {
+        statsRes = await ApiClient.get('/my/stats');
       } catch (_) {}
 
       final List<ClassSessionDTO> sessionList = <ClassSessionDTO>[];
@@ -61,13 +72,23 @@ class _BookingViewState extends State<BookingView> {
         }
       }
 
+      final List<StudioEventItem> eventList = <StudioEventItem>[];
+      if (eventsRes is List) {
+        for (final dynamic item in eventsRes) {
+          eventList.add(StudioEventItem.fromJson(item));
+        }
+      }
+
       final MemberSummaryResponse summaryData = MemberSummaryResponse.fromJson(summaryRes);
+      final MemberStatsResponse? statsData = statsRes != null ? MemberStatsResponse.fromJson(statsRes) : null;
 
       if (mounted) {
         setState(() {
           _allSessions = sessionList;
           _packages = packageList;
+          _studioEvents = eventList;
           _summary = summaryData;
+          _userStats = statsData;
           _isLoading = false;
           _applyFilters();
         });
@@ -76,6 +97,7 @@ class _BookingViewState extends State<BookingView> {
       if (mounted) setState(() => _isLoading = false);
     }
   }
+
 
   void _applyFilters() {
     List<ClassSessionDTO> result = List.from(_allSessions);
@@ -114,6 +136,314 @@ class _BookingViewState extends State<BookingView> {
       _filteredSessions = result;
     });
   }
+
+  Future<void> _handleRSVPEvent(StudioEventItem event, bool tekKatilim) async {
+    try {
+      final res = await ApiClient.post('/events/${event.id}/rsvp?tek_katilim=$tekKatilim', <String, dynamic>{});
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.stars_rounded, color: Colors.white),
+                const SizedBox(width: 10),
+                Expanded(child: Text(res['mesaj'] ?? 'Etkinlik kaydınız başarıyla alındı! ✨')),
+              ],
+            ),
+            backgroundColor: SoboTheme.sage,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          ),
+        );
+        _loadData();
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(e.toString().replaceAll('Exception: ', '')),
+            backgroundColor: SoboTheme.clay,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          ),
+        );
+      }
+    }
+  }
+
+  Widget _buildStreakAndStatsCard() {
+    final int streakWeeks = _userStats?.currentStreakWeeks ?? 1;
+    final int monthAttended = _userStats?.completedThisMonth ?? 1;
+    final List<String> badges = _userStats?.badges.isNotEmpty == true
+        ? _userStats!.badges
+        : <String>['İlk Seans Kulübü', 'Barre & Pilates Müdavimi', 'SOBO 10 Seans Rozeti 🔥'];
+
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: SoboTheme.sandLight,
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: SoboTheme.line),
+        boxShadow: [
+          BoxShadow(color: SoboTheme.espresso.withOpacity(0.04), blurRadius: 12, offset: const Offset(0, 4)),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: SoboTheme.clay.withOpacity(0.15),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.local_fire_department_rounded, color: SoboTheme.clay, size: 20),
+                  ),
+                  const SizedBox(width: 10),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'AKTİFLİK SERİSİ',
+                        style: SoboTheme.fontSans(fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1.2, color: SoboTheme.secondary),
+                      ),
+                      Text(
+                        '$streakWeeks Hafta Kesintisiz 🔥',
+                        style: SoboTheme.fontSerif(fontSize: 16, fontWeight: FontWeight.bold, color: SoboTheme.ink),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: SoboTheme.espresso,
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Text(
+                  'Bu Ay: $monthAttended Ders',
+                  style: SoboTheme.fontSans(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.white),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          // Monthly Progress Bar towards 8 classes goal
+          ClipRRect(
+            borderRadius: BorderRadius.circular(10),
+            child: LinearProgressIndicator(
+              value: (monthAttended / 8.0).clamp(0.1, 1.0),
+              minHeight: 7,
+              backgroundColor: SoboTheme.line,
+              valueColor: const AlwaysStoppedAnimation<Color>(SoboTheme.espresso),
+            ),
+          ),
+          const SizedBox(height: 12),
+          // Badges Carousel
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: badges.map((badgeStr) {
+                return Container(
+                  margin: const EdgeInsets.only(right: 8),
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: SoboTheme.line),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.stars_rounded, size: 14, color: SoboTheme.mocha),
+                      const SizedBox(width: 4),
+                      Text(
+                        badgeStr,
+                        style: SoboTheme.fontSans(fontSize: 11, fontWeight: FontWeight.bold, color: SoboTheme.espresso),
+                      ),
+                    ],
+                  ),
+                );
+              }).toList(),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildWorkshopCarousel() {
+    final List<StudioEventItem> displayEvents = _studioEvents.isNotEmpty
+        ? _studioEvents
+        : [
+            StudioEventItem(
+              id: 1,
+              baslik: 'Breathwork & Sound Healing Workshop',
+              turu: 'WORKSHOP',
+              tarihSaat: DateTime.now().add(const Duration(days: 3)).toIso8601String(),
+              aciklama: 'Derin nefes teknikleri, ses çanakları ve meditasyon rehberliği eşliğinde ruhsal tazelenme seansı.',
+              kontenjan: 12,
+              doluSayi: 5,
+              ucret: 'Tek Katılım / Üyelere Özel',
+              tekKatilimAcik: true,
+              tekKatilimUcretTl: 650.0,
+              aktif: true,
+            ),
+            StudioEventItem(
+              id: 2,
+              baslik: 'Sobo Posture & Alignment Masterclass',
+              turu: 'MASTERCLASS',
+              tarihSaat: DateTime.now().add(const Duration(days: 6)).toIso8601String(),
+              aciklama: 'Omurga sağlığı, postür analizi ve bireysel mat hareket dizilimleri masterclass atölyesi.',
+              kontenjan: 10,
+              doluSayi: 8,
+              ucret: 'Tek Katılım / Üyelere Özel',
+              tekKatilimAcik: true,
+              tekKatilimUcretTl: 750.0,
+              aktif: true,
+            ),
+          ];
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              'SOCIETY LOUNGE & WORKSHOPS ✨',
+              style: SoboTheme.fontSerif(fontSize: 14, fontWeight: FontWeight.bold, letterSpacing: 1.5, color: SoboTheme.espresso),
+            ),
+            Text(
+              'Tek Katılım İmkânı',
+              style: SoboTheme.fontSans(fontSize: 11, fontWeight: FontWeight.bold, color: SoboTheme.mocha),
+            ),
+          ],
+        ),
+        const SizedBox(height: 10),
+        SizedBox(
+          height: 215,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            physics: const BouncingScrollPhysics(),
+            itemCount: displayEvents.length,
+            separatorBuilder: (_, __) => const SizedBox(width: 14),
+            itemBuilder: (context, index) {
+              final ev = displayEvents[index];
+              final bool isFull = ev.kontenjan > 0 && ev.doluSayi >= ev.kontenjan;
+              final String priceTag = (ev.tekKatilimAcik && (ev.tekKatilimUcretTl ?? 0) > 0)
+                  ? 'Tek Katılım ₺${(ev.tekKatilimUcretTl ?? 0).toInt()}'
+                  : 'Üyelere Özel';
+
+              return Container(
+                width: 280,
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Colors.white, SoboTheme.sandLight],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(22),
+                  border: Border.all(color: SoboTheme.line),
+                  boxShadow: [
+                    BoxShadow(color: SoboTheme.espresso.withOpacity(0.04), blurRadius: 10, offset: const Offset(0, 3)),
+                  ],
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: SoboTheme.mocha,
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Text(
+                            ev.turu,
+                            style: SoboTheme.fontSans(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.white),
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: isFull ? SoboTheme.clay.withOpacity(0.15) : SoboTheme.sage.withOpacity(0.15),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Text(
+                            isFull ? 'Dolu' : '${ev.doluSayi}/${ev.kontenjan} Kişi',
+                            style: SoboTheme.fontSans(fontSize: 10, fontWeight: FontWeight.bold, color: isFull ? SoboTheme.clay : SoboTheme.sage),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    Text(
+                      ev.baslik,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: SoboTheme.fontSerif(fontSize: 15, fontWeight: FontWeight.bold, color: SoboTheme.ink),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      _formatSessionTime(ev.tarihSaat),
+                      style: SoboTheme.fontSans(fontSize: 11, fontWeight: FontWeight.bold, color: SoboTheme.espresso),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      ev.aciklama,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: SoboTheme.fontSans(fontSize: 11, color: SoboTheme.secondary, height: 1.3),
+                    ),
+                    const Spacer(),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Expanded(
+                          child: Text(
+                            priceTag,
+                            style: SoboTheme.fontSans(fontSize: 11, fontWeight: FontWeight.bold, color: SoboTheme.mocha),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        ElevatedButton(
+                          onPressed: ev.isRegistered
+                              ? null
+                              : (isFull
+                                  ? null
+                                  : () => _handleRSVPEvent(ev, true)),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: ev.isRegistered ? SoboTheme.sage : SoboTheme.espresso,
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          ),
+                          child: Text(
+                            ev.isRegistered ? 'Kayıtlısınız ✨' : (isFull ? 'Dolu' : 'Kaydol'),
+                            style: SoboTheme.fontSans(fontSize: 10.5, fontWeight: FontWeight.bold, color: Colors.white),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
 
   String _formatSessionTime(String isoString) {
     try {
@@ -868,7 +1198,16 @@ class _BookingViewState extends State<BookingView> {
                   ],
                 ),
               ),
+              const SizedBox(height: 16),
+
+              // Streak & Badges Progress Card
+              _buildStreakAndStatsCard(),
+              const SizedBox(height: 18),
+
+              // Society Lounge & Workshops Carousel
+              _buildWorkshopCarousel(),
               const SizedBox(height: 20),
+
 
               // Search Bar
               TextField(

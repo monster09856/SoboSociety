@@ -157,6 +157,8 @@ class EventCreateRequest(BaseModel):
     aciklama: str = ""
     kontenjan: int = 15
     ucret: str = "Ücretsiz / Üyelere Özel"
+    tek_katilim_acik: bool = True
+    tek_katilim_ucret_tl: float | None = 0.0
 
 
 class EventResponse(BaseModel):
@@ -166,7 +168,10 @@ class EventResponse(BaseModel):
     tarih_saat: datetime
     aciklama: str
     kontenjan: int
+    dolu_sayi: int = 0
     ucret: str
+    tek_katilim_acik: bool = True
+    tek_katilim_ucret_tl: float | None = 0.0
     aktif: bool
 
 class AdminCredentialsUpdateRequest(BaseModel):

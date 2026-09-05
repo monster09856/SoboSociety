@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, String, Text
+from sqlalchemy import Boolean, DateTime, ForeignKey, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import Base, ZamanDamgali
@@ -53,3 +53,22 @@ class Instructor(ZamanDamgali, Base):
     biyografi: Mapped[str | None] = mapped_column(Text, default=None)
     foto_url: Mapped[str | None] = mapped_column(String(500), default=None)
     aktif: Mapped[bool] = mapped_column(Boolean, default=True)
+
+
+class MemberMeasurementHistory(ZamanDamgali, Base):
+    """Üye vücut ölçülerinin tarih bazlı gelişim geçmişi."""
+
+    __tablename__ = "member_measurement_histories"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    member_id: Mapped[int] = mapped_column(ForeignKey("members.id"), index=True)
+    tarih: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.now)
+    bel: Mapped[str | None] = mapped_column(String(40), default=None)
+    kalca: Mapped[str | None] = mapped_column(String(40), default=None)
+    kilo: Mapped[str | None] = mapped_column(String(40), default=None)
+    boy: Mapped[str | None] = mapped_column(String(40), default=None)
+    sag_bacak: Mapped[str | None] = mapped_column(String(40), default=None)
+    sol_bacak: Mapped[str | None] = mapped_column(String(40), default=None)
+    sag_kol: Mapped[str | None] = mapped_column(String(40), default=None)
+    sol_kol: Mapped[str | None] = mapped_column(String(40), default=None)
+

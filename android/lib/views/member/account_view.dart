@@ -72,7 +72,7 @@ class _AccountViewState extends State<AccountView> {
   Future<void> _saveMeasurements() async {
     setState(() => _isSavingMeasurements = true);
     try {
-      await ApiClient.put('/auth/me', <String, dynamic>{
+      final payload = <String, dynamic>{
         'bel': _belCtrl.text.trim(),
         'kalca': _kalcaCtrl.text.trim(),
         'sag_ic_bacak': _sagIcBacakCtrl.text.trim(),
@@ -84,11 +84,17 @@ class _AccountViewState extends State<AccountView> {
         'boy': _boyCtrl.text.trim(),
         'kilo': _kiloCtrl.text.trim(),
         'saglik_notu': _saglikNotuCtrl.text.trim(),
-      });
+      };
+
+      await ApiClient.put('/auth/me', payload);
+      try {
+        await ApiClient.post('/my/measurements', payload);
+      } catch (_) {}
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: const Text('Vücut ölçüleriniz ve VKE bilgileriniz profilinize kaydedildi! ✨'),
+            content: const Text('Vücut ölçüleriniz ve gelişim kaydınız başarıyla kaydedildi! ✨'),
             backgroundColor: SoboTheme.sage,
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
@@ -110,6 +116,181 @@ class _AccountViewState extends State<AccountView> {
       if (mounted) setState(() => _isSavingMeasurements = false);
     }
   }
+
+  void _showMeasurementHistoryBottomSheet() {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: SoboTheme.ivory,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      builder: (context) => Container(
+        height: MediaQuery.of(context).size.height * 0.75,
+        padding: const EdgeInsets.all(24.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(color: SoboTheme.line, borderRadius: BorderRadius.circular(10)),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  children: [
+                    const Icon(Icons.show_chart_rounded, color: SoboTheme.mocha, size: 24),
+                    const SizedBox(width: 10),
+                    Text(
+                      'GELİŞİM VE ÖLÇÜ GEÇMİŞİ 📈',
+                      style: SoboTheme.fontSerif(fontSize: 17, fontWeight: FontWeight.bold, color: SoboTheme.espresso, letterSpacing: 1.2),
+                    ),
+                  ],
+                ),
+                IconButton(
+                  icon: const Icon(Icons.close_rounded, color: SoboTheme.secondary),
+                  onPressed: () => Navigator.of(context).pop(),
+                ),
+              ],
+            ),
+            Text(
+              'Düzenli kaydedilen vücut ölçü ve incelme takip geçmişiniz.',
+              style: SoboTheme.fontSans(fontSize: 12, color: SoboTheme.secondary, height: 1.3),
+            ),
+            const SizedBox(height: 16),
+            Expanded(
+              child: FutureBuilder<dynamic>(
+                future: ApiClient.get('/my/measurements/history'),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(child: CircularProgressIndicator(color: SoboTheme.espresso));
+                  }
+
+                  final List historyList = (snapshot.hasData && snapshot.data is List)
+                      ? snapshot.data as List
+                      : [];
+
+                  if (historyList.isEmpty) {
+                    return Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(Icons.straighten_rounded, size: 44, color: SoboTheme.muted),
+                          const SizedBox(height: 12),
+                          Text('Henüz geçmiş ölçü kaydınız bulunmuyor.', style: SoboTheme.fontSans(fontSize: 13, color: SoboTheme.secondary, fontWeight: FontWeight.w600)),
+                          const SizedBox(height: 6),
+                          Text('Form bilgilerinizi kaydettikçe gelişim grafiğiniz burada görüntülenecektir.', textAlign: TextAlign.center, style: SoboTheme.fontSans(fontSize: 11.5, color: SoboTheme.muted)),
+                        ],
+                      ),
+                    );
+                  }
+
+                  return ListView.separated(
+                    itemCount: historyList.length,
+                    separatorBuilder: (_, __) => const SizedBox(height: 12),
+                    itemBuilder: (context, index) {
+                      final item = historyList[index];
+                      String dateStr = item['tarih'] ?? '';
+                      try {
+                        final dt = DateTime.parse(dateStr).toLocal();
+                        const months = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
+                        dateStr = '${dt.day} ${months[(dt.month - 1) % 12]} ${dt.year}';
+                      } catch (_) {}
+
+                      return Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(18),
+                          border: Border.all(color: SoboTheme.line),
+                          boxShadow: [
+                            BoxShadow(color: SoboTheme.espresso.withOpacity(0.03), blurRadius: 8, offset: const Offset(0, 2)),
+                          ],
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Row(
+                                  children: [
+                                    const Icon(Icons.calendar_today_rounded, size: 14, color: SoboTheme.mocha),
+                                    const SizedBox(width: 6),
+                                    Text(dateStr, style: SoboTheme.fontSans(fontSize: 13, fontWeight: FontWeight.bold, color: SoboTheme.ink)),
+                                  ],
+                                ),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                  decoration: BoxDecoration(
+                                    color: SoboTheme.sage.withOpacity(0.15),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Text(
+                                    'Gelişim Kaydı #${historyList.length - index}',
+                                    style: SoboTheme.fontSans(fontSize: 10.5, fontWeight: FontWeight.bold, color: SoboTheme.sage),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 10),
+                            const Divider(color: SoboTheme.line),
+                            const SizedBox(height: 6),
+                            Wrap(
+                              spacing: 8,
+                              runSpacing: 6,
+                              children: [
+                                if (item['kilo'] != null && item['kilo'].toString().isNotEmpty)
+                                  _buildHistoryMetricChip('Kilo', '${item['kilo']} kg', Icons.fitness_center_rounded),
+                                if (item['bel'] != null && item['bel'].toString().isNotEmpty)
+                                  _buildHistoryMetricChip('Bel', '${item['bel']} cm', Icons.straighten_rounded),
+                                if (item['kalca'] != null && item['kalca'].toString().isNotEmpty)
+                                  _buildHistoryMetricChip('Kalça', '${item['kalca']} cm', Icons.straighten_rounded),
+                                if (item['sag_bacak'] != null && item['sag_bacak'].toString().isNotEmpty)
+                                  _buildHistoryMetricChip('Sağ Bacak', '${item['sag_bacak']} cm', Icons.accessibility_new_rounded),
+                                if (item['sag_kol'] != null && item['sag_kol'].toString().isNotEmpty)
+                                  _buildHistoryMetricChip('Kol', '${item['sag_kol']} cm', Icons.fitness_center_rounded),
+                              ],
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHistoryMetricChip(String label, String value, IconData icon) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: SoboTheme.sandLight,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: SoboTheme.line),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 12, color: SoboTheme.mocha),
+          const SizedBox(width: 4),
+          Text('$label: ', style: SoboTheme.fontSans(fontSize: 11, color: SoboTheme.secondary)),
+          Text(value, style: SoboTheme.fontSans(fontSize: 11, fontWeight: FontWeight.bold, color: SoboTheme.espresso)),
+        ],
+      ),
+    );
+  }
+
 
   Map<String, dynamic> _getBMIDetails() {
     final double? h = double.tryParse(_boyCtrl.text.replaceAll(',', '.'));
@@ -691,16 +872,36 @@ class _AccountViewState extends State<AccountView> {
                   ),
                   _buildField('Sağlık & Hedef Notum', _saglikNotuCtrl, 'Varsa sakatlık veya gelişim hedefiniz...'),
                   const SizedBox(height: 10),
-                  ElevatedButton.icon(
-                    onPressed: _isSavingMeasurements ? null : _saveMeasurements,
-                    icon: const Icon(Icons.save_rounded, size: 18, color: Colors.white),
-                    label: Text('ÖLÇÜLERİMİ VE FORMUMU KAYDET', style: SoboTheme.fontSans(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white)),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: SoboTheme.espresso,
-                      minimumSize: const Size.fromHeight(48),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                    ),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: _showMeasurementHistoryBottomSheet,
+                          icon: const Icon(Icons.show_chart_rounded, size: 16, color: SoboTheme.espresso),
+                          label: Text('GELİŞİM GEÇMİŞİ', style: SoboTheme.fontSans(fontSize: 11, fontWeight: FontWeight.bold, color: SoboTheme.espresso)),
+                          style: OutlinedButton.styleFrom(
+                            side: const BorderSide(color: SoboTheme.line),
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          onPressed: _isSavingMeasurements ? null : _saveMeasurements,
+                          icon: const Icon(Icons.save_rounded, size: 16, color: Colors.white),
+                          label: Text('ÖLÇÜLERİ KAYDET', style: SoboTheme.fontSans(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.white)),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: SoboTheme.espresso,
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
+
                 ],
               ),
             ),

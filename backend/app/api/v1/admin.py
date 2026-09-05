@@ -849,6 +849,8 @@ async def create_admin_event(
         aciklama=body.aciklama,
         kontenjan=body.kontenjan,
         ucret=body.ucret,
+        tek_katilim_acik=body.tek_katilim_acik,
+        tek_katilim_ucret_tl=body.tek_katilim_ucret_tl or 0.0,
         aktif=True,
     )
     db.add(ev)
