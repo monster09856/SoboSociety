@@ -34,7 +34,6 @@ class _MainTabViewState extends State<MainTabView> {
       const WorkshopsView(),
       const PackagesView(),
       const AccountView(),
-      const AIChatView(),
       if (widget.isAdmin) const AdminTodayView(),
     ];
 
@@ -59,10 +58,6 @@ class _MainTabViewState extends State<MainTabView> {
         icon: Icon(Icons.person_rounded),
         label: 'Hesabım',
       ),
-      const BottomNavigationBarItem(
-        icon: Icon(Icons.psychology_rounded),
-        label: 'Sobo AI',
-      ),
       if (widget.isAdmin)
         const BottomNavigationBarItem(
           icon: Icon(Icons.admin_panel_settings_rounded),
@@ -75,17 +70,28 @@ class _MainTabViewState extends State<MainTabView> {
         index: _currentIndex.clamp(0, pages.length - 1),
         children: pages,
       ),
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _currentIndex.clamp(0, items.length - 1),
-        onTap: (int index) => setState(() => _currentIndex = index),
-        backgroundColor: Colors.white,
-        selectedItemColor: SoboTheme.espresso,
-        unselectedItemColor: SoboTheme.secondary,
-        selectedLabelStyle: SoboTheme.fontSans(fontSize: 10, fontWeight: FontWeight.bold),
-        unselectedLabelStyle: SoboTheme.fontSans(fontSize: 10),
-        type: BottomNavigationBarType.fixed,
-        items: items,
+      bottomNavigationBar: Container(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          border: Border(top: BorderSide(color: SoboTheme.line, width: 0.8)),
+        ),
+        child: SafeArea(
+          top: false,
+          child: BottomNavigationBar(
+            currentIndex: _currentIndex.clamp(0, items.length - 1),
+            onTap: (int index) => setState(() => _currentIndex = index),
+            backgroundColor: Colors.white,
+            elevation: 0,
+            selectedItemColor: SoboTheme.espresso,
+            unselectedItemColor: SoboTheme.secondary,
+            selectedLabelStyle: SoboTheme.fontSans(fontSize: 10.5, fontWeight: FontWeight.bold),
+            unselectedLabelStyle: SoboTheme.fontSans(fontSize: 10),
+            type: BottomNavigationBarType.fixed,
+            items: items,
+          ),
+        ),
       ),
     );
   }
 }
+

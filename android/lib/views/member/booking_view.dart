@@ -4,6 +4,7 @@ import '../../models/member_models.dart';
 import '../../models/session_models.dart';
 import '../../services/api_client.dart';
 import '../../theme/sobo_theme.dart';
+import '../ai/ai_chat_view.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class BookingView extends StatefulWidget {
@@ -1075,6 +1076,15 @@ class _BookingViewState extends State<BookingView> {
           ),
         ),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.psychology_rounded, color: SoboTheme.espresso),
+            tooltip: 'Sobo AI Asistan',
+            onPressed: () {
+              Navigator.of(context, rootNavigator: true).push(
+                MaterialPageRoute<dynamic>(builder: (_) => const AIChatView()),
+              );
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.notifications_active_rounded, color: SoboTheme.espresso),
             tooltip: 'Bildirimler',
