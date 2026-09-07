@@ -28,8 +28,8 @@ workflows:
           security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "" ~/Library/Keychains/login.keychain-db || true
           flutter packages get
           flutter build ipa --release \
-            --build-name=1.0.0 \
-            --build-number=11 \
+            --build-name=1.0.1 \
+            --build-number=12 \
             --export-options-plist=ios/ExportOptions.plist
       - name: Publish IPA to App Store Connect TestFlight
         script: |
