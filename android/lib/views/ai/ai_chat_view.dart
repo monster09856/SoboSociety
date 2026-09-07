@@ -17,7 +17,8 @@ class _AIChatViewState extends State<AIChatView> {
   final TextEditingController _controller = TextEditingController();
   final List<Map<String, dynamic>> _messages = <Map<String, dynamic>>[];
   List<String> _suggestions = <String>[
-    'Kalan Kredim Nedir?',
+    'Paket Fiyatları',
+    'Kalan Ders Hakkım Nedir?',
     'Yaklaşan Derslerim',
     '12 Saat İptal Kuralı',
     'Vücut Ölçülerim',
@@ -32,7 +33,7 @@ class _AIChatViewState extends State<AIChatView> {
     _messages.add(<String, dynamic>{
       'sender': 'ai',
       'text':
-          'Merhaba! Ben Sobo AI Pilates & Wellness Asistanınız. 🧘‍♀️\nKalan ders kredileriniz, yaklaşan rezervasyonlarınız, 12 saatlik iadeli iptal kuralımız, vücut ölçü takibiniz veya seans saatleri hakkında dilediğinizi sorabilirsiniz.',
+          'Merhaba! Ben Sobo AI Pilates & Wellness Asistanınız. 🧘‍♀️\nKalan ders haklarınız, ders paketlerimiz, yaklaşan rezervasyonlarınız, 12 saatlik iadeli iptal kuralımız veya seans saatleri hakkında dilediğinizi sorabilirsiniz.',
     });
   }
 

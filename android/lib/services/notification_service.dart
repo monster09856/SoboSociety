@@ -6,7 +6,6 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:workmanager/workmanager.dart';
 import 'api_client.dart';
 import 'storage_service.dart';
 
@@ -33,21 +32,6 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   }
 }
 
-@pragma('vm:entry-point')
-void callbackDispatcher() {
-  Workmanager().executeTask((task, inputData) async {
-    try {
-      await NotificationService().initialize();
-      await NotificationService().registerDeviceToken();
-      await NotificationService().checkAndShowPendingNotifications();
-    } catch (e) {
-      if (kDebugMode) {
-        print('[Workmanager] Background task error: $e');
-      }
-    }
-    return Future.value(true);
-  });
-}
 
 class NotificationService {
   static final NotificationService _instance = NotificationService._internal();
@@ -144,31 +128,11 @@ class NotificationService {
     // Register device token if logged in
     await registerDeviceToken();
 
-    // Workmanager OS-level background execution setup
-    try {
-      await Workmanager().initialize(
-        callbackDispatcher,
-        isInDebugMode: false,
-      );
-      await Workmanager().registerPeriodicTask(
-        'sobo_bg_notif_sync_task',
-        'sobo_notification_sync_task',
-        frequency: const Duration(minutes: 15),
-        existingWorkPolicy: ExistingWorkPolicy.keep,
-        constraints: Constraints(
-          networkType: NetworkType.connected,
-        ),
-      );
-    } catch (e) {
-      if (kDebugMode) {
-        print('[Workmanager] Init error: $e');
-      }
-    }
-    
     // Immediate check + start periodic active poller
     checkAndShowPendingNotifications();
     startNotificationPoller();
   }
+
 
   /// Register FCM Device Token with backend for logged in user
   Future<void> registerDeviceToken() async {

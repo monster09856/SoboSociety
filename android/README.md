@@ -1,17 +1,14 @@
-# android
+# Sobo Society Mobile App
 
-A new Flutter project.
+Sobo Society Flutter Mobil Uygulaması (`android`).
 
-## Getting Started
+- **Backend API:** `https://sobosociety.com/api/v1`
+- **Release APK:** `https://ilacbilgi.org/ss/uploads/sobosociety-app.apk`
+- **Shorebird App ID:** `dfef2ab2-bc9c-4317-a46a-0be276645962`
 
-This project is a starting point for a Flutter application.
+---
 
-A few resources to get you started if this is your first Flutter project:
+## 📖 Rehberler
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
-
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+- **Shorebird (CodePush) Kılavuzu & Anlık Güncelleme Adımları:**  
+  Detaylı komutlar ve mağaza onaysız güncelleme adımları için [`SHOREBIRD_GUIDE.md`](./SHOREBIRD_GUIDE.md) dosyasına bakabilirsiniz.

@@ -1,4 +1,5 @@
 import 'session_models.dart';
+export 'session_models.dart';
 
 class BookingResponse {
   final int id;
@@ -16,6 +17,10 @@ class BookingResponse {
     this.olusturulduUtc,
     this.session,
   });
+
+  String get baslangic => session?.baslangic ?? olusturulduUtc ?? '';
+  String get instructorName => session?.instructor?.ad ?? 'Eğitmen';
+  String get classTypeName => session?.classType?.ad ?? 'Ders';
 
   factory BookingResponse.fromJson(Map<String, dynamic> json) {
     return BookingResponse(
