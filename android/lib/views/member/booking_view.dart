@@ -522,6 +522,7 @@ class _BookingViewState extends State<BookingView> {
   void _showPackagesBottomSheet() {
     showModalBottomSheet<void>(
       context: context,
+      useRootNavigator: true,
       isScrollControlled: true,
       backgroundColor: SoboTheme.ivory,
       shape: const RoundedRectangleBorder(
@@ -729,6 +730,7 @@ class _BookingViewState extends State<BookingView> {
 
     showModalBottomSheet<void>(
       context: context,
+      useRootNavigator: true,
       isScrollControlled: true,
       backgroundColor: SoboTheme.ivory,
       shape: const RoundedRectangleBorder(
@@ -922,6 +924,7 @@ class _BookingViewState extends State<BookingView> {
   void _showNotificationsModal() async {
     showModalBottomSheet<void>(
       context: context,
+      useRootNavigator: true,
       isScrollControlled: true,
       backgroundColor: SoboTheme.ivory,
       shape: const RoundedRectangleBorder(

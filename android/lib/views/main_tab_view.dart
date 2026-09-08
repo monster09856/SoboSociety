@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import '../services/notification_service.dart';
 import '../theme/sobo_theme.dart';
 import 'admin/admin_today_view.dart';
@@ -19,11 +20,25 @@ class MainTabView extends StatefulWidget {
 
 class _MainTabViewState extends State<MainTabView> {
   int _currentIndex = 0;
+  bool _isNavVisible = true;
 
   @override
   void initState() {
     super.initState();
     NotificationService().registerDeviceToken();
+  }
+
+  bool _onScrollNotification(UserScrollNotification notification) {
+    if (notification.direction == ScrollDirection.reverse) {
+      if (_isNavVisible) {
+        setState(() => _isNavVisible = false);
+      }
+    } else if (notification.direction == ScrollDirection.forward) {
+      if (!_isNavVisible) {
+        setState(() => _isNavVisible = true);
+      }
+    }
+    return false;
   }
 
   @override
@@ -66,32 +81,49 @@ class _MainTabViewState extends State<MainTabView> {
     ];
 
     return Scaffold(
-      body: IndexedStack(
-        index: _currentIndex.clamp(0, pages.length - 1),
-        children: pages,
-      ),
-      bottomNavigationBar: Container(
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          border: Border(top: BorderSide(color: SoboTheme.line, width: 0.8)),
+      body: NotificationListener<UserScrollNotification>(
+        onNotification: _onScrollNotification,
+        child: IndexedStack(
+          index: _currentIndex.clamp(0, pages.length - 1),
+          children: pages,
         ),
-        child: SafeArea(
-          top: false,
-          child: BottomNavigationBar(
-            currentIndex: _currentIndex.clamp(0, items.length - 1),
-            onTap: (int index) => setState(() => _currentIndex = index),
-            backgroundColor: Colors.white,
-            elevation: 0,
-            selectedItemColor: SoboTheme.espresso,
-            unselectedItemColor: SoboTheme.secondary,
-            selectedLabelStyle: SoboTheme.fontSans(fontSize: 10.5, fontWeight: FontWeight.bold),
-            unselectedLabelStyle: SoboTheme.fontSans(fontSize: 10),
-            type: BottomNavigationBarType.fixed,
-            items: items,
+      ),
+      bottomNavigationBar: AnimatedSlide(
+        duration: const Duration(milliseconds: 250),
+        offset: _isNavVisible ? Offset.zero : const Offset(0, 1),
+        child: AnimatedOpacity(
+          duration: const Duration(milliseconds: 200),
+          opacity: _isNavVisible ? 1.0 : 0.0,
+          child: Container(
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              border: Border(top: BorderSide(color: SoboTheme.line, width: 0.8)),
+            ),
+            child: SafeArea(
+              top: false,
+              child: BottomNavigationBar(
+                currentIndex: _currentIndex.clamp(0, items.length - 1),
+                onTap: (int index) {
+                  setState(() {
+                    _currentIndex = index;
+                    _isNavVisible = true;
+                  });
+                },
+                backgroundColor: Colors.white,
+                elevation: 0,
+                selectedItemColor: SoboTheme.espresso,
+                unselectedItemColor: SoboTheme.secondary,
+                selectedLabelStyle: SoboTheme.fontSans(fontSize: 10.5, fontWeight: FontWeight.bold),
+                unselectedLabelStyle: SoboTheme.fontSans(fontSize: 10),
+                type: BottomNavigationBarType.fixed,
+                items: items,
+              ),
+            ),
           ),
         ),
       ),
     );
   }
 }
+
 

@@ -120,6 +120,7 @@ class _AccountViewState extends State<AccountView> {
   void _showMeasurementHistoryBottomSheet() {
     showModalBottomSheet<void>(
       context: context,
+      useRootNavigator: true,
       isScrollControlled: true,
       backgroundColor: SoboTheme.ivory,
       shape: const RoundedRectangleBorder(
@@ -345,6 +346,7 @@ class _AccountViewState extends State<AccountView> {
   void _showBMICalculatorBottomSheet() {
     showModalBottomSheet<void>(
       context: context,
+      useRootNavigator: true,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (BuildContext context) {

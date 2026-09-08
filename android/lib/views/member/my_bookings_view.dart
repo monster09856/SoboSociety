@@ -48,6 +48,7 @@ class _MyBookingsViewState extends State<MyBookingsView> with SingleTickerProvid
   Future<void> _handleCancelBooking(BookingResponse booking) async {
     final bool? confirm = await showDialog<bool>(
       context: context,
+      useRootNavigator: true,
       builder: (context) => AlertDialog(
         backgroundColor: SoboTheme.ivory,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
