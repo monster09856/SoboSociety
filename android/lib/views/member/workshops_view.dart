@@ -111,6 +111,23 @@ class _WorkshopsViewState extends State<WorkshopsView> {
     }
   }
 
+  String _formatDate(String isoStr) {
+    try {
+      final dt = DateTime.parse(isoStr).toLocal();
+      const days = ['Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi', 'Pazar'];
+      const months = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
+      
+      final dayName = days[(dt.weekday - 1) % 7];
+      final monthName = months[(dt.month - 1) % 12];
+      final hourStr = dt.hour.toString().padLeft(2, '0');
+      final minuteStr = dt.minute.toString().padLeft(2, '0');
+      
+      return '${dt.day} $monthName $dayName • $hourStr:$minuteStr';
+    } catch (_) {
+      return isoStr;
+    }
+  }
+
   Future<void> _launchWhatsApp(String text) async {
     final String encoded = Uri.encodeComponent(text);
     final Uri waUri = Uri.parse("whatsapp://send?phone=905316033080&text=$encoded");
@@ -296,7 +313,7 @@ class _WorkshopsViewState extends State<WorkshopsView> {
                               const Icon(Icons.schedule_rounded, size: 15, color: SoboTheme.espresso),
                               const SizedBox(width: 6),
                               Text(
-                                ev.tarihSaat,
+                                _formatDate(ev.tarihSaat),
                                 style: SoboTheme.fontSans(
                                   fontSize: 12,
                                   fontWeight: FontWeight.bold,
@@ -329,7 +346,7 @@ class _WorkshopsViewState extends State<WorkshopsView> {
                               Expanded(
                                 child: OutlinedButton.icon(
                                   onPressed: () => _launchWhatsApp(
-                                    "Merhaba! Sobo Society'nin '${ev.baslik}' (${ev.tarihSaat}) etkinliği hakkında bilgi almak istiyorum.",
+                                    "Merhaba! Sobo Society'nin '${ev.baslik}' (${_formatDate(ev.tarihSaat)}) etkinliği hakkında bilgi almak istiyorum.",
                                   ),
                                   icon: const Icon(Icons.chat_bubble_rounded, size: 16, color: SoboTheme.espresso),
                                   label: Text(
