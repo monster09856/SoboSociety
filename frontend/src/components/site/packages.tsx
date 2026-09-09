@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
 import { api, PackageResponse } from '@/lib/api'
+import { isAuthenticated } from '@/lib/auth'
 
 interface PackageItem {
   id?: number
@@ -24,12 +25,19 @@ export function Packages() {
   const [activeTab, setActiveTab] = useState<'grup' | 'bireysel'>('grup')
   const [dbPackages, setDbPackages] = useState<PackageResponse[]>([])
   const [loading, setLoading] = useState(true)
+  const [isLoaded, setIsLoaded] = useState(false)
+  const [isLoggedIn, setIsLoggedIn] = useState(false)
+
+  useEffect(() => {
+    setIsLoggedIn(isAuthenticated())
+  }, [])
 
   useEffect(() => {
     async function loadPackages() {
       try {
         const pkgs = await api.packages.list()
         setDbPackages(pkgs || [])
+        setIsLoaded(true)
       } catch (err) {
         console.error('Paketler çekilemedi:', err)
       } finally {
@@ -37,6 +45,8 @@ export function Packages() {
       }
     }
     loadPackages()
+    const interval = setInterval(loadPackages, 10000)
+    return () => clearInterval(interval)
   }, [])
 
   // Static Fallback Bireysel Ders Paketleri (Private Class / Individual)
@@ -128,65 +138,81 @@ export function Packages() {
       subtitle: '8 Derslik Grup Paketi',
       validity: 'Kullanım Süresi: 45 Gün',
       fiyat_tl: 5800,
-      popularTag: 'Popüler Seçim ⭐',
       features: [
         '8 Adet Barre Class Dersi',
         'Butik Sınıf (Maks. 5 Üye)',
         'Kullanım Süresi: 45 Gün',
         'Mobil İle Kolay Rezervasyon',
       ],
-      buttonVariant: 'primary',
+      buttonVariant: 'secondary',
     },
     {
       title: 'Barre Class 12 Ders',
       subtitle: '12 Derslik Grup Paketi',
       validity: 'Kullanım Süresi: 60 Gün',
       fiyat_tl: 8400,
+      popularTag: 'Popüler Seçim ⭐',
       features: [
         '12 Adet Barre Class Dersi',
         'Butik Sınıf (Maks. 5 Üye)',
         'Kullanım Süresi: 60 Gün',
         'Öncelikli Bekleme Sırası',
       ],
-      buttonVariant: 'secondary',
+      buttonVariant: 'primary',
     },
   ]
+
+  const formatValidityText = (days: number) => {
+    if (!days) return ''
+    if (days % 7 === 0) {
+      const hafta = days / 7
+      return `${hafta} Hafta`
+    }
+    const hafta = Math.floor(days / 7)
+    const kalan = days % 7
+    if (hafta > 0) {
+      return `${hafta} Hafta ${kalan} Gün`
+    }
+    return `${days} Gün`
+  }
 
   // Prepare active package list combining backend DB packages and fallbacks
   const dynamicPackages: PackageItem[] = dbPackages.map((p, idx) => {
     const isBireysel = p.ad.toLowerCase().includes('bireysel') || p.ad.toLowerCase().includes('özel')
+    const formattedVal = formatValidityText(p.gecerlilik_gun)
+    const isPopular = p.ders_adedi === 12 || p.ad.includes('12')
     return {
       id: p.id,
       title: p.ad,
       subtitle: `${p.ders_adedi} Derslik Stüdyo Paketi`,
-      validity: `Kullanım Süresi: ${p.gecerlilik_gun} Gün`,
+      validity: `Kullanım Süresi: ${formattedVal}`,
       fiyat_tl: p.fiyat_tl,
-      isPopular: idx === 1,
-      popularTag: idx === 1 ? 'Popüler Paket ⭐' : undefined,
+      isPopular: isPopular,
+      popularTag: isPopular ? 'Popüler Paket ⭐' : undefined,
       features: [
         `${p.ders_adedi} Adet Class Seansı`,
-        `Geçerlilik Süresi: ${p.gecerlilik_gun} Gün`,
+        `Geçerlilik Süresi: ${formattedVal}`,
         isBireysel ? 'Kişiye Özel Birebir Eğitmen' : 'Butik Sınıf (Maks. 5 Üye)',
         'Tüm Ekipman ve Mat Kullanımı Dahil',
         '12 Saat Önceden Kolay İptal & İade',
       ],
-      buttonVariant: idx === 1 ? 'primary' : 'secondary',
+      buttonVariant: isPopular ? 'primary' : 'secondary',
     }
   })
 
   // Filter packages based on activeTab
   let currentPackages: PackageItem[] = []
-  if (dynamicPackages.length > 0) {
+  if (isLoaded) {
     if (activeTab === 'bireysel') {
       currentPackages = dynamicPackages.filter(
         (p) => p.title.toLowerCase().includes('bireysel') || p.title.toLowerCase().includes('özel')
       )
-      if (currentPackages.length === 0) currentPackages = dynamicPackages
+      if (currentPackages.length === 0 && dbPackages.length > 0) currentPackages = dynamicPackages
     } else {
       currentPackages = dynamicPackages.filter(
         (p) => !p.title.toLowerCase().includes('bireysel') && !p.title.toLowerCase().includes('özel')
       )
-      if (currentPackages.length === 0) currentPackages = dynamicPackages
+      if (currentPackages.length === 0 && dbPackages.length > 0) currentPackages = dynamicPackages
     }
   } else {
     currentPackages = activeTab === 'grup' ? defaultGrupPackages : defaultBireyselPackages
@@ -301,9 +327,16 @@ export function Packages() {
                           <span className="text-[11px] text-mocha font-medium block">{pkg.validity}</span>
                         </div>
                         <div className="text-right">
-                          <span className="text-2xl font-extrabold text-espresso tracking-tight">
-                            ₺{pkg.fiyat_tl ? pkg.fiyat_tl.toLocaleString('tr-TR') : '---'}
-                          </span>
+                          {isLoggedIn ? (
+                            <span className="text-2xl font-extrabold text-espresso tracking-tight">
+                              ₺{pkg.fiyat_tl ? pkg.fiyat_tl.toLocaleString('tr-TR') : '---'}
+                            </span>
+                          ) : (
+                            <span className="text-xs font-bold text-espresso bg-ivory px-3 py-1.5 rounded-xl border border-line flex items-center gap-1.5 shadow-xs">
+                              <Lock className="w-3.5 h-3.5 text-mocha" />
+                              <span>Üyelere Özel</span>
+                            </span>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -319,19 +352,28 @@ export function Packages() {
                   </div>
 
                   <div className="pt-4">
-                    <a
-                      href={`https://wa.me/905316033080?text=${encodeURIComponent(
-                        `Merhaba! Sobo Society'den ${pkg.title} (₺${pkg.fiyat_tl ? pkg.fiyat_tl.toLocaleString('tr-TR') : ''}) paketi hakkında bilgi almak ve satın almak istiyorum. Yardımcı olabilir misiniz?`
-                      )}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="w-full block"
-                    >
-                      <Button variant={pkg.buttonVariant} className="w-full justify-center py-3 text-sm font-medium gap-2">
-                        <MessageCircle className="w-4 h-4" />
-                        <span>Fiyat Bilgisi & Satın Al (WhatsApp)</span>
-                      </Button>
-                    </a>
+                    {isLoggedIn ? (
+                      <a
+                        href={`https://wa.me/905316033080?text=${encodeURIComponent(
+                          `Merhaba! Sobo Society'den ${pkg.title} (₺${pkg.fiyat_tl ? pkg.fiyat_tl.toLocaleString('tr-TR') : ''}) paketi hakkında bilgi almak ve satın almak istiyorum. Yardımcı olabilir misiniz?`
+                        )}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="w-full block"
+                      >
+                        <Button variant={pkg.buttonVariant} className="w-full justify-center py-3 text-sm font-medium gap-2">
+                          <MessageCircle className="w-4 h-4" />
+                          <span>Fiyat Bilgisi & Satın Al (WhatsApp)</span>
+                        </Button>
+                      </a>
+                    ) : (
+                      <Link href="/giris" className="w-full block">
+                        <Button variant={pkg.buttonVariant} className="w-full justify-center py-3 text-sm font-medium gap-2">
+                          <Lock className="w-4 h-4" />
+                          <span>Giriş Yap & Fiyatı Gör</span>
+                        </Button>
+                      </Link>
+                    )}
                   </div>
                 </CardContent>
               </Card>

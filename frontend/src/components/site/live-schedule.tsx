@@ -2,11 +2,12 @@
 
 import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { Calendar, Clock, User, CheckCircle2, Flame, Sparkles, HeartHandshake, Users, Phone, X, Loader2, ArrowRight } from 'lucide-react'
+import { Calendar, Clock, User, CheckCircle2, Flame, Sparkles, HeartHandshake, Users, Phone, X, Loader2, ArrowRight, Lock } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card } from '@/components/ui/card'
 import { api, ClassSessionResponse } from '@/lib/api'
+import { isAuthenticated } from '@/lib/auth'
 
 interface ScheduleSession {
   id: number
@@ -57,8 +58,17 @@ export function LiveSchedule() {
   const [selectedDay, setSelectedDay] = useState('Pazartesi')
   const [selectedSession, setSelectedSession] = useState<ScheduleSession | null>(null)
   
+  // Auth state
+  const [isLoggedIn, setIsLoggedIn] = useState(false)
+
+  useEffect(() => {
+    setIsLoggedIn(isAuthenticated())
+  }, [])
+  
   // Real Sessions API State
   const [realSessions, setRealSessions] = useState<Record<string, ScheduleSession[]>>({})
+  const [isLoaded, setIsLoaded] = useState(false)
+  const [apiError, setApiError] = useState(false)
   
   // Guest Booking Modal Form State
   const [guestAd, setGuestAd] = useState('')
@@ -71,18 +81,18 @@ export function LiveSchedule() {
     async function loadSessions() {
       try {
         const res = await api.sessions.list()
-        if (res && Array.isArray(res) && res.length > 0) {
-          const grouped: Record<string, ScheduleSession[]> = {
-            Pazartesi: [],
-            Salı: [],
-            Çarşamba: [],
-            Perşembe: [],
-            Cuma: [],
-            Cumartesi: [],
-            Pazar: [],
-          }
-          const dayNames = ['Pazar', 'Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi']
+        const grouped: Record<string, ScheduleSession[]> = {
+          Pazartesi: [],
+          Salı: [],
+          Çarşamba: [],
+          Perşembe: [],
+          Cuma: [],
+          Cumartesi: [],
+          Pazar: [],
+        }
+        const dayNames = ['Pazar', 'Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi']
 
+        if (res && Array.isArray(res)) {
           res.forEach((s) => {
             const dt = new Date(s.baslangic)
             const dayName = dayNames[dt.getDay()] || 'Pazartesi'
@@ -115,18 +125,23 @@ export function LiveSchedule() {
             if (!grouped[dayName]) grouped[dayName] = []
             grouped[dayName].push(mapped)
           })
-          setRealSessions(grouped)
         }
+        setRealSessions(grouped)
+        setIsLoaded(true)
       } catch (err) {
         console.error('Failed to load real sessions:', err)
+        setApiError(true)
       }
     }
+
     loadSessions()
+    const interval = setInterval(loadSessions, 10000)
+    return () => clearInterval(interval)
   }, [])
 
-  const currentSessions = (realSessions[selectedDay] && realSessions[selectedDay].length > 0)
-    ? realSessions[selectedDay]
-    : (mockScheduleData[selectedDay] || [])
+  const currentSessions = isLoaded
+    ? (realSessions[selectedDay] || [])
+    : (apiError ? (mockScheduleData[selectedDay] || []) : [])
 
   const handleGuestBooking = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -197,117 +212,134 @@ export function LiveSchedule() {
         </div>
 
         {/* Session Cards Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {currentSessions.map((session) => {
-            const occupancyPercentage = Math.round((session.enrolled / session.capacity) * 100)
-            const isFull = session.status === 'full'
-            const isFewLeft = session.status === 'few_left'
+        {currentSessions.length === 0 ? (
+          <div className="p-12 text-center bg-white/80 border border-line rounded-3xl space-y-3 max-w-lg mx-auto shadow-xs">
+            <Calendar className="w-10 h-10 text-mocha mx-auto opacity-50" />
+            <h3 className="font-serif text-xl font-bold text-ink">Bu Gün İçin Ders Bulunmamaktadır</h3>
+            <p className="text-xs text-secondary leading-relaxed font-medium">
+              <strong>{selectedDay}</strong> günü için stüdyomuzda planlanmış aktif ders oturumu bulunmuyor. Diğer günlerin programını inceleyebilir veya stüdyomuzla iletişime geçebilirsiniz.
+            </p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {currentSessions.map((session) => {
+              const occupancyPercentage = Math.round((session.enrolled / session.capacity) * 100)
+              const isFull = session.status === 'full'
+              const isFewLeft = session.status === 'few_left'
 
-            const badgeVariant = isFull ? ('clay' as const) : isFewLeft ? ('mocha' as const) : ('sage' as const)
+              const badgeVariant = isFull ? ('clay' as const) : isFewLeft ? ('mocha' as const) : ('sage' as const)
 
-            const CategoryIcon =
-              session.category === 'Barre'
-                ? Sparkles
-                : session.category === 'Pilates'
-                ? HeartHandshake
-                : Flame
+              const CategoryIcon =
+                session.category === 'Barre'
+                  ? Sparkles
+                  : session.category === 'Pilates'
+                  ? HeartHandshake
+                  : Flame
 
-            return (
-              <Card
-                key={session.id}
-                className="relative overflow-hidden bg-white/90 border-line hover:border-mocha/50 p-6 flex flex-col justify-between"
-              >
-                <div className="space-y-5">
-                  {/* Header info */}
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2">
-                        <CategoryIcon className="w-4 h-4 text-mocha" />
-                        <span className="text-xs font-semibold uppercase tracking-wider text-secondary">
-                          {session.category}
+              return (
+                <Card
+                  key={session.id}
+                  className="relative overflow-hidden bg-white/90 border-line hover:border-mocha/50 p-6 flex flex-col justify-between"
+                >
+                  <div className="space-y-5">
+                    {/* Header info */}
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <CategoryIcon className="w-4 h-4 text-mocha" />
+                          <span className="text-xs font-semibold uppercase tracking-wider text-secondary">
+                            {session.category}
+                          </span>
+                        </div>
+                        <h3 className="font-serif text-2xl font-medium text-ink tracking-tight">
+                          {session.title}
+                        </h3>
+                      </div>
+
+                      <Badge variant={badgeVariant} className="shrink-0">
+                        {session.statusText}
+                      </Badge>
+                    </div>
+
+                    {/* Occupancy Progress Bar */}
+                    <div className="space-y-1.5 pt-2">
+                      <div className="flex items-center justify-between text-xs text-secondary font-medium">
+                        <span>Doluluk Oranı</span>
+                        <span className="font-semibold text-ink">
+                          {session.enrolled} / {session.capacity} Üye ({occupancyPercentage}%)
                         </span>
                       </div>
-                      <h3 className="font-serif text-2xl font-medium text-ink tracking-tight">
-                        {session.title}
-                      </h3>
+                      <div className="w-full bg-sand-light h-2 rounded-full overflow-hidden p-0.5 border border-line/40">
+                        <div
+                          className={`h-full rounded-full transition-all duration-500 ${
+                            isFull
+                              ? 'bg-clay'
+                              : isFewLeft
+                              ? 'bg-mocha'
+                              : 'bg-sage'
+                          }`}
+                          style={{ width: `${occupancyPercentage}%` }}
+                        />
+                      </div>
                     </div>
 
-                    <Badge variant={badgeVariant} className="shrink-0">
-                      {session.statusText}
-                    </Badge>
+                    {/* Details list */}
+                    <div className="space-y-2.5 text-sm text-secondary pt-3 border-t border-line/50">
+                      <div className="flex items-center gap-2.5">
+                        <Clock className="w-4 h-4 text-mocha" />
+                        <span>
+                          {session.time} <strong className="text-ink font-normal">({session.duration})</strong>
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2.5">
+                        <User className="w-4 h-4 text-mocha" />
+                        <span>Eğitmen: <strong className="text-ink font-medium">{session.instructor}</strong></span>
+                      </div>
+                      <div className="flex items-center justify-between text-xs text-espresso font-bold pt-1">
+                        <span>Tek Ders Ücreti:</span>
+                        {isLoggedIn ? (
+                          <span className="text-sm font-serif font-extrabold text-mocha">{session.fiyat_tl} ₺</span>
+                        ) : (
+                          <span className="text-xs font-semibold text-mocha bg-sand px-2.5 py-0.5 rounded-full border border-line flex items-center gap-1">
+                            <Lock className="w-3 h-3 text-mocha" />
+                            <span>Üyelere Özel</span>
+                          </span>
+                        )}
+                      </div>
+                    </div>
                   </div>
 
-                  {/* Occupancy Progress Bar */}
-                  <div className="space-y-1.5 pt-2">
-                    <div className="flex items-center justify-between text-xs text-secondary font-medium">
-                      <span>Doluluk Oranı</span>
-                      <span className="font-semibold text-ink">
-                        {session.enrolled} / {session.capacity} Üye ({occupancyPercentage}%)
-                      </span>
-                    </div>
-                    <div className="w-full bg-sand-light h-2 rounded-full overflow-hidden p-0.5 border border-line/40">
-                      <div
-                        className={`h-full rounded-full transition-all duration-500 ${
-                          isFull
-                            ? 'bg-clay'
-                            : isFewLeft
-                            ? 'bg-mocha'
-                            : 'bg-sage'
-                        }`}
-                        style={{ width: `${occupancyPercentage}%` }}
-                      />
-                    </div>
+                  {/* Action Buttons */}
+                  <div className="pt-6 space-y-2">
+                    {session.tek_ders_acik && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSelectedSession(session)
+                          setError(null)
+                          setSuccessMsg(null)
+                        }}
+                        className="w-full h-11 rounded-2xl bg-espresso hover:bg-espresso-dark text-ivory font-extrabold text-xs tracking-wider uppercase shadow-xs transition-all flex items-center justify-center gap-2 cursor-pointer"
+                      >
+                        <Sparkles className="w-4 h-4 text-mocha" />
+                        <span>Tek Ders Al (Üyeliksiz)</span>
+                      </button>
+                    )}
+
+                    <Link href="/giris" className="w-full block">
+                      <button
+                        type="button"
+                        className="w-full h-10 rounded-2xl border border-line bg-sand-light hover:bg-sand text-ink font-bold text-xs tracking-wider uppercase transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                      >
+                        <span>Üye Girişi ile Rezerve Et</span>
+                      </button>
+                    </Link>
                   </div>
-
-                  {/* Details list */}
-                  <div className="space-y-2.5 text-sm text-secondary pt-3 border-t border-line/50">
-                    <div className="flex items-center gap-2.5">
-                      <Clock className="w-4 h-4 text-mocha" />
-                      <span>
-                        {session.time} <strong className="text-ink font-normal">({session.duration})</strong>
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2.5">
-                      <User className="w-4 h-4 text-mocha" />
-                      <span>Eğitmen: <strong className="text-ink font-medium">{session.instructor}</strong></span>
-                    </div>
-                    <div className="flex items-center justify-between text-xs text-espresso font-bold pt-1">
-                      <span>Tek Ders Ücreti:</span>
-                      <span className="text-sm font-serif font-extrabold text-mocha">{session.fiyat_tl} ₺</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Action Buttons */}
-                <div className="pt-6 space-y-2">
-                  {session.tek_ders_acik && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setSelectedSession(session)
-                        setError(null)
-                        setSuccessMsg(null)
-                      }}
-                      className="w-full h-11 rounded-2xl bg-espresso hover:bg-espresso-dark text-ivory font-extrabold text-xs tracking-wider uppercase shadow-xs transition-all flex items-center justify-center gap-2 cursor-pointer"
-                    >
-                      <Sparkles className="w-4 h-4 text-mocha" />
-                      <span>Tek Ders Al (Üyeliksiz)</span>
-                    </button>
-                  )}
-
-                  <Link href="/giris" className="w-full block">
-                    <button
-                      type="button"
-                      className="w-full h-10 rounded-2xl border border-line bg-sand-light hover:bg-sand text-ink font-bold text-xs tracking-wider uppercase transition-all flex items-center justify-center gap-1.5 cursor-pointer"
-                    >
-                      <span>Üye Girişi ile Rezerve Et</span>
-                    </button>
-                  </Link>
-                </div>
-              </Card>
-            )
-          })}
-        </div>
+                </Card>
+              )
+            })}
+          </div>
+        )}
 
         {/* Bottom Notice */}
         <div className="mt-12 text-center text-xs text-secondary flex items-center justify-center gap-2">
@@ -318,8 +350,8 @@ export function LiveSchedule() {
 
       {/* Guest Booking Modal (Üyeliksiz Tek Ders Talebi) */}
       {selectedSession && (
-        <div className="fixed inset-0 z-50 bg-ink/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-sand border border-line shadow-2xl rounded-3xl w-full max-w-md p-6 relative animate-in fade-in zoom-in duration-200">
+        <div className="fixed inset-0 z-50 bg-ink/60 backdrop-blur-xs overflow-y-auto flex items-center justify-center p-4 sm:p-6 min-h-screen">
+          <div className="bg-sand border border-line shadow-2xl rounded-3xl w-full max-w-md max-h-[90vh] overflow-y-auto p-6 relative animate-in fade-in zoom-in duration-200 my-auto flex flex-col">
             <button
               type="button"
               onClick={() => setSelectedSession(null)}
@@ -344,7 +376,13 @@ export function LiveSchedule() {
             <div className="bg-ivory border border-line p-3.5 rounded-2xl mb-5 space-y-1.5">
               <div className="flex items-center justify-between text-xs font-bold text-espresso">
                 <span>{selectedSession.title}</span>
-                <span className="text-mocha">{selectedSession.fiyat_tl} ₺</span>
+                {isLoggedIn ? (
+                  <span className="text-mocha">{selectedSession.fiyat_tl} ₺</span>
+                ) : (
+                  <span className="text-mocha font-medium flex items-center gap-1">
+                    <Lock className="w-3 h-3 text-mocha" /> Üyelere Özel
+                  </span>
+                )}
               </div>
               <div className="flex items-center gap-3 text-xs text-secondary">
                 <span>Saat: {selectedSession.time}</span>
