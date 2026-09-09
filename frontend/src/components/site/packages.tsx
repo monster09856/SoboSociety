@@ -54,12 +54,12 @@ export function Packages() {
     {
       title: 'Barre Class Bireysel',
       subtitle: '8 Derslik Bireysel Paket',
-      validity: 'Kullanım Süresi: 45 Gün',
+      validity: 'Kullanım Süresi: 6 Hafta',
       fiyat_tl: 6400,
       features: [
         '8 Bireysel Class Seansı',
         'Kişiye Özel Birebir Eğitmen',
-        'Kullanım Süresi: 45 Gün',
+        'Kullanım Süresi: 6 Hafta',
         'Tüm Mat & Ekipmanlar Dahil',
       ],
       buttonVariant: 'secondary',
@@ -67,13 +67,13 @@ export function Packages() {
     {
       title: 'Barre Class Bireysel Premium',
       subtitle: '12 Derslik Bireysel Paket',
-      validity: 'Kullanım Süresi: 60 Gün',
+      validity: 'Kullanım Süresi: 8 Hafta',
       fiyat_tl: 9200,
       popularTag: '12 Saat Önceden İade Hakkı ⏱️',
       features: [
         '12 Bireysel Class Seansı',
         'Kişiye Özel Birebir Eğitmen',
-        'Kullanım Süresi: 60 Gün',
+        'Kullanım Süresi: 8 Hafta',
         'Esnek İptal & Öncelikli Randevu',
       ],
       buttonVariant: 'primary',
@@ -81,12 +81,12 @@ export function Packages() {
     {
       title: 'Reformer Class Bireysel',
       subtitle: '8 Derslik Bireysel Reformer',
-      validity: 'Kullanım Süresi: 45 Gün',
+      validity: 'Kullanım Süresi: 6 Hafta',
       fiyat_tl: 7200,
       features: [
         '8 Bireysel Reformer Seansı',
         'Kişiye Özel Reformer Cihazı',
-        'Kullanım Süresi: 45 Gün',
+        'Kullanım Süresi: 6 Hafta',
         'Birebir Postür & Seviye Analizi',
       ],
       buttonVariant: 'secondary',
@@ -94,12 +94,12 @@ export function Packages() {
     {
       title: 'Reformer Class Bireysel Elite',
       subtitle: '12 Derslik Bireysel Reformer',
-      validity: 'Kullanım Süresi: 60 Gün',
+      validity: 'Kullanım Süresi: 8 Hafta',
       fiyat_tl: 10400,
       features: [
         '12 Bireysel Reformer Seansı',
         'Kişiye Özel Reformer Cihazı',
-        'Kullanım Süresi: 60 Gün',
+        'Kullanım Süresi: 8 Hafta',
         'Esnek Ders İptal Hakkı',
       ],
       buttonVariant: 'secondary',
@@ -123,12 +123,12 @@ export function Packages() {
     {
       title: 'Barre Class 4 Ders',
       subtitle: '4 Derslik Grup Paketi',
-      validity: 'Kullanım Süresi: 30 Gün',
+      validity: 'Kullanım Süresi: 4 Hafta',
       fiyat_tl: 3200,
       features: [
         '4 Adet Barre Class Dersi',
         'Butik Sınıf (Maks. 5 Üye)',
-        'Kullanım Süresi: 30 Gün',
+        'Kullanım Süresi: 4 Hafta',
         '12 Saat Önceden İade Hakkı',
       ],
       buttonVariant: 'secondary',
@@ -136,12 +136,12 @@ export function Packages() {
     {
       title: 'Barre Class 8 Ders',
       subtitle: '8 Derslik Grup Paketi',
-      validity: 'Kullanım Süresi: 45 Gün',
+      validity: 'Kullanım Süresi: 6 Hafta',
       fiyat_tl: 5800,
       features: [
         '8 Adet Barre Class Dersi',
         'Butik Sınıf (Maks. 5 Üye)',
-        'Kullanım Süresi: 45 Gün',
+        'Kullanım Süresi: 6 Hafta',
         'Mobil İle Kolay Rezervasyon',
       ],
       buttonVariant: 'secondary',
@@ -149,37 +149,36 @@ export function Packages() {
     {
       title: 'Barre Class 12 Ders',
       subtitle: '12 Derslik Grup Paketi',
-      validity: 'Kullanım Süresi: 60 Gün',
+      validity: 'Kullanım Süresi: 8 Hafta',
       fiyat_tl: 8400,
       popularTag: 'Popüler Seçim ⭐',
       features: [
         '12 Adet Barre Class Dersi',
         'Butik Sınıf (Maks. 5 Üye)',
-        'Kullanım Süresi: 60 Gün',
+        'Kullanım Süresi: 8 Hafta',
         'Öncelikli Bekleme Sırası',
       ],
       buttonVariant: 'primary',
     },
   ]
 
-  const formatValidityText = (days: number) => {
+  const formatValidityText = (days: number, dersAdedi?: number) => {
+    if (dersAdedi === 4 || days === 28 || days === 30) return '4 Hafta'
+    if (dersAdedi === 8 || days === 42 || days === 45) return '6 Hafta'
+    if (dersAdedi === 12 || days === 56 || days === 60) return '8 Hafta'
     if (!days) return ''
     if (days % 7 === 0) {
       const hafta = days / 7
       return `${hafta} Hafta`
     }
-    const hafta = Math.floor(days / 7)
-    const kalan = days % 7
-    if (hafta > 0) {
-      return `${hafta} Hafta ${kalan} Gün`
-    }
-    return `${days} Gün`
+    const hafta = Math.round(days / 7)
+    return `${hafta} Hafta`
   }
 
   // Prepare active package list combining backend DB packages and fallbacks
   const dynamicPackages: PackageItem[] = dbPackages.map((p, idx) => {
     const isBireysel = p.ad.toLowerCase().includes('bireysel') || p.ad.toLowerCase().includes('özel')
-    const formattedVal = formatValidityText(p.gecerlilik_gun)
+    const formattedVal = formatValidityText(p.gecerlilik_gun, p.ders_adedi)
     const isPopular = p.ders_adedi === 12 || p.ad.includes('12')
     return {
       id: p.id,
@@ -438,15 +437,15 @@ export function Packages() {
               <div className="space-y-2 text-xs text-ink font-medium">
                 <div className="flex justify-between py-1.5 border-b border-line/40">
                   <span className="text-secondary font-bold">4 Derslik Paket</span>
-                  <span className="font-bold text-espresso">30 Gün</span>
+                  <span className="font-bold text-espresso">4 Hafta</span>
                 </div>
                 <div className="flex justify-between py-1.5 border-b border-line/40">
                   <span className="text-secondary font-bold">8 Derslik Paket (Mini)</span>
-                  <span className="font-bold text-espresso">45 Gün</span>
+                  <span className="font-bold text-espresso">6 Hafta</span>
                 </div>
                 <div className="flex justify-between py-1.5">
                   <span className="text-secondary font-bold">12 Derslik Paket (Standart)</span>
-                  <span className="font-bold text-espresso">60 Gün</span>
+                  <span className="font-bold text-espresso">8 Hafta</span>
                 </div>
               </div>
               <p className="text-[11px] text-secondary italic leading-relaxed pt-2">
