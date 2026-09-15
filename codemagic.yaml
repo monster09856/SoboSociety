@@ -19,6 +19,7 @@ workflows:
       vars:
         BUNDLE_ID: "com.sobosociety.app"
         DEVELOPMENT_TEAM: "YR2KGFQ6H3"
+        SHOREBIRD_TOKEN: "sb_api_TXmtC63S-oANCcJJfCydAso1jolGgyTFpHgsm7fTuCA"
     scripts:
       - name: Set up App Store Connect API Key & Profiles
         script: |
@@ -28,16 +29,36 @@ workflows:
           python3 setup_signing.py
           xcode-project use-profiles
           security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "" ~/Library/Keychains/login.keychain-db || true
-      - name: Build Flutter iOS IPA
+      - name: Build Flutter iOS IPA (Shorebird Release)
         script: |
           set -e
           security unlock-keychain -p "" ~/Library/Keychains/login.keychain-db || true
           security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "" ~/Library/Keychains/login.keychain-db || true
           flutter packages get
-          flutter build ipa --release \
-            --build-name=1.0.4 \
-            --build-number=15 \
-            --export-options-plist=ios/ExportOptions.plist
+          
+          # Install Shorebird CLI
+          curl --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/shorebirdtech/install/main/install.sh | bash || true
+          export PATH="$HOME/.shorebird/bin:$PATH"
+
+          if command -v shorebird &> /dev/null && [ -n "$SHOREBIRD_TOKEN" ]; then
+            echo "=== Building iOS IPA via Shorebird Release ==="
+            yes | shorebird release ios \
+              --build-name=1.0.4 \
+              --build-number=15 \
+              --export-options-plist=ios/ExportOptions.plist || {
+                echo "Shorebird release encountered an issue, falling back to flutter build ipa..."
+                flutter build ipa --release \
+                  --build-name=1.0.4 \
+                  --build-number=15 \
+                  --export-options-plist=ios/ExportOptions.plist
+              }
+          else
+            echo "=== Building standard Flutter iOS IPA ==="
+            flutter build ipa --release \
+              --build-name=1.0.4 \
+              --build-number=15 \
+              --export-options-plist=ios/ExportOptions.plist
+          fi
       - name: Publish IPA to App Store Connect TestFlight
         script: |
           set -e
