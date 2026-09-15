@@ -77,3 +77,24 @@ workflows:
       - android/build/ios/ipa/*.ipa
       - ios/build/ios/ipa/*.ipa
       - "*.ipa"
+
+  ios-shorebird-patch:
+    name: Sobo Society iOS Shorebird Instant OTA Patch
+    max_build_duration: 30
+    instance_type: mac_mini_m2
+    working_directory: android
+    environment:
+      flutter: 3.29.0
+      xcode: latest
+      vars:
+        BUNDLE_ID: "com.sobosociety.app"
+        SHOREBIRD_TOKEN: "sb_api_TXmtC63S-oANCcJJfCydAso1jolGgyTFpHgsm7fTuCA"
+    scripts:
+      - name: Send Shorebird iOS Patch (Instant OTA)
+        script: |
+          set -e
+          curl --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/shorebirdtech/install/main/install.sh | bash
+          export PATH="$HOME/.shorebird/bin:$PATH"
+          flutter packages get
+          yes | shorebird patch ios --release-version=1.0.4+15
+
