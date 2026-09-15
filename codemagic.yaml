@@ -109,5 +109,5 @@ workflows:
           flutter packages get
           curl --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/shorebirdtech/install/main/install.sh | bash
           export PATH="$HOME/.shorebird/bin:$PATH"
-          yes | shorebird patch ios --release-version=1.0.4+15 --export-options-plist=ios/ExportOptions.plist
+          yes | shorebird patch ios --release-version=1.0.4+15 --allow-asset-diffs --export-options-plist=ios/ExportOptions.plist
 
