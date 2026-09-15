@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../models/auth_models.dart';
 import '../../models/event_models.dart';
 import '../../services/api_client.dart';
 import '../../theme/sobo_theme.dart';
@@ -14,11 +15,25 @@ class WorkshopsView extends StatefulWidget {
 class _WorkshopsViewState extends State<WorkshopsView> {
   List<StudioEventItem> _events = <StudioEventItem>[];
   bool _isLoading = true;
+  bool _isAdmin = false;
 
   @override
   void initState() {
     super.initState();
+    _checkAdmin();
     _loadEvents();
+  }
+
+  Future<void> _checkAdmin() async {
+    try {
+      final dynamic meRes = await ApiClient.get('/auth/me');
+      final MemberMeResponse me = MemberMeResponse.fromJson(meRes);
+      if (mounted) {
+        setState(() {
+          _isAdmin = me.isAdmin;
+        });
+      }
+    } catch (_) {}
   }
 
   Future<void> _loadEvents() async {
@@ -145,10 +160,310 @@ class _WorkshopsViewState extends State<WorkshopsView> {
     } catch (_) {}
   }
 
+  Future<void> _confirmDeleteEvent(StudioEventItem ev) async {
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Text('Workshopu Sil', style: SoboTheme.fontSerif(fontSize: 18, fontWeight: FontWeight.bold, color: SoboTheme.espresso)),
+        content: Text('"${ev.baslik}" etkinliğini silmek istediğinize emin misiniz? Bu işlem geri alınamaz.', style: SoboTheme.fontSans(fontSize: 13, color: SoboTheme.ink)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text('Vazgeç', style: SoboTheme.fontSans(color: SoboTheme.secondary, fontWeight: FontWeight.bold)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: SoboTheme.clay, foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+            onPressed: () async {
+              Navigator.pop(ctx);
+              try {
+                await ApiClient.delete('/admin/events/${ev.id}');
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Workshop başarıyla silindi.'), backgroundColor: SoboTheme.sage),
+                  );
+                  _loadEvents();
+                }
+              } catch (e) {
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Hata: $e'), backgroundColor: SoboTheme.clay),
+                  );
+                }
+              }
+            },
+            child: const Text('Evet, Sil'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _showAddEventDialog() async {
+    final titleCtrl = TextEditingController();
+    final descCtrl = TextEditingController();
+    final capacityCtrl = TextEditingController(text: '12');
+    final priceCtrl = TextEditingController(text: '750 ₺');
+    String selectedType = 'Workshop';
+    DateTime selectedDate = DateTime.now().add(const Duration(days: 3));
+    TimeOfDay selectedTime = const TimeOfDay(hour: 14, minute: 0);
+    bool isSubmitting = false;
+
+    final types = [
+      'Workshop',
+      'Masterclass',
+      'Sound Bath',
+      'Topluluk Etkinliği',
+      'Doğa Yürüyüşü',
+      'Özel Seans',
+    ];
+
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setModalState) {
+          return Container(
+            padding: EdgeInsets.only(
+              bottom: MediaQuery.of(ctx).viewInsets.bottom + 24,
+              top: 20,
+              left: 20,
+              right: 20,
+            ),
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+            ),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Yeni Workshop / Etkinlik Ekle',
+                        style: SoboTheme.fontSerif(fontSize: 18, fontWeight: FontWeight.bold, color: SoboTheme.espresso),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close_rounded),
+                        onPressed: () => Navigator.pop(ctx),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+
+                  TextField(
+                    controller: titleCtrl,
+                    decoration: InputDecoration(
+                      labelText: 'Workshop Başlığı',
+                      hintText: 'Örn: Ses Çanağı & Meditasyon',
+                      filled: true,
+                      fillColor: SoboTheme.ivory,
+                      labelStyle: SoboTheme.fontSans(fontSize: 12),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: SoboTheme.line)),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+
+                  DropdownButtonFormField<String>(
+                    initialValue: selectedType,
+                    decoration: InputDecoration(
+                      labelText: 'Etkinlik Türü',
+                      filled: true,
+                      fillColor: SoboTheme.ivory,
+                      labelStyle: SoboTheme.fontSans(fontSize: 12),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: SoboTheme.line)),
+                    ),
+                    items: types.map((t) => DropdownMenuItem(value: t, child: Text(t, style: SoboTheme.fontSans(fontSize: 13)))).toList(),
+                    onChanged: (val) {
+                      if (val != null) setModalState(() => selectedType = val);
+                    },
+                  ),
+                  const SizedBox(height: 12),
+
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          icon: const Icon(Icons.calendar_today_rounded, size: 16, color: SoboTheme.espresso),
+                          label: Text(
+                            '${selectedDate.day}.${selectedDate.month}.${selectedDate.year}',
+                            style: SoboTheme.fontSans(fontSize: 12, fontWeight: FontWeight.bold, color: SoboTheme.espresso),
+                          ),
+                          onPressed: () async {
+                            final picked = await showDatePicker(
+                              context: ctx,
+                              initialDate: selectedDate,
+                              firstDate: DateTime.now(),
+                              lastDate: DateTime.now().add(const Duration(days: 365)),
+                            );
+                            if (picked != null) setModalState(() => selectedDate = picked);
+                          },
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          icon: const Icon(Icons.access_time_rounded, size: 16, color: SoboTheme.espresso),
+                          label: Text(
+                            '${selectedTime.hour.toString().padLeft(2, '0')}:${selectedTime.minute.toString().padLeft(2, '0')}',
+                            style: SoboTheme.fontSans(fontSize: 12, fontWeight: FontWeight.bold, color: SoboTheme.espresso),
+                          ),
+                          onPressed: () async {
+                            final picked = await showTimePicker(
+                              context: ctx,
+                              initialTime: selectedTime,
+                            );
+                            if (picked != null) setModalState(() => selectedTime = picked);
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: capacityCtrl,
+                          keyboardType: TextInputType.number,
+                          decoration: InputDecoration(
+                            labelText: 'Kontenjan',
+                            filled: true,
+                            fillColor: SoboTheme.ivory,
+                            labelStyle: SoboTheme.fontSans(fontSize: 12),
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: TextField(
+                          controller: priceCtrl,
+                          decoration: InputDecoration(
+                            labelText: 'Ücret',
+                            hintText: '750 ₺ veya Ücretsiz',
+                            filled: true,
+                            fillColor: SoboTheme.ivory,
+                            labelStyle: SoboTheme.fontSans(fontSize: 12),
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+
+                  TextField(
+                    controller: descCtrl,
+                    maxLines: 3,
+                    decoration: InputDecoration(
+                      labelText: 'Açıklama',
+                      hintText: 'Etkinlik içeriği ve detayları...',
+                      filled: true,
+                      fillColor: SoboTheme.ivory,
+                      labelStyle: SoboTheme.fontSans(fontSize: 12),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+                    ),
+                  ),
+                  const SizedBox(height: 18),
+
+                  ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: SoboTheme.espresso,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    ),
+                    onPressed: isSubmitting ? null : () async {
+                      if (titleCtrl.text.trim().isEmpty) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Lütfen etkinlik başlığını girin.'), backgroundColor: SoboTheme.clay),
+                        );
+                        return;
+                      }
+
+                      setModalState(() => isSubmitting = true);
+                      try {
+                        final dt = DateTime(
+                          selectedDate.year,
+                          selectedDate.month,
+                          selectedDate.day,
+                          selectedTime.hour,
+                          selectedTime.minute,
+                        );
+
+                        final capacity = int.tryParse(capacityCtrl.text.trim()) ?? 12;
+
+                        await ApiClient.post('/admin/events', <String, dynamic>{
+                          'baslik': titleCtrl.text.trim(),
+                          'turu': selectedType,
+                          'tarih_saat': dt.toIso8601String(),
+                          'aciklama': descCtrl.text.trim().isEmpty ? 'Sobo Society özel stüdyo etkinliği.' : descCtrl.text.trim(),
+                          'kontenjan': capacity,
+                          'ucret': priceCtrl.text.trim().isEmpty ? 'Ücretsiz' : priceCtrl.text.trim(),
+                          'tek_katilim_acik': true,
+                          'tek_katilim_ucret_tl': double.tryParse(priceCtrl.text.replaceAll(RegExp(r'[^0-9.]'), '')) ?? 0.0,
+                        });
+
+                        if (ctx.mounted) {
+                          Navigator.pop(ctx);
+                        }
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Workshop başarıyla eklendi ve üyelere duyuruldu! ✨'),
+                              backgroundColor: SoboTheme.sage,
+                            ),
+                          );
+                          _loadEvents();
+                        }
+                      } catch (e) {
+                        setModalState(() => isSubmitting = false);
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('Hata: ${e.toString().replaceAll('Exception: ', '')}'),
+                              backgroundColor: SoboTheme.clay,
+                            ),
+                          );
+                        }
+                      }
+                    },
+                    child: Text(
+                      isSubmitting ? 'KAYDEDİLİYOR...' : 'WORKSHOP\'U CANLIYA AL VE DUYUR',
+                      style: SoboTheme.fontSans(fontWeight: FontWeight.bold, fontSize: 13, letterSpacing: 0.8),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: SoboTheme.ivory,
+      floatingActionButton: _isAdmin
+          ? FloatingActionButton.extended(
+              backgroundColor: SoboTheme.espresso,
+              foregroundColor: Colors.white,
+              icon: const Icon(Icons.add_rounded, size: 20),
+              label: Text(
+                'YENİ WORKSHOP EKLE',
+                style: SoboTheme.fontSans(fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 0.8),
+              ),
+              onPressed: _showAddEventDialog,
+            )
+          : null,
       appBar: AppBar(
         backgroundColor: SoboTheme.ivory,
         elevation: 0,
@@ -264,20 +579,46 @@ class _WorkshopsViewState extends State<WorkshopsView> {
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                decoration: BoxDecoration(
-                                  color: SoboTheme.mocha,
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                                child: Text(
-                                  ev.turu,
-                                  style: SoboTheme.fontSans(
-                                    fontSize: 10.5,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.white,
+                              Row(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                    decoration: BoxDecoration(
+                                      color: SoboTheme.mocha,
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                    child: Text(
+                                      ev.turu,
+                                      style: SoboTheme.fontSans(
+                                        fontSize: 10.5,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.white,
+                                      ),
+                                    ),
                                   ),
-                                ),
+                                  if (_isAdmin) ...[
+                                    const SizedBox(width: 8),
+                                    InkWell(
+                                      onTap: () => _confirmDeleteEvent(ev),
+                                      borderRadius: BorderRadius.circular(8),
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                        decoration: BoxDecoration(
+                                          color: SoboTheme.clay.withOpacity(0.12),
+                                          borderRadius: BorderRadius.circular(8),
+                                        ),
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            const Icon(Icons.delete_outline_rounded, size: 14, color: SoboTheme.clay),
+                                            const SizedBox(width: 4),
+                                            Text('Sil', style: SoboTheme.fontSans(fontSize: 10, fontWeight: FontWeight.bold, color: SoboTheme.clay)),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ],
                               ),
                               Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),

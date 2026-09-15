@@ -18,6 +18,10 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
   bool _isLoadingSingleBookings = false;
   bool _isLoadingMembers = false;
   bool _isLoadingPackages = false;
+  bool _isLoadingWorkshops = false;
+
+  // Workshop & Events State
+  List<dynamic> _workshops = <dynamic>[];
 
   // 1. Today Sessions & Quick Booking State
   List<dynamic> _todaySessions = <dynamic>[];
@@ -72,7 +76,7 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 5, vsync: this);
+    _tabController = TabController(length: 6, vsync: this);
     _loadAllData();
   }
 
@@ -103,6 +107,7 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
     _loadMembers();
     _loadPackages();
     _loadNotificationStats();
+    _loadWorkshops();
   }
 
   Future<void> _loadTodaySessions() async {
@@ -211,6 +216,405 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
         });
       }
     } catch (_) {}
+  }
+
+  Future<void> _loadWorkshops() async {
+    setState(() => _isLoadingWorkshops = true);
+    try {
+      final dynamic res = await ApiClient.get('/admin/events');
+      if (mounted) {
+        setState(() {
+          _workshops = res is List ? res : <dynamic>[];
+          _isLoadingWorkshops = false;
+        });
+      }
+    } catch (_) {
+      if (mounted) setState(() => _isLoadingWorkshops = false);
+    }
+  }
+
+  Future<void> _handleDeleteWorkshop(int id, String title) async {
+    final bool? confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Text('Workshopu Sil', style: SoboTheme.fontSerif(fontSize: 18, fontWeight: FontWeight.bold, color: SoboTheme.espresso)),
+        content: Text('"$title" etkinliğini silmek istediğinize emin misiniz? Bu işlem geri alınamaz.', style: SoboTheme.fontSans(fontSize: 13, color: SoboTheme.ink)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text('Vazgeç', style: SoboTheme.fontSans(color: SoboTheme.secondary, fontWeight: FontWeight.bold)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: SoboTheme.clay, foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Evet, Sil'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      try {
+        await ApiClient.delete('/admin/events/$id');
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Workshop başarıyla silindi.'), backgroundColor: SoboTheme.sage),
+          );
+          _loadWorkshops();
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Hata: $e'), backgroundColor: SoboTheme.clay),
+          );
+        }
+      }
+    }
+  }
+
+  void _showWorkshopFormModal({dynamic eventToEdit}) {
+    final bool isEdit = eventToEdit != null;
+    final TextEditingController titleCtrl = TextEditingController(text: eventToEdit?['baslik'] ?? '');
+    final TextEditingController descCtrl = TextEditingController(text: eventToEdit?['aciklama'] ?? '');
+    final TextEditingController capacityCtrl = TextEditingController(text: (eventToEdit?['kontenjan'] ?? 15).toString());
+    final TextEditingController priceCtrl = TextEditingController(text: eventToEdit?['ucret'] ?? 'Ücretsiz');
+
+    String selectedType = eventToEdit?['turu'] ?? 'Workshop';
+    DateTime selectedDate = DateTime.now().add(const Duration(days: 3));
+    TimeOfDay selectedTime = const TimeOfDay(hour: 14, minute: 0);
+
+    if (isEdit && eventToEdit?['tarih_saat'] != null) {
+      try {
+        final parsed = DateTime.parse(eventToEdit['tarih_saat']).toLocal();
+        selectedDate = parsed;
+        selectedTime = TimeOfDay(hour: parsed.hour, minute: parsed.minute);
+      } catch (_) {}
+    }
+
+    bool isSubmitting = false;
+
+    final types = [
+      'Workshop',
+      'Masterclass',
+      'Sound Bath',
+      'Topluluk Etkinliği',
+      'Doğa Yürüyüşü',
+      'Özel Seans',
+    ];
+
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setModalState) {
+          return Container(
+            padding: EdgeInsets.only(
+              bottom: MediaQuery.of(ctx).viewInsets.bottom + 24,
+              top: 20,
+              left: 20,
+              right: 20,
+            ),
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+            ),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        isEdit ? 'Workshopu Düzenle' : 'Yeni Workshop Ekle',
+                        style: SoboTheme.fontSerif(fontSize: 18, fontWeight: FontWeight.bold, color: SoboTheme.espresso),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close_rounded),
+                        onPressed: () => Navigator.pop(ctx),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+
+                  if (!isEdit) ...[
+                    Text(
+                      'HIZLI ŞABLONLAR',
+                      style: SoboTheme.fontSans(fontSize: 10.5, fontWeight: FontWeight.bold, letterSpacing: 1.1, color: SoboTheme.secondary),
+                    ),
+                    const SizedBox(height: 8),
+                    SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Row(
+                        children: [
+                          ActionChip(
+                            avatar: const Text('🌲', style: TextStyle(fontSize: 14)),
+                            label: const Text('Belgrad Ormanı'),
+                            backgroundColor: SoboTheme.sandLight,
+                            onPressed: () {
+                              setModalState(() {
+                                titleCtrl.text = 'Belgrad Ormanı Doğa Yürüyüşü & Kahve Buluşması';
+                                selectedType = 'Doğa Yürüyüşü';
+                                capacityCtrl.text = '25';
+                                priceCtrl.text = 'Ücretsiz / Topluluk Etkinliği';
+                                descCtrl.text = 'Temiz havada hafif tempolu yürüyüş, nefes egzersizleri ve ardından tüm Sobo topluluğu ile kahve sohbeti.';
+                              });
+                            },
+                          ),
+                          const SizedBox(width: 8),
+                          ActionChip(
+                            avatar: const Text('🥣', style: TextStyle(fontSize: 14)),
+                            label: const Text('Ses Çanağı'),
+                            backgroundColor: SoboTheme.sandLight,
+                            onPressed: () {
+                              setModalState(() {
+                                titleCtrl.text = 'Ses Çanağı & Derin Meditasyon (Sound Bath)';
+                                selectedType = 'Sound Bath';
+                                capacityCtrl.text = '12';
+                                priceCtrl.text = '750 ₺';
+                                descCtrl.text = 'Tibet ses çanaklarının şifalı frekansları eşliğinde derin zihinsel ve bedensel dinlenme seansı.';
+                              });
+                            },
+                          ),
+                          const SizedBox(width: 8),
+                          ActionChip(
+                            avatar: const Text('🧘‍♀️', style: TextStyle(fontSize: 14)),
+                            label: const Text('Postür & Mobilite'),
+                            backgroundColor: SoboTheme.sandLight,
+                            onPressed: () {
+                              setModalState(() {
+                                titleCtrl.text = 'Postür, Omurga & Mobilite Masterclass';
+                                selectedType = 'Masterclass';
+                                capacityCtrl.text = '10';
+                                priceCtrl.text = '600 ₺';
+                                descCtrl.text = 'Masa başı çalışanlar için özel omurga sağlığı, duruş bozukluklarını düzeltici teknikler ve mobilite çalışması.';
+                              });
+                            },
+                          ),
+                          const SizedBox(width: 8),
+                          ActionChip(
+                            avatar: const Text('☕', style: TextStyle(fontSize: 14)),
+                            label: const Text('Mat & Kahve'),
+                            backgroundColor: SoboTheme.sandLight,
+                            onPressed: () {
+                              setModalState(() {
+                                titleCtrl.text = 'Mat & Kahve Topluluk Buluşması';
+                                selectedType = 'Topluluk Etkinliği';
+                                capacityCtrl.text = '20';
+                                priceCtrl.text = 'Ücretsiz / Topluluk Etkinliği';
+                                descCtrl.text = 'Stüdyoda keyifli bir mat seansının ardından hep birlikte kahve ve sohbet.';
+                              });
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                  ],
+
+                  TextField(
+                    controller: titleCtrl,
+                    decoration: InputDecoration(
+                      labelText: 'Workshop Başlığı',
+                      hintText: 'Örn: Ses Çanağı & Meditasyon',
+                      filled: true,
+                      fillColor: SoboTheme.ivory,
+                      labelStyle: SoboTheme.fontSans(fontSize: 12),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: SoboTheme.line)),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+
+                  DropdownButtonFormField<String>(
+                    initialValue: types.contains(selectedType) ? selectedType : types.first,
+                    decoration: InputDecoration(
+                      labelText: 'Etkinlik Türü',
+                      filled: true,
+                      fillColor: SoboTheme.ivory,
+                      labelStyle: SoboTheme.fontSans(fontSize: 12),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: SoboTheme.line)),
+                    ),
+                    items: types.map((t) => DropdownMenuItem(value: t, child: Text(t, style: SoboTheme.fontSans(fontSize: 13)))).toList(),
+                    onChanged: (val) {
+                      if (val != null) setModalState(() => selectedType = val);
+                    },
+                  ),
+                  const SizedBox(height: 12),
+
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          icon: const Icon(Icons.calendar_today_rounded, size: 16, color: SoboTheme.espresso),
+                          label: Text(
+                            '${selectedDate.day}.${selectedDate.month}.${selectedDate.year}',
+                            style: SoboTheme.fontSans(fontSize: 12, fontWeight: FontWeight.bold, color: SoboTheme.espresso),
+                          ),
+                          onPressed: () async {
+                            final picked = await showDatePicker(
+                              context: ctx,
+                              initialDate: selectedDate,
+                              firstDate: DateTime.now().subtract(const Duration(days: 30)),
+                              lastDate: DateTime.now().add(const Duration(days: 365)),
+                            );
+                            if (picked != null) setModalState(() => selectedDate = picked);
+                          },
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          icon: const Icon(Icons.access_time_rounded, size: 16, color: SoboTheme.espresso),
+                          label: Text(
+                            '${selectedTime.hour.toString().padLeft(2, '0')}:${selectedTime.minute.toString().padLeft(2, '0')}',
+                            style: SoboTheme.fontSans(fontSize: 12, fontWeight: FontWeight.bold, color: SoboTheme.espresso),
+                          ),
+                          onPressed: () async {
+                            final picked = await showTimePicker(
+                              context: ctx,
+                              initialTime: selectedTime,
+                            );
+                            if (picked != null) setModalState(() => selectedTime = picked);
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: capacityCtrl,
+                          keyboardType: TextInputType.number,
+                          decoration: InputDecoration(
+                            labelText: 'Kontenjan (Kişi)',
+                            filled: true,
+                            fillColor: SoboTheme.ivory,
+                            labelStyle: SoboTheme.fontSans(fontSize: 12),
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: SoboTheme.line)),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: TextField(
+                          controller: priceCtrl,
+                          decoration: InputDecoration(
+                            labelText: 'Ücret',
+                            hintText: 'Ücretsiz veya 750 ₺',
+                            filled: true,
+                            fillColor: SoboTheme.ivory,
+                            labelStyle: SoboTheme.fontSans(fontSize: 12),
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: SoboTheme.line)),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+
+                  TextField(
+                    controller: descCtrl,
+                    maxLines: 3,
+                    decoration: InputDecoration(
+                      labelText: 'Açıklama & Detaylar',
+                      hintText: 'Etkinlik akışı, katılımcıların getirmesi gerekenler vb.',
+                      filled: true,
+                      fillColor: SoboTheme.ivory,
+                      labelStyle: SoboTheme.fontSans(fontSize: 12),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: SoboTheme.line)),
+                    ),
+                  ),
+                  const SizedBox(height: 18),
+
+                  ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: SoboTheme.espresso,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    ),
+                    onPressed: isSubmitting ? null : () async {
+                      if (titleCtrl.text.trim().isEmpty) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Lütfen etkinlik başlığını girin.'), backgroundColor: SoboTheme.clay),
+                        );
+                        return;
+                      }
+
+                      setModalState(() => isSubmitting = true);
+                      try {
+                        final dt = DateTime(
+                          selectedDate.year,
+                          selectedDate.month,
+                          selectedDate.day,
+                          selectedTime.hour,
+                          selectedTime.minute,
+                        );
+
+                        final capacity = int.tryParse(capacityCtrl.text.trim()) ?? 15;
+                        final payload = <String, dynamic>{
+                          'baslik': titleCtrl.text.trim(),
+                          'turu': selectedType,
+                          'tarih_saat': dt.toIso8601String(),
+                          'aciklama': descCtrl.text.trim().isEmpty ? 'Sobo Society özel stüdyo etkinliği.' : descCtrl.text.trim(),
+                          'kontenjan': capacity,
+                          'ucret': priceCtrl.text.trim().isEmpty ? 'Ücretsiz' : priceCtrl.text.trim(),
+                          'tek_katilim_acik': true,
+                          'tek_katilim_ucret_tl': double.tryParse(priceCtrl.text.replaceAll(RegExp(r'[^0-9.]'), '')) ?? 0.0,
+                        };
+
+                        if (isEdit) {
+                          await ApiClient.put('/admin/events/${eventToEdit['id']}', payload);
+                        } else {
+                          await ApiClient.post('/admin/events', payload);
+                        }
+
+                        if (ctx.mounted) {
+                          Navigator.pop(ctx);
+                        }
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(isEdit
+                                  ? 'Workshop başarıyla güncellendi! ✨'
+                                  : 'Workshop başarıyla eklendi ve üyelere duyuruldu! ✨'),
+                              backgroundColor: SoboTheme.sage,
+                            ),
+                          );
+                          _loadWorkshops();
+                        }
+                      } catch (e) {
+                        setModalState(() => isSubmitting = false);
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('Hata: ${e.toString().replaceAll('Exception: ', '')}'),
+                              backgroundColor: SoboTheme.clay,
+                            ),
+                          );
+                        }
+                      }
+                    },
+                    child: Text(
+                      isSubmitting
+                          ? 'KAYDEDİLİYOR...'
+                          : (isEdit ? 'DEĞİŞİKLİKLERİ GÜNCELLE' : 'WORKSHOP\'U CANLIYA AL VE DUYUR'),
+                      style: SoboTheme.fontSans(fontWeight: FontWeight.bold, fontSize: 13, letterSpacing: 0.8),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
   }
 
   // --- Handlers ---
@@ -880,6 +1284,7 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
             Tab(icon: Icon(Icons.confirmation_number_rounded, size: 18), text: 'Talepler'),
             Tab(icon: Icon(Icons.people_alt_rounded, size: 18), text: 'Üyeler'),
             Tab(icon: Icon(Icons.campaign_rounded, size: 18), text: 'Bildirim/Paket'),
+            Tab(icon: Icon(Icons.auto_awesome_rounded, size: 18), text: 'Workshop'),
           ],
         ),
       ),
@@ -891,6 +1296,7 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
           _buildSingleBookingsTab(),
           _buildMembersTab(),
           _buildNotificationAndPackagesTab(),
+          _buildWorkshopsTab(),
         ],
       ),
     );
@@ -1738,7 +2144,6 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
               itemBuilder: (context, index) {
                 final pkg = _packages[index];
                 final int price = (pkg['fiyat_tl'] != null) ? (pkg['fiyat_tl'] as num).toInt() : 0;
-                final bool aktif = pkg['aktif'] == true;
 
                 return Container(
                   padding: const EdgeInsets.all(14),
@@ -1771,6 +2176,204 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
               },
             ),
         ],
+      ),
+    );
+  }
+
+  // TAB 6: WORKSHOP & ATÖLYE YÖNETİMİ
+  Widget _buildWorkshopsTab() {
+    return RefreshIndicator(
+      onRefresh: _loadWorkshops,
+      color: SoboTheme.espresso,
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(16.0),
+        physics: const AlwaysScrollableScrollPhysics(),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(18),
+              decoration: BoxDecoration(
+                color: SoboTheme.sandLight,
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: SoboTheme.line),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(Icons.auto_awesome_rounded, color: SoboTheme.mocha, size: 22),
+                      const SizedBox(width: 8),
+                      Text(
+                        'STÜDİYO ATÖLYELERİ & ETKİNLİKLER',
+                        style: SoboTheme.fontSans(fontSize: 12, fontWeight: FontWeight.bold, color: SoboTheme.espresso, letterSpacing: 0.8),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    'Özel atölyeleri, doğa yürüyüşlerini ve sound bath seanslarını mobilden anında ekleyin, düzenleyin ve silin.',
+                    style: SoboTheme.fontSans(fontSize: 11.5, color: SoboTheme.secondary, height: 1.35),
+                  ),
+                  const SizedBox(height: 14),
+                  ElevatedButton.icon(
+                    onPressed: () => _showWorkshopFormModal(),
+                    icon: const Icon(Icons.add_rounded, size: 18, color: Colors.white),
+                    label: Text(
+                      'YENİ WORKSHOP EKLE',
+                      style: SoboTheme.fontSans(fontWeight: FontWeight.bold, fontSize: 12, letterSpacing: 0.6),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: SoboTheme.espresso,
+                      foregroundColor: Colors.white,
+                      minimumSize: const Size.fromHeight(44),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'YAYINDAKİ WORKSHOPLAR (${_workshops.length})',
+                  style: SoboTheme.fontSans(fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 1.1, color: SoboTheme.secondary),
+                ),
+                TextButton.icon(
+                  onPressed: _loadWorkshops,
+                  icon: const Icon(Icons.refresh_rounded, size: 16, color: SoboTheme.espresso),
+                  label: Text('Yenile', style: SoboTheme.fontSans(fontSize: 11, fontWeight: FontWeight.bold, color: SoboTheme.espresso)),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+
+            if (_isLoadingWorkshops)
+              const Center(child: Padding(padding: EdgeInsets.all(32), child: CircularProgressIndicator(color: SoboTheme.espresso)))
+            else if (_workshops.isEmpty)
+              Container(
+                padding: const EdgeInsets.all(32),
+                decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20), border: Border.all(color: SoboTheme.line)),
+                child: Column(
+                  children: [
+                    const Icon(Icons.event_busy_rounded, size: 48, color: SoboTheme.secondary),
+                    const SizedBox(height: 12),
+                    Text('Henüz yayında workshop yok', style: SoboTheme.fontSerif(fontSize: 16, fontWeight: FontWeight.bold, color: SoboTheme.ink)),
+                    const SizedBox(height: 6),
+                    Text('Yukarıdaki butona tıklayarak hemen yeni bir etkinlik oluşturabilirsiniz.', textAlign: TextAlign.center, style: SoboTheme.fontSans(fontSize: 12, color: SoboTheme.secondary)),
+                  ],
+                ),
+              )
+            else
+              ListView.separated(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: _workshops.length,
+                separatorBuilder: (_, __) => const SizedBox(height: 12),
+                itemBuilder: (context, index) {
+                  final w = _workshops[index];
+                  final String dateStr = w['tarih_saat'] != null ? w['tarih_saat'].toString().substring(0, 16).replaceAll('T', ' • ') : '';
+
+                  return Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(18),
+                      border: Border.all(color: SoboTheme.line),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                              decoration: BoxDecoration(color: SoboTheme.mocha, borderRadius: BorderRadius.circular(10)),
+                              child: Text(
+                                w['turu'] ?? 'Workshop',
+                                style: SoboTheme.fontSans(fontSize: 10.5, fontWeight: FontWeight.bold, color: Colors.white),
+                              ),
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                              decoration: BoxDecoration(color: SoboTheme.sandLight, borderRadius: BorderRadius.circular(10)),
+                              child: Text(
+                                '${w['kontenjan'] ?? 0} Kişi Kontenjan',
+                                style: SoboTheme.fontSans(fontSize: 10.5, fontWeight: FontWeight.bold, color: SoboTheme.espresso),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 10),
+                        Text(
+                          w['baslik'] ?? 'İsimsiz Workshop',
+                          style: SoboTheme.fontSerif(fontSize: 16, fontWeight: FontWeight.bold, color: SoboTheme.ink),
+                        ),
+                        const SizedBox(height: 6),
+                        Row(
+                          children: [
+                            const Icon(Icons.access_time_rounded, size: 14, color: SoboTheme.secondary),
+                            const SizedBox(width: 4),
+                            Text(dateStr, style: SoboTheme.fontSans(fontSize: 11.5, color: SoboTheme.secondary)),
+                            const SizedBox(width: 14),
+                            const Icon(Icons.payments_outlined, size: 14, color: SoboTheme.secondary),
+                            const SizedBox(width: 4),
+                            Text(w['ucret'] ?? 'Ücretsiz', style: SoboTheme.fontSans(fontSize: 11.5, fontWeight: FontWeight.bold, color: SoboTheme.espresso)),
+                          ],
+                        ),
+                        if (w['aciklama'] != null && (w['aciklama'] as String).isNotEmpty) ...[
+                          const SizedBox(height: 8),
+                          Text(
+                            w['aciklama'],
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: SoboTheme.fontSans(fontSize: 11.5, color: SoboTheme.secondary, height: 1.3),
+                          ),
+                        ],
+                        const SizedBox(height: 12),
+                        const Divider(height: 1, color: SoboTheme.line),
+                        const SizedBox(height: 10),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.end,
+                          children: [
+                            OutlinedButton.icon(
+                              onPressed: () => _showWorkshopFormModal(eventToEdit: w),
+                              icon: const Icon(Icons.edit_outlined, size: 14, color: SoboTheme.espresso),
+                              label: Text('Düzenle', style: SoboTheme.fontSans(fontSize: 11, fontWeight: FontWeight.bold, color: SoboTheme.espresso)),
+                              style: OutlinedButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                minimumSize: Size.zero,
+                                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            OutlinedButton.icon(
+                              onPressed: () => _handleDeleteWorkshop(w['id'], w['baslik'] ?? 'Workshop'),
+                              icon: const Icon(Icons.delete_outline_rounded, size: 14, color: SoboTheme.clay),
+                              label: Text('Sil', style: SoboTheme.fontSans(fontSize: 11, fontWeight: FontWeight.bold, color: SoboTheme.clay)),
+                              style: OutlinedButton.styleFrom(
+                                side: const BorderSide(color: SoboTheme.clay),
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                minimumSize: Size.zero,
+                                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+          ],
+        ),
       ),
     );
   }
