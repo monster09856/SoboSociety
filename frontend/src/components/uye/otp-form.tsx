@@ -43,6 +43,12 @@ export function OtpForm({ onSuccess, redirectTo }: OtpFormProps) {
       return
     }
 
+    const cleanPhone = regTelefon.replace(/\D/g, '')
+    if (cleanPhone && (cleanPhone.length < 10 || cleanPhone.length > 11 || (!cleanPhone.startsWith('5') && !cleanPhone.startsWith('05')))) {
+      setError('Telefon numaranızı eksik veya yanlış tuşladınız. Lütfen kontrol ediniz (örn: 05XX XXX XX XX).')
+      return
+    }
+
     setLoading(true)
     try {
       const res = await api.auth.register({

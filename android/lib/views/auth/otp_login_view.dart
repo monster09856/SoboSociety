@@ -70,6 +70,14 @@ class _OTPLoginViewState extends State<OTPLoginView> with SingleTickerProviderSt
       return;
     }
 
+    final String cleanPhone = phone.replaceAll(RegExp(r'\D'), '');
+    if (phone.isNotEmpty) {
+      if (cleanPhone.length < 10 || cleanPhone.length > 11 || (!cleanPhone.startsWith('5') && !cleanPhone.startsWith('05'))) {
+        setState(() => _errorMessage = 'Telefon numaranızı eksik veya yanlış tuşladınız. Lütfen kontrol ediniz (örn: 05XX XXX XX XX).');
+        return;
+      }
+    }
+
     setState(() {
       _isLoading = true;
       _errorMessage = null;

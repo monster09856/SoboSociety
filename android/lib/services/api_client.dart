@@ -17,6 +17,25 @@ class ApiClient {
     return headers;
   }
 
+  static String _extractErrorMessage(http.Response response) {
+    try {
+      final dynamic body = jsonDecode(response.body);
+      if (body is Map) {
+        final dynamic detail = body['detail'] ?? body['detay'] ?? body['message'];
+        if (detail is String && detail.isNotEmpty) {
+          return detail;
+        } else if (detail is List && detail.isNotEmpty) {
+          final first = detail.first;
+          if (first is Map && first['msg'] != null) {
+            return first['msg'].toString();
+          }
+          return first.toString();
+        }
+      }
+    } catch (_) {}
+    return 'İşlem tamamlanamadı (${response.statusCode})';
+  }
+
   static Future<dynamic> get(String endpoint) async {
     final String url = '$baseUrl$endpoint';
     final Map<String, String> headers = await _getHeaders();
@@ -25,9 +44,7 @@ class ApiClient {
     if (response.statusCode >= 200 && response.statusCode < 300) {
       return jsonDecode(response.body);
     } else {
-      final dynamic body = jsonDecode(response.body);
-      final String msg = body['detail'] ?? 'Bir hata oluştu (${response.statusCode})';
-      throw Exception(msg);
+      throw Exception(_extractErrorMessage(response));
     }
   }
 
@@ -43,9 +60,7 @@ class ApiClient {
     if (response.statusCode >= 200 && response.statusCode < 300) {
       return jsonDecode(response.body);
     } else {
-      final dynamic body = jsonDecode(response.body);
-      final String msg = body['detail'] ?? 'Bir hata oluştu (${response.statusCode})';
-      throw Exception(msg);
+      throw Exception(_extractErrorMessage(response));
     }
   }
 
@@ -61,9 +76,7 @@ class ApiClient {
     if (response.statusCode >= 200 && response.statusCode < 300) {
       return jsonDecode(response.body);
     } else {
-      final dynamic body = jsonDecode(response.body);
-      final String msg = body['detail'] ?? 'Bir hata oluştu (${response.statusCode})';
-      throw Exception(msg);
+      throw Exception(_extractErrorMessage(response));
     }
   }
 
@@ -75,9 +88,7 @@ class ApiClient {
     if (response.statusCode >= 200 && response.statusCode < 300) {
       return jsonDecode(response.body);
     } else {
-      final dynamic body = jsonDecode(response.body);
-      final String msg = body['detail'] ?? 'Bir hata oluştu (${response.statusCode})';
-      throw Exception(msg);
+      throw Exception(_extractErrorMessage(response));
     }
   }
 }

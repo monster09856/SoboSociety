@@ -42,7 +42,11 @@ async def sobo_hata_handler(request: Request, exc: SoboHata):
 
     return JSONResponse(
         status_code=status_code,
-        content={"detay": str(exc) or exc.__class__.__name__, "hata": exc.__class__.__name__},
+        content={
+            "detail": str(exc) or exc.__class__.__name__,
+            "detay": str(exc) or exc.__class__.__name__,
+            "hata": exc.__class__.__name__,
+        },
     )
 
 

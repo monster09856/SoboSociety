@@ -24,6 +24,6 @@ def normalize_telefon(ham: str) -> str:
         rakamlar = rakamlar[1:]
 
     if len(rakamlar) != 10 or not rakamlar.startswith("5"):
-        raise GecersizTelefon(f"Geçerli bir Türkiye cep numarası değil: {ham}")
+        raise GecersizTelefon("Telefon numaranızı eksik veya yanlış tuşladınız. Lütfen kontrol ediniz (örn: 05XX XXX XX XX).")
 
     return f"+90{rakamlar}"
