@@ -86,15 +86,28 @@ workflows:
     environment:
       flutter: 3.29.0
       xcode: latest
+      groups:
+        - app_store_credentials
       vars:
         BUNDLE_ID: "com.sobosociety.app"
+        DEVELOPMENT_TEAM: "YR2KGFQ6H3"
         SHOREBIRD_TOKEN: "sb_api_TXmtC63S-oANCcJJfCydAso1jolGgyTFpHgsm7fTuCA"
     scripts:
+      - name: Set up App Store Connect API Key & Profiles
+        script: |
+          set -e
+          keychain initialize
+          pip3 install --break-system-packages pyjwt requests cryptography || pip3 install pyjwt requests cryptography || true
+          python3 setup_signing.py
+          xcode-project use-profiles
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "" ~/Library/Keychains/login.keychain-db || true
       - name: Send Shorebird iOS Patch (Instant OTA)
         script: |
           set -e
+          security unlock-keychain -p "" ~/Library/Keychains/login.keychain-db || true
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "" ~/Library/Keychains/login.keychain-db || true
+          flutter packages get
           curl --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/shorebirdtech/install/main/install.sh | bash
           export PATH="$HOME/.shorebird/bin:$PATH"
-          flutter packages get
-          yes | shorebird patch ios --release-version=1.0.4+15
+          yes | shorebird patch ios --release-version=1.0.4+15 --export-options-plist=ios/ExportOptions.plist
 
