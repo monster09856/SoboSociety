@@ -228,6 +228,13 @@ export default function AdminNotificationsPage() {
                       </select>
                     </div>
 
+                    {instantKitle.startsWith('MEMBER_') && (
+                      <div className="p-3 bg-amber-500/10 border border-amber-500/30 rounded-input text-xs text-amber-800 dark:text-amber-200 flex items-center gap-2">
+                        <Users className="w-4 h-4 shrink-0 text-amber-600" />
+                        <span>Bu bildirim <strong>yalnızca seçilen üyeye özel</strong> iletilecektir. Diğer üyelere gönderilmez.</span>
+                      </div>
+                    )}
+
                     {instantResult && (
                       <div className="p-4 bg-sage/10 border border-sage/30 rounded-input text-xs text-sage flex items-center gap-2">
                         <CheckCircle2 className="w-4 h-4 shrink-0" />
@@ -242,7 +249,13 @@ export default function AdminNotificationsPage() {
                       className="w-full py-3 text-xs tracking-wider uppercase font-medium flex items-center justify-center gap-2 cursor-pointer"
                     >
                       <Send className="w-4 h-4" />
-                      <span>{instantLoading ? 'Gönderiliyor...' : 'ANINDA TOPLU PUSH GÖNDER'}</span>
+                      <span>
+                        {instantLoading
+                          ? 'Gönderiliyor...'
+                          : instantKitle.startsWith('MEMBER_')
+                          ? 'KİŞİYE ÖZEL PUSH GÖNDER'
+                          : 'ANINDA TOPLU PUSH GÖNDER'}
+                      </span>
                     </Button>
                   </form>
                 </CardContent>

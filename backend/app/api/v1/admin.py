@@ -469,8 +469,42 @@ async def broadcast_push_notification(
     current_admin: Member = Depends(get_current_admin),
 ):
     """Anında tüm üyelere veya hedef kitleye Firebase/APNs Push Bildirimi gönderir."""
-    res = await db.execute(select(Member).where(Member.aktif == True))
-    members = res.scalars().all()
+    kitle = (body.hedef_kitle or "TUM_UYELER").strip()
+    tip = "DUYURU"
+
+    if kitle.startswith("MEMBER_"):
+        try:
+            target_id = int(kitle.replace("MEMBER_", "").strip())
+            res = await db.execute(select(Member).where(Member.id == target_id))
+            target_member = res.scalar_one_or_none()
+            members = [target_member] if target_member else []
+            tip = "KISIYE_OZEL"
+        except (ValueError, TypeError):
+            members = []
+    elif kitle.isdigit():
+        target_id = int(kitle)
+        res = await db.execute(select(Member).where(Member.id == target_id))
+        target_member = res.scalar_one_or_none()
+        members = [target_member] if target_member else []
+        tip = "KISIYE_OZEL"
+    elif kitle == "AKTIF_PAKETLI":
+        today = datetime.now(STUDYO_TZ).date()
+        res_pkgs = await db.execute(
+            select(MemberPackage.member_id)
+            .where(MemberPackage.bitis > today)
+            .distinct()
+        )
+        pkg_member_ids = list(res_pkgs.scalars().all())
+        if pkg_member_ids:
+            res = await db.execute(
+                select(Member).where(Member.id.in_(pkg_member_ids), Member.aktif == True)
+            )
+            members = res.scalars().all()
+        else:
+            members = []
+    else:  # TUM_UYELER
+        res = await db.execute(select(Member).where(Member.aktif == True))
+        members = res.scalars().all()
 
     gonderilen = 0
     for m in members:
@@ -479,12 +513,19 @@ async def broadcast_push_notification(
             member_id=m.id,
             baslik=body.baslik,
             mesaj=body.mesaj,
-            tip="DUYURU",
+            tip=tip,
         )
         gonderilen += 1
 
     await db.commit()
-    return {"mesaj": "Toplu bildirim gönderildi", "gonderilen_sayisi": gonderilen}
+
+    if tip == "KISIYE_OZEL":
+        if members:
+            return {"mesaj": f"{members[0].ad} üyesine özel bildirim gönderildi.", "gonderilen_sayisi": 1}
+        else:
+            return {"mesaj": "Belirtilen üye bulunamadı.", "gonderilen_sayisi": 0}
+
+    return {"mesaj": f"Bildirim {gonderilen} üyeye gönderildi.", "gonderilen_sayisi": gonderilen}
 
 
 @router.get("/notifications/stats")
@@ -841,7 +882,7 @@ async def create_admin_event(
     db: AsyncSession = Depends(get_db),
     current_admin: Member = Depends(get_current_admin),
 ):
-    """Yeni bir Workshop veya Etkinlik ekler."""
+    """Yeni bir Workshop veya Etkinlik ekler ve üyelere bildirim gönderir."""
     ev = StudioEvent(
         baslik=body.baslik,
         turu=body.turu,
@@ -856,6 +897,23 @@ async def create_admin_event(
     db.add(ev)
     await db.commit()
     await db.refresh(ev)
+
+    # Tüm kayıtlı ve aktif üyelere anında bildirim & push gönder
+    try:
+        res_m = await db.execute(select(Member).where(Member.aktif == True))
+        members = res_m.scalars().all()
+        for m in members:
+            await bildirim_gonder(
+                db,
+                member_id=m.id,
+                baslik=f"✨ Yeni Workshop: {ev.baslik}",
+                mesaj=f"{ev.turu} | {ev.tarih_saat} - {ev.ucret or 'Detaylar İçin İnceleyin'}. Sobo Society uygulamasından hemen yerinizi ayırtabilirsiniz!",
+                tip="WORKSHOP",
+            )
+        await db.commit()
+    except Exception as e:
+        print(f"[WORKSHOP NOTIF ERROR] {e}")
+
     return ev
 
 
@@ -873,6 +931,33 @@ async def delete_admin_event(
     await db.delete(ev)
     await db.commit()
     return {"silindi": True, "event_id": event_id}
+
+
+@router.put("/events/{event_id}", response_model=EventResponse)
+async def update_admin_event(
+    event_id: int,
+    body: EventCreateRequest,
+    db: AsyncSession = Depends(get_db),
+    current_admin: Member = Depends(get_current_admin),
+):
+    """Etkinliği / Workshop'u günceller."""
+    ev = await db.get(StudioEvent, event_id)
+    if not ev:
+        raise HTTPException(status_code=404, detail="Etkinlik bulunamadı.")
+    
+    ev.baslik = body.baslik
+    ev.turu = body.turu
+    ev.tarih_saat = body.tarih_saat
+    ev.aciklama = body.aciklama
+    ev.kontenjan = body.kontenjan
+    ev.ucret = body.ucret
+    ev.tek_katilim_acik = body.tek_katilim_acik
+    if body.tek_katilim_ucret_tl is not None:
+        ev.tek_katilim_ucret_tl = body.tek_katilim_ucret_tl
+    
+    await db.commit()
+    await db.refresh(ev)
+    return ev
 
 
 # --- Dynamic Class Types & Instructors Endpoints ---
