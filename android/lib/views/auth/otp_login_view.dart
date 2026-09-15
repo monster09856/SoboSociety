@@ -22,8 +22,8 @@ class _OTPLoginViewState extends State<OTPLoginView> with SingleTickerProviderSt
   final TextEditingController _regPasswordController = TextEditingController();
   final TextEditingController _regPhoneController = TextEditingController();
 
-  final TextEditingController _loginUsernameController = TextEditingController(text: 'admin');
-  final TextEditingController _loginPasswordController = TextEditingController(text: '345678');
+  final TextEditingController _loginUsernameController = TextEditingController();
+  final TextEditingController _loginPasswordController = TextEditingController();
 
   bool _isLoading = false;
   bool _obscureLoginPassword = true;

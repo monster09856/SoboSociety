@@ -98,24 +98,12 @@ async def login_endpoint(
     username = normalize_username(user_input)
     password = body.sifre.strip()
 
-    # Admin Bypass Kontrolü
+    # GÜVENLİK: Mobil uygulamada test için bırakılmış varsayılan admin girişlerini tamamen engelle
     if (username in ["admin", "05316033080", "+905316033080"]) and (password in ["345678", "admin"]):
-        stmt_admin = select(Member).where(or_(Member.kullanici_adi.ilike("admin"), Member.telefon == "+905316033080"))
-        res_admin = await db.execute(stmt_admin)
-        admin_member = res_admin.scalars().first()
-        if not admin_member:
-            admin_member = Member(
-                ad="Stüdyo Yöneticisi",
-                kullanici_adi="admin",
-                telefon="+905316033080",
-                sifre_hash=hash_password("345678"),
-            )
-            db.add(admin_member)
-            await db.commit()
-            await db.refresh(admin_member)
-
-        token = create_access_token(subject=str(admin_member.id), is_admin=True)
-        return TokenResponse(access_token=token)
+        raise HTTPException(
+            status_code=400,
+            detail="Bu varsayılan giriş devre dışı bırakılmıştır. Lütfen kendi kullanıcı adı ve şifrenizle giriş yapınız veya kayıt olunuz.",
+        )
 
     # Normal Üye Girişi (kullanıcı adı veya telefon ile)
     try:
