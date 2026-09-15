@@ -240,8 +240,19 @@ class NotificationService {
           final int id = item['id'] ?? DateTime.now().millisecondsSinceEpoch ~/ 1000;
           final String idStr = id.toString();
 
-          // STRICT SINGLE-SHOW RULE: Never trigger notification if ID was already shown natively!
-          if (!shownIds.contains(idStr)) {
+          // STRICT SINGLE-SHOW RULE: Never trigger notification if ID was already shown natively or already read!
+          final bool isRead = item['okundu'] == true;
+          if (!shownIds.contains(idStr) && !isRead) {
+            // Do not pop up notifications older than 24 hours on freshly installed app
+            if (item['olusturuldu_at'] != null) {
+              final DateTime? dt = DateTime.tryParse(item['olusturuldu_at'].toString());
+              if (dt != null && DateTime.now().difference(dt).inHours > 24) {
+                shownIds.add(idStr);
+                await prefs.setStringList('shown_notif_ids', shownIds);
+                continue;
+              }
+            }
+
             final String title = item['baslik'] ?? item['title'] ?? 'SOBO Society';
             final String body = item['mesaj'] ?? item['body'] ?? item['message'] ?? '';
 
