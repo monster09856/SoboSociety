@@ -14,7 +14,7 @@ from app.schemas.auth import (
     OTPVerifyRequest,
     TokenResponse,
 )
-from app.services.hatalar import GecersizOTP
+from app.services.hatalar import GecersizOTP, GecersizTelefon
 from app.services.telefon import normalize_telefon
 from app.settings import ayarlar
 
