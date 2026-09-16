@@ -36,7 +36,7 @@ class AIChatResponse(BaseModel):
 
 
 SOBO_KNOWLEDGE_BASE = """
-Sobo Society, Nişantaşı Teşvikiye'de yer alan boutique bir Barre, Pilates ve Functional antrenman stüdyosudur.
+Sobo Society, Afyonkarahisar Uydukent'te yer alan boutique bir Barre, Pilates ve Functional antrenman stüdyosudur.
 Slogan: "Not just a studio. It's a society."
 Marka Teması: Pantone 17-1230 TCX (Mocha Mousse #A47864)
 
@@ -52,8 +52,9 @@ Resmi İptal & Ders Kuralları:
 - Özel Paketler: İhtiyaca göre kişiye/üyeye özel ders hakkı, süresi ve paket adı tanımlanabilmektedir.
 - Vücut Ölçüleri & Form Takibi: Üyelerimiz /hesabim sayfasından Bel, Kalça, Sağ/Sol İç Bacak, Sağ/Sol Bacak, Sağ/Sol Kol, Boy, Kilo ve Sağlık/Sakatlık notlarını girebilir. Eğitmenlerimiz gelişimlerini yakından takip eder.
 
-Adres: Teşvikiye, Abdi İpekçi Cd. No:42, Nişantaşı / İstanbul
+Adres: Cumhuriyet Mah. 16. Sk. No:3 D:13 Metropol Plaza 1. Kat (İstek Koleji Arkası, Uydukent), Afyonkarahisar
 WhatsApp İletişim: +90 531 603 30 80
+Email: sobosociety@gmail.com
 Instagram: @thesobosociety
 """
 
@@ -342,11 +343,12 @@ async def ai_concierge_chat(
     # --- INTENT 7: ADRES / İLETİŞİM / KONUM ---
     elif any(k in prompt for k in ["nerede", "adres", "konum", "ulaşım", "harita", "iletişim", "telefon", "whatsapp", "instagram"]):
         yanit = (
-            "Stüdyomuz Nişantaşı'nın tam kalbinde yer alıyor! 📍\n\n"
-            "• **Adres:** Teşvikiye, Abdi İpekçi Cd. No:42, Nişantaşı / İstanbul\n"
+            "Sobo Society Stüdyomuz Afyonkarahisar Uydukent'te Metropol Plaza'da yer almaktadır! 📍\n\n"
+            "• **Adres:** Cumhuriyet Mah. 16. Sk. No:3 D:13 Metropol Plaza 1. Kat (İstek Koleji Arkası, Uydukent) Afyonkarahisar\n"
             "• **WhatsApp İletişim:** +90 531 603 30 80\n"
+            "• **E-posta:** sobosociety@gmail.com\n"
             "• **Instagram:** @thesobosociety\n\n"
-            "Dilerseniz WhatsApp üzerinden bize tek tıkla mesaj atabilirsiniz!"
+            "Dilerseniz WhatsApp butonuna tıklayarak bize anında yazabilir ve canlı konum isteyebilirsiniz!"
         )
         oneriler = ["WhatsApp ile yazın", "Ders programı", "Paket Fiyatları"]
         aksiyon = AIActionButton(etiket="WhatsApp İletişim", url="https://wa.me/905316033080", tip="external")
