@@ -1869,6 +1869,8 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
             backgroundColor: SoboTheme.clay,
           ),
         );
+      }
+    }
   }
 
   Future<void> _handleApproveMember(dynamic m) async {
