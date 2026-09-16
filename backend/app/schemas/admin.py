@@ -65,6 +65,13 @@ class MemberPackageResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+class MemberPackageUpdateRequest(BaseModel):
+    bitis: date | None = Field(default=None, description="Yeni bitiş tarihi (YYYY-MM-DD)")
+    ek_gun: int | None = Field(default=None, description="Mevcut bitişe eklenecek gün sayısı")
+    kalan_ders: int | None = Field(default=None, description="Yeni kalan ders adedi")
+    paket_adi: str | None = Field(default=None, description="Özel paket adı")
+
+
 class SessionGenerateRequest(BaseModel):
     baslangic: date = Field(..., description="Başlangıç tarihi")
     bitis: date = Field(..., description="Bitiş tarihi (dahil)")

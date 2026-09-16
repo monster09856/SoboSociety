@@ -18,6 +18,7 @@ from app.schemas.admin import (
     EventResponse,
     EventRSVPAttendeeResponse,
     MemberPackageResponse,
+    MemberPackageUpdateRequest,
     MemberAdminDetailResponse,
     PackageAssignRequest,
     QuickBookingRequest,
@@ -276,6 +277,62 @@ async def cancel_member_package_endpoint(
 
     await db.commit()
     return await _build_member_detail_response(db, m)
+
+
+@router.put("/members/{member_id}/packages/{member_package_id}", response_model=MemberAdminDetailResponse)
+async def update_member_package_endpoint(
+    member_id: int,
+    member_package_id: int,
+    body: MemberPackageUpdateRequest,
+    db: AsyncSession = Depends(get_db),
+    current_admin: Member = Depends(get_current_admin),
+):
+    """Admin tarafından üyenin aktif paketinin bitiş tarihini veya kalan ders adedini düzenler."""
+    m = await db.get(Member, member_id)
+    if not m:
+        raise HTTPException(status_code=404, detail="Üye bulunamadı.")
+
+    mp = await db.get(MemberPackage, member_package_id)
+    if not mp or mp.member_id != member_id:
+        raise HTTPException(status_code=404, detail="Paket kaydı bulunamadı.")
+
+    if body.bitis is not None:
+        mp.bitis = body.bitis
+    elif body.ek_gun is not None and body.ek_gun > 0:
+        base_date = max(mp.bitis, date.today()) if mp.bitis else date.today()
+        mp.bitis = base_date + timedelta(days=body.ek_gun)
+
+    if body.kalan_ders is not None:
+        cur_b = await bakiye(db, member_id)
+        fark = body.kalan_ders - cur_b
+        if fark != 0:
+            await hareket_ekle(
+                db,
+                member_id=member_id,
+                tip=LedgerTipi.ADMIN_ADJUST,
+                miktar=fark,
+                sebep=f"Admin tarafından kalan ders {cur_b} -> {body.kalan_ders} olarak güncellendi.",
+                member_package_id=member_package_id,
+            )
+
+    await db.commit()
+    return await _build_member_detail_response(db, m)
+
+
+@router.delete("/members/{member_id}/packages/{member_package_id}", response_model=MemberAdminDetailResponse)
+async def delete_member_package_endpoint(
+    member_id: int,
+    member_package_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_admin: Member = Depends(get_current_admin),
+):
+    """Admin tarafından üyenin aktif paketini iptal eder/siler ve kalan ders hakkını sıfırlar."""
+    return await cancel_member_package_endpoint(
+        member_id=member_id,
+        member_package_id=member_package_id,
+        db=db,
+        current_admin=current_admin,
+    )
 
 
 @router.post("/sessions/generate", response_model=SessionGenerateResponse)
