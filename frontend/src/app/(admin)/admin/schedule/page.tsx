@@ -569,9 +569,9 @@ export default function AdminSchedulePage() {
 
         {/* Modal: Edit Existing Session */}
         {editingSession && (
-          <div className="fixed inset-0 z-50 bg-ink/60 backdrop-blur-xs flex items-center justify-center p-4">
-            <Card className="max-w-md w-full bg-sand border border-line rounded-2xl shadow-xl animate-in fade-in zoom-in-95 duration-150">
-              <CardHeader className="border-b border-line pb-4 relative">
+          <div className="fixed inset-0 z-50 bg-ink/60 backdrop-blur-xs overflow-y-auto p-4 sm:p-6 flex items-center justify-center min-h-screen">
+            <Card className="max-w-md w-full max-h-[90vh] flex flex-col my-auto bg-sand border border-line rounded-2xl shadow-xl animate-in fade-in zoom-in-95 duration-150 overflow-hidden">
+              <CardHeader className="border-b border-line pb-4 relative shrink-0">
                 <button
                   onClick={() => setEditingSession(null)}
                   className="absolute top-4 right-4 text-secondary hover:text-ink p-1 rounded-full hover:bg-sand cursor-pointer"
@@ -586,7 +586,7 @@ export default function AdminSchedulePage() {
                   Dersin yapılacağı günü, saati, eğitmeni, kontenjanı ve ücreti değiştirin.
                 </CardDescription>
               </CardHeader>
-              <CardContent className="pt-6 space-y-4">
+              <CardContent className="pt-6 space-y-4 overflow-y-auto flex-1">
                 <form onSubmit={handleUpdateSession} className="space-y-4">
                   <div>
                     <div className="flex items-center justify-between mb-1.5">
@@ -737,10 +737,10 @@ export default function AdminSchedulePage() {
                 <CardHeader className="border-b border-line/80 pb-4">
                   <CardTitle className="flex items-center gap-2.5 text-xl font-serif font-bold text-ink">
                     <Calendar className="w-5 h-5 text-espresso" />
-                    <span>{buyukHarf("Şablondan Toplu Ders Oturumları Türet")}</span>
+                    <span>{buyukHarf("Aylık Programı Otomatik Oluştur (Tek Tıkla Tüm Ay)")}</span>
                   </CardTitle>
-                  <CardDescription className="text-secondary text-xs font-medium">
-                    Haftalık sabit ders programı şablonunu seçtiğiniz tarih aralığı için otomatik oturumlara dönüştürün.
+                  <CardDescription className="text-secondary text-xs font-medium leading-relaxed">
+                    Yukarıda tanımladığınız haftalık sabit ders programınızı 30 günlük (veya istediğiniz sürelik) tüm takvime <strong>tek tıkla otomatik olarak ekleyin</strong>. Dersleri tek tek eklemenize gerek kalmaz!
                   </CardDescription>
                 </CardHeader>
 
@@ -749,7 +749,7 @@ export default function AdminSchedulePage() {
                     {/* Hızlı Seçim Butonları */}
                     <div>
                       <label className="block text-xs font-bold text-secondary uppercase tracking-wider mb-2.5">
-                        {buyukHarf("Hızlı Tarih Şablonları")}
+                        {buyukHarf("Hızlı Süre Seçimi (Otomatik Program)")}
                       </label>
                       <div className="flex flex-wrap gap-2.5">
                         <button
@@ -757,21 +757,28 @@ export default function AdminSchedulePage() {
                           onClick={() => setPresetRange(7)}
                           className="px-4 py-2 rounded-xl text-xs font-bold bg-ivory text-espresso border border-line hover:border-mocha/60 transition-all cursor-pointer shadow-xs"
                         >
-                          Gelecek 7 Gün
+                          1 Hafta (7 Gün)
                         </button>
                         <button
                           type="button"
                           onClick={() => setPresetRange(14)}
                           className="px-4 py-2 rounded-xl text-xs font-bold bg-ivory text-espresso border border-line hover:border-mocha/60 transition-all cursor-pointer shadow-xs"
                         >
-                          Gelecek 14 Gün
+                          2 Hafta (14 Gün)
                         </button>
                         <button
                           type="button"
                           onClick={() => setPresetRange(30)}
+                          className="px-4 py-2 rounded-xl text-xs font-bold bg-espresso text-ivory border border-espresso hover:bg-espresso/90 transition-all cursor-pointer shadow-xs"
+                        >
+                          🗓️ Gelecek 30 Gün (Tüm Ayı Oluştur)
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setPresetRange(60)}
                           className="px-4 py-2 rounded-xl text-xs font-bold bg-ivory text-espresso border border-line hover:border-mocha/60 transition-all cursor-pointer shadow-xs"
                         >
-                          Gelecek 30 Gün
+                          2 Ay (60 Gün)
                         </button>
                       </div>
                     </div>

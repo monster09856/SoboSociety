@@ -132,8 +132,8 @@ export function AdminNav() {
 
       {/* Admin Credentials Settings Modal */}
       {showSettingsModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4">
-          <div className="bg-ivory border border-line rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl relative">
+        <div className="fixed inset-0 z-50 overflow-y-auto flex items-center justify-center bg-black/40 backdrop-blur-xs p-4 sm:p-6 min-h-screen">
+          <div className="bg-ivory border border-line rounded-3xl p-6 sm:p-8 max-w-md w-full max-h-[90vh] overflow-y-auto shadow-2xl relative my-auto flex flex-col">
             <button
               onClick={() => setShowSettingsModal(false)}
               className="absolute top-4 right-4 text-secondary hover:text-ink p-1 rounded-full hover:bg-sand cursor-pointer"

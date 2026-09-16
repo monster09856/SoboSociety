@@ -22,10 +22,9 @@ export function Navigation() {
   }, [])
 
   const navLinks = [
-    { href: '#dersler', label: 'Dersler' },
     { href: '#canli-program', label: 'Canlı Program' },
+    { href: '#workshoplar', label: 'Workshop & Etkinlikler' },
     { href: '#paketler', label: 'Paketler' },
-    { href: '#iletisim', label: 'İletişim' },
   ]
 
   return (

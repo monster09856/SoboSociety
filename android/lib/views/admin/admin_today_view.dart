@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../services/api_client.dart';
 import '../../theme/sobo_theme.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class AdminTodayView extends StatefulWidget {
   const AdminTodayView({super.key});
@@ -614,6 +615,306 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
           );
         },
       ),
+    );
+  }
+
+  void _showWorkshopAttendeesModal(dynamic workshopRaw) {
+    final Map<String, dynamic> workshop = workshopRaw is Map<String, dynamic>
+        ? workshopRaw
+        : Map<String, dynamic>.from(workshopRaw as Map);
+
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (modalContext, setModalState) {
+            final List<dynamic> attendees = workshop['katilimcilar'] is List
+                ? (workshop['katilimcilar'] as List)
+                : <dynamic>[];
+            final int count = attendees.length;
+            final int quota = workshop['kontenjan'] ?? 0;
+
+            return Container(
+              constraints: BoxConstraints(
+                maxHeight: MediaQuery.of(ctx).size.height * 0.85,
+              ),
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Handle bar
+                  Center(
+                    child: Container(
+                      margin: const EdgeInsets.only(top: 12, bottom: 8),
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: SoboTheme.line,
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                  ),
+
+                  // Header
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: SoboTheme.sandLight,
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Text(
+                                  workshop['turu'] ?? 'Workshop',
+                                  style: SoboTheme.fontSans(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                    color: SoboTheme.espresso,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 6),
+                              Text(
+                                workshop['baslik'] ?? 'Workshop',
+                                style: SoboTheme.fontSerif(
+                                  fontSize: 17,
+                                  fontWeight: FontWeight.bold,
+                                  color: SoboTheme.ink,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                'Kayıtlı Katılımcılar ($count / $quota Kişi)',
+                                style: SoboTheme.fontSans(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                  color: SoboTheme.mocha,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.close_rounded, color: SoboTheme.secondary),
+                          onPressed: () => Navigator.pop(ctx),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const Divider(height: 1, color: SoboTheme.line),
+
+                  // Attendees List or Empty
+                  Flexible(
+                    child: attendees.isEmpty
+                        ? Padding(
+                            padding: const EdgeInsets.all(36.0),
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                const Icon(Icons.people_outline_rounded, size: 48, color: SoboTheme.secondary),
+                                const SizedBox(height: 12),
+                                Text(
+                                  'Henüz kayıtlı katılımcı yok',
+                                  style: SoboTheme.fontSerif(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                    color: SoboTheme.ink,
+                                  ),
+                                ),
+                                const SizedBox(height: 6),
+                                Text(
+                                  'Üyeler veya misafirler workshopa kayıt olduklarında anında burada görünecektir.',
+                                  textAlign: TextAlign.center,
+                                  style: SoboTheme.fontSans(fontSize: 12, color: SoboTheme.secondary),
+                                ),
+                              ],
+                            ),
+                          )
+                        : ListView.separated(
+                            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                            itemCount: attendees.length,
+                            separatorBuilder: (_, __) => const Divider(height: 20, color: SoboTheme.line),
+                            itemBuilder: (itemCtx, idx) {
+                              final att = attendees[idx] is Map<String, dynamic>
+                                  ? attendees[idx] as Map<String, dynamic>
+                                  : Map<String, dynamic>.from(attendees[idx] as Map);
+                              final String name = att['ad'] ?? 'İsimsiz Katılımcı';
+                              final String phone = (att['telefon'] ?? '').toString();
+                              final bool isSingle = att['tek_katilim'] == true;
+                              final int rsvpId = att['rsvp_id'] ?? 0;
+                              final String createdAt = att['created_at'] != null
+                                  ? att['created_at'].toString().substring(0, 16).replaceAll('T', ' ')
+                                  : '';
+
+                              return Row(
+                                crossAxisAlignment: CrossAxisAlignment.center,
+                                children: [
+                                  CircleAvatar(
+                                    radius: 18,
+                                    backgroundColor: SoboTheme.sandLight,
+                                    child: Text(
+                                      '${idx + 1}',
+                                      style: SoboTheme.fontSans(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.bold,
+                                        color: SoboTheme.espresso,
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Row(
+                                          children: [
+                                            Flexible(
+                                              child: Text(
+                                                name,
+                                                style: SoboTheme.fontSans(
+                                                  fontSize: 13.5,
+                                                  fontWeight: FontWeight.bold,
+                                                  color: SoboTheme.ink,
+                                                ),
+                                                overflow: TextOverflow.ellipsis,
+                                              ),
+                                            ),
+                                            const SizedBox(width: 6),
+                                            Container(
+                                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                              decoration: BoxDecoration(
+                                                color: isSingle ? const Color(0xFFFEF3C7) : SoboTheme.sage.withOpacity(0.15),
+                                                borderRadius: BorderRadius.circular(6),
+                                                border: Border.all(
+                                                  color: isSingle ? const Color(0xFFF59E0B) : SoboTheme.sage.withOpacity(0.4),
+                                                ),
+                                              ),
+                                              child: Text(
+                                                isSingle ? 'Tek Katılım' : 'Sobo Üyesi',
+                                                style: SoboTheme.fontSans(
+                                                  fontSize: 9.5,
+                                                  fontWeight: FontWeight.bold,
+                                                  color: isSingle ? const Color(0xFFB45309) : SoboTheme.sage,
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        if (phone.isNotEmpty) ...[
+                                          const SizedBox(height: 2),
+                                          Text(
+                                            phone,
+                                            style: SoboTheme.fontSans(fontSize: 11.5, color: SoboTheme.secondary),
+                                          ),
+                                        ],
+                                        if (createdAt.isNotEmpty) ...[
+                                          const SizedBox(height: 2),
+                                          Text(
+                                            'Kayıt: $createdAt',
+                                            style: SoboTheme.fontSans(fontSize: 10, color: SoboTheme.secondary.withOpacity(0.8)),
+                                          ),
+                                        ],
+                                      ],
+                                    ),
+                                  ),
+                                  // Quick Call
+                                  if (phone.isNotEmpty)
+                                    IconButton(
+                                      icon: const Icon(Icons.phone_rounded, color: SoboTheme.mocha, size: 20),
+                                      tooltip: 'Ara',
+                                      onPressed: () => launchUrl(Uri.parse('tel:$phone')),
+                                    ),
+                                  // Quick WhatsApp
+                                  if (phone.isNotEmpty)
+                                    IconButton(
+                                      icon: const Icon(Icons.chat_bubble_outline_rounded, color: Color(0xFF25D366), size: 20),
+                                      tooltip: 'WhatsApp',
+                                      onPressed: () {
+                                        final digits = phone.replaceAll(RegExp(r'\D'), '');
+                                        final waNumber = digits.startsWith('90')
+                                            ? digits
+                                            : (digits.startsWith('0') ? '90${digits.substring(1)}' : '90$digits');
+                                        launchUrl(
+                                          Uri.parse('https://wa.me/$waNumber'),
+                                          mode: LaunchMode.externalApplication,
+                                        );
+                                      },
+                                    ),
+                                  // Remove Attendee
+                                  IconButton(
+                                    icon: const Icon(Icons.delete_outline_rounded, color: SoboTheme.clay, size: 20),
+                                    tooltip: 'Katılımcıyı Çıkar',
+                                    onPressed: () async {
+                                      final bool? confirm = await showDialog<bool>(
+                                        context: ctx,
+                                        builder: (dCtx) => AlertDialog(
+                                          title: Text('Katılımcıyı Çıkar', style: SoboTheme.fontSerif(fontSize: 16, fontWeight: FontWeight.bold)),
+                                          content: Text('"$name" adlı katılımcıyı bu etkinlikten çıkarmak istediğinize emin misiniz?', style: SoboTheme.fontSans(fontSize: 13)),
+                                          actions: [
+                                            TextButton(
+                                              onPressed: () => Navigator.pop(dCtx, false),
+                                              child: const Text('Vazgeç'),
+                                            ),
+                                            ElevatedButton(
+                                              style: ElevatedButton.styleFrom(backgroundColor: SoboTheme.clay, foregroundColor: Colors.white),
+                                              onPressed: () => Navigator.pop(dCtx, true),
+                                              child: const Text('Çıkar'),
+                                            ),
+                                          ],
+                                        ),
+                                      );
+                                      if (confirm == true) {
+                                        try {
+                                          await ApiClient.delete('/admin/events/${workshop['id']}/rsvp/$rsvpId');
+                                          setModalState(() {
+                                            attendees.removeWhere((item) => item['rsvp_id'] == rsvpId);
+                                          });
+                                          setState(() {
+                                            workshop['katilimcilar'] = attendees;
+                                            workshop['dolu_sayi'] = attendees.length;
+                                          });
+                                          if (mounted) {
+                                            ScaffoldMessenger.of(context).showSnackBar(
+                                              SnackBar(content: Text('"$name" etkinlikten çıkarıldı.'), backgroundColor: SoboTheme.sage),
+                                            );
+                                          }
+                                        } catch (err) {
+                                          if (mounted) {
+                                            ScaffoldMessenger.of(context).showSnackBar(
+                                              SnackBar(content: Text('Hata: $err'), backgroundColor: SoboTheme.clay),
+                                            );
+                                          }
+                                        }
+                                      }
+                                    },
+                                  ),
+                                ],
+                              );
+                            },
+                          ),
+                  ),
+
+                  // Bottom padding for safe area
+                  SizedBox(height: MediaQuery.of(ctx).padding.bottom + 12),
+                ],
+              ),
+            );
+          },
+        );
+      },
     );
   }
 
@@ -2301,10 +2602,39 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
                             ),
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                              decoration: BoxDecoration(color: SoboTheme.sandLight, borderRadius: BorderRadius.circular(10)),
-                              child: Text(
-                                '${w['kontenjan'] ?? 0} Kişi Kontenjan',
-                                style: SoboTheme.fontSans(fontSize: 10.5, fontWeight: FontWeight.bold, color: SoboTheme.espresso),
+                              decoration: BoxDecoration(
+                                color: ((w['katilimcilar'] is List && (w['katilimcilar'] as List).isNotEmpty) || (w['dolu_sayi'] ?? 0) > 0)
+                                    ? SoboTheme.sage.withOpacity(0.15)
+                                    : SoboTheme.sandLight,
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(
+                                  color: ((w['katilimcilar'] is List && (w['katilimcilar'] as List).isNotEmpty) || (w['dolu_sayi'] ?? 0) > 0)
+                                      ? SoboTheme.sage.withOpacity(0.4)
+                                      : SoboTheme.line,
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    Icons.people_alt_rounded,
+                                    size: 13,
+                                    color: ((w['katilimcilar'] is List && (w['katilimcilar'] as List).isNotEmpty) || (w['dolu_sayi'] ?? 0) > 0)
+                                        ? SoboTheme.sage
+                                        : SoboTheme.espresso,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    '${(w['katilimcilar'] is List) ? (w['katilimcilar'] as List).length : (w['dolu_sayi'] ?? 0)} / ${w['kontenjan'] ?? 0} Kayıtlı',
+                                    style: SoboTheme.fontSans(
+                                      fontSize: 10.5,
+                                      fontWeight: FontWeight.bold,
+                                      color: ((w['katilimcilar'] is List && (w['katilimcilar'] as List).isNotEmpty) || (w['dolu_sayi'] ?? 0) > 0)
+                                          ? SoboTheme.sage
+                                          : SoboTheme.espresso,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
                           ],
@@ -2339,31 +2669,51 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
                         const Divider(height: 1, color: SoboTheme.line),
                         const SizedBox(height: 10),
                         Row(
-                          mainAxisAlignment: MainAxisAlignment.end,
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            OutlinedButton.icon(
-                              onPressed: () => _showWorkshopFormModal(eventToEdit: w),
-                              icon: const Icon(Icons.edit_outlined, size: 14, color: SoboTheme.espresso),
-                              label: Text('Düzenle', style: SoboTheme.fontSans(fontSize: 11, fontWeight: FontWeight.bold, color: SoboTheme.espresso)),
-                              style: OutlinedButton.styleFrom(
+                            ElevatedButton.icon(
+                              onPressed: () => _showWorkshopAttendeesModal(w),
+                              icon: const Icon(Icons.people_alt_outlined, size: 14, color: Colors.white),
+                              label: Text(
+                                'Katılımcılar (${(w['katilimcilar'] is List) ? (w['katilimcilar'] as List).length : (w['dolu_sayi'] ?? 0)})',
+                                style: SoboTheme.fontSans(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.white),
+                              ),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: SoboTheme.espresso,
+                                foregroundColor: Colors.white,
                                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                                 minimumSize: Size.zero,
                                 tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                               ),
                             ),
-                            const SizedBox(width: 8),
-                            OutlinedButton.icon(
-                              onPressed: () => _handleDeleteWorkshop(w['id'], w['baslik'] ?? 'Workshop'),
-                              icon: const Icon(Icons.delete_outline_rounded, size: 14, color: SoboTheme.clay),
-                              label: Text('Sil', style: SoboTheme.fontSans(fontSize: 11, fontWeight: FontWeight.bold, color: SoboTheme.clay)),
-                              style: OutlinedButton.styleFrom(
-                                side: const BorderSide(color: SoboTheme.clay),
-                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                                minimumSize: Size.zero,
-                                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                              ),
+                            Row(
+                              children: [
+                                OutlinedButton.icon(
+                                  onPressed: () => _showWorkshopFormModal(eventToEdit: w),
+                                  icon: const Icon(Icons.edit_outlined, size: 14, color: SoboTheme.espresso),
+                                  label: Text('Düzenle', style: SoboTheme.fontSans(fontSize: 11, fontWeight: FontWeight.bold, color: SoboTheme.espresso)),
+                                  style: OutlinedButton.styleFrom(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                                    minimumSize: Size.zero,
+                                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                  ),
+                                ),
+                                const SizedBox(width: 6),
+                                OutlinedButton.icon(
+                                  onPressed: () => _handleDeleteWorkshop(w['id'], w['baslik'] ?? 'Workshop'),
+                                  icon: const Icon(Icons.delete_outline_rounded, size: 14, color: SoboTheme.clay),
+                                  label: Text('Sil', style: SoboTheme.fontSans(fontSize: 11, fontWeight: FontWeight.bold, color: SoboTheme.clay)),
+                                  style: OutlinedButton.styleFrom(
+                                    side: const BorderSide(color: SoboTheme.clay),
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                                    minimumSize: Size.zero,
+                                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                  ),
+                                ),
+                              ],
                             ),
                           ],
                         ),

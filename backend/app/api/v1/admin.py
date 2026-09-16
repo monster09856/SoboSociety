@@ -8,11 +8,15 @@ from app.api.deps import get_db, get_current_admin
 from app.models import (
     Booking, BookingDurumu, BookingKaynagi, ClassSession, Member, WaitlistEntry, 
     CreditLedger, LedgerTipi, MemberPackage, DeviceToken, Notification,
+    StudioEvent, EventRSVP,
 )
 from app.schemas.admin import (
     AttendanceSubmitRequest,
     AttendanceSubmitResponse,
     AttendeeResponse,
+    EventCreateRequest,
+    EventResponse,
+    EventRSVPAttendeeResponse,
     MemberPackageResponse,
     MemberAdminDetailResponse,
     PackageAssignRequest,
@@ -871,9 +875,57 @@ async def list_admin_events(
     db: AsyncSession = Depends(get_db),
     current_admin: Member = Depends(get_current_admin),
 ):
-    """Admin paneli için tüm stüdyo etkinliklerini ve workshop'ları listeler."""
+    """Admin paneli için tüm stüdyo etkinliklerini ve workshop'ları katılımcı listeleriyle birlikte döndürür."""
     res = await db.execute(select(StudioEvent).order_by(StudioEvent.tarih_saat.desc()))
-    return list(res.scalars().all())
+    events = list(res.scalars().all())
+
+    event_ids = [e.id for e in events]
+    attendees_by_event: dict[int, list[EventRSVPAttendeeResponse]] = {e_id: [] for e_id in event_ids}
+
+    if event_ids:
+        rsvp_res = await db.execute(
+            select(EventRSVP, Member)
+            .join(Member, EventRSVP.member_id == Member.id)
+            .where(
+                EventRSVP.event_id.in_(event_ids),
+                EventRSVP.durum == "registered",
+            )
+            .order_by(EventRSVP.created_at.asc())
+        )
+        for rsvp, member in rsvp_res.all():
+            att = EventRSVPAttendeeResponse(
+                rsvp_id=rsvp.id,
+                member_id=member.id,
+                ad=member.ad,
+                telefon=member.telefon or "",
+                tek_katilim=rsvp.tek_katilim,
+                durum=rsvp.durum,
+                created_at=rsvp.created_at,
+            )
+            if rsvp.event_id in attendees_by_event:
+                attendees_by_event[rsvp.event_id].append(att)
+
+    result = []
+    for ev in events:
+        atts = attendees_by_event.get(ev.id, [])
+        result.append(
+            EventResponse(
+                id=ev.id,
+                baslik=ev.baslik,
+                turu=ev.turu,
+                tarih_saat=ev.tarih_saat,
+                aciklama=ev.aciklama,
+                kontenjan=ev.kontenjan,
+                dolu_sayi=len(atts),
+                ucret=ev.ucret,
+                tek_katilim_acik=ev.tek_katilim_acik,
+                tek_katilim_ucret_tl=ev.tek_katilim_ucret_tl,
+                aktif=ev.aktif,
+                katilimcilar=atts,
+            )
+        )
+
+    return result
 
 
 @router.post("/events", response_model=EventResponse)
@@ -914,7 +966,20 @@ async def create_admin_event(
     except Exception as e:
         print(f"[WORKSHOP NOTIF ERROR] {e}")
 
-    return ev
+    return EventResponse(
+        id=ev.id,
+        baslik=ev.baslik,
+        turu=ev.turu,
+        tarih_saat=ev.tarih_saat,
+        aciklama=ev.aciklama,
+        kontenjan=ev.kontenjan,
+        dolu_sayi=0,
+        ucret=ev.ucret,
+        tek_katilim_acik=ev.tek_katilim_acik,
+        tek_katilim_ucret_tl=ev.tek_katilim_ucret_tl,
+        aktif=ev.aktif,
+        katilimcilar=[],
+    )
 
 
 @router.delete("/events/{event_id}")
@@ -931,6 +996,27 @@ async def delete_admin_event(
     await db.delete(ev)
     await db.commit()
     return {"silindi": True, "event_id": event_id}
+
+
+@router.delete("/events/{event_id}/rsvp/{rsvp_id}")
+async def cancel_admin_event_rsvp(
+    event_id: int,
+    rsvp_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_admin: Member = Depends(get_current_admin),
+):
+    """Admin tarafından workshop katılımcısının kaydını iptal eder."""
+    rsvp = await db.get(EventRSVP, rsvp_id)
+    if not rsvp or rsvp.event_id != event_id:
+        raise HTTPException(status_code=404, detail="Kayıt bulunamadı.")
+
+    ev = await db.get(StudioEvent, event_id)
+    if ev and ev.dolu_sayi > 0:
+        ev.dolu_sayi -= 1
+
+    rsvp.durum = "cancelled"
+    await db.commit()
+    return {"silindi": True, "rsvp_id": rsvp_id}
 
 
 @router.put("/events/{event_id}", response_model=EventResponse)
@@ -957,7 +1043,43 @@ async def update_admin_event(
     
     await db.commit()
     await db.refresh(ev)
-    return ev
+
+    rsvp_res = await db.execute(
+        select(EventRSVP, Member)
+        .join(Member, EventRSVP.member_id == Member.id)
+        .where(
+            EventRSVP.event_id == event_id,
+            EventRSVP.durum == "registered",
+        )
+        .order_by(EventRSVP.created_at.asc())
+    )
+    atts = [
+        EventRSVPAttendeeResponse(
+            rsvp_id=rsvp.id,
+            member_id=member.id,
+            ad=member.ad,
+            telefon=member.telefon or "",
+            tek_katilim=rsvp.tek_katilim,
+            durum=rsvp.durum,
+            created_at=rsvp.created_at,
+        )
+        for rsvp, member in rsvp_res.all()
+    ]
+
+    return EventResponse(
+        id=ev.id,
+        baslik=ev.baslik,
+        turu=ev.turu,
+        tarih_saat=ev.tarih_saat,
+        aciklama=ev.aciklama,
+        kontenjan=ev.kontenjan,
+        dolu_sayi=len(atts),
+        ucret=ev.ucret,
+        tek_katilim_acik=ev.tek_katilim_acik,
+        tek_katilim_ucret_tl=ev.tek_katilim_ucret_tl,
+        aktif=ev.aktif,
+        katilimcilar=atts,
+    )
 
 
 # --- Dynamic Class Types & Instructors Endpoints ---

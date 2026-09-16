@@ -71,7 +71,8 @@ export default function AdminMembersPage() {
   const [isCustomPkg, setIsCustomPkg] = useState(false)
   const [customPkgName, setCustomPkgName] = useState('')
   const [customCredits, setCustomCredits] = useState(10)
-  const [customDays, setCustomDays] = useState(45)
+  const [customUnit, setCustomUnit] = useState<'hafta' | 'gun'>('hafta')
+  const [customVal, setCustomVal] = useState(6)
   const [assigningPkg, setAssigningPkg] = useState(false)
 
   const loadMembers = async (query?: string) => {
@@ -179,13 +180,14 @@ export default function AdminMembersPage() {
 
     try {
       if (isCustomPkg) {
+        const actualDays = customUnit === 'hafta' ? Number(customVal) * 7 : Number(customVal)
         await admin.assignPackage({
           member_id: pkgMember.id,
           ozel_paket_adi: customPkgName.trim() || 'Özel Üye Paketi',
           ozel_ders_adedi: Number(customCredits),
-          ozel_gecerlilik_gun: Number(customDays),
+          ozel_gecerlilik_gun: actualDays,
         })
-        setSuccess(`${pkgMember.ad} üyesine özel ${customPkgName || 'Özel Paket'} (${customCredits} Ders / ${customDays} Gün) tanımlandı.`)
+        setSuccess(`${pkgMember.ad} üyesine özel ${customPkgName || 'Özel Paket'} (${customCredits} Ders / ${actualDays} Gün - ${customUnit === 'hafta' ? `${customVal} Hafta` : ''}) tanımlandı.`)
       } else {
         await admin.assignPackage({
           member_id: pkgMember.id,
@@ -441,7 +443,8 @@ export default function AdminMembersPage() {
                           setIsCustomPkg(false)
                           setCustomPkgName(`${m.ad} Özel Paket`)
                           setCustomCredits(10)
-                          setCustomDays(45)
+                          setCustomUnit('hafta')
+                          setCustomVal(6)
                         }}
                         className="p-1.5 rounded-xl bg-ivory border border-line hover:border-espresso text-ink hover:text-espresso text-[10px] font-bold flex flex-col items-center gap-1 transition-all cursor-pointer"
                         title="Paket Tanımla"
@@ -481,9 +484,9 @@ export default function AdminMembersPage() {
 
         {/* Modal 1: Member Edit / Full Body Measurements & Credit Intervention */}
         {editingMember && (
-          <div className="fixed inset-0 z-50 bg-ink/60 backdrop-blur-xs flex items-center justify-center p-4">
-            <Card className="max-w-lg w-full bg-sand border border-line rounded-2xl shadow-xl animate-in fade-in zoom-in-95 duration-150 max-h-[90vh] overflow-y-auto">
-              <CardHeader className="border-b border-line pb-4 relative">
+          <div className="fixed inset-0 z-50 bg-ink/60 backdrop-blur-xs overflow-y-auto p-4 sm:p-6 flex items-center justify-center min-h-screen">
+            <Card className="max-w-lg w-full max-h-[90vh] flex flex-col my-auto bg-sand border border-line rounded-2xl shadow-xl animate-in fade-in zoom-in-95 duration-150 overflow-hidden">
+              <CardHeader className="border-b border-line pb-4 relative shrink-0">
                 <button
                   type="button"
                   onClick={() => setEditingMember(null)}
@@ -499,7 +502,7 @@ export default function AdminMembersPage() {
                   <strong>{editingMember.ad}</strong> üyesinin tüm ölçülerini, bakiyesini ve özel notlarını düzenleyin.
                 </CardDescription>
               </CardHeader>
-              <CardContent className="pt-6 space-y-5">
+              <CardContent className="pt-6 space-y-5 overflow-y-auto flex-1">
                 <form onSubmit={handleUpdateMember} className="space-y-4">
                   {/* Temel Üye Bilgileri */}
                   <div className="grid grid-cols-2 gap-3">
@@ -675,9 +678,9 @@ export default function AdminMembersPage() {
 
         {/* Modal 2: Single Member Notification */}
         {notifMember && (
-          <div className="fixed inset-0 z-50 bg-ink/60 backdrop-blur-xs flex items-center justify-center p-4">
-            <Card className="max-w-md w-full bg-sand border border-line rounded-2xl shadow-xl animate-in fade-in zoom-in-95 duration-150">
-              <CardHeader className="border-b border-line pb-4">
+          <div className="fixed inset-0 z-50 bg-ink/60 backdrop-blur-xs overflow-y-auto p-4 sm:p-6 flex items-center justify-center min-h-screen">
+            <Card className="max-w-md w-full max-h-[90vh] flex flex-col my-auto bg-sand border border-line rounded-2xl shadow-xl animate-in fade-in zoom-in-95 duration-150 overflow-hidden">
+              <CardHeader className="border-b border-line pb-4 shrink-0">
                 <CardTitle className="font-serif text-lg font-bold text-ink flex items-center gap-2">
                   <Send className="w-4 h-4 text-espresso" />
                   <span>Üyeye Özel Bildirim Gönder</span>
@@ -686,7 +689,7 @@ export default function AdminMembersPage() {
                   <strong>{notifMember.ad}</strong> üyesine doğrudan push bildirim ve duyuru iletin.
                 </CardDescription>
               </CardHeader>
-              <CardContent className="pt-6 space-y-4">
+              <CardContent className="pt-6 space-y-4 overflow-y-auto flex-1">
                 <form onSubmit={handleSendSinglePush} className="space-y-4">
                   <div>
                     <label className="block text-xs font-bold text-secondary uppercase mb-1">Bildirim Başlığı</label>
@@ -735,9 +738,9 @@ export default function AdminMembersPage() {
 
         {/* Modal 3: Assign Custom / Standard Package */}
         {pkgMember && (
-          <div className="fixed inset-0 z-50 bg-ink/60 backdrop-blur-xs flex items-center justify-center p-4">
-            <Card className="max-w-md w-full bg-sand border border-line rounded-2xl shadow-xl animate-in fade-in zoom-in-95 duration-150">
-              <CardHeader className="border-b border-line pb-4">
+          <div className="fixed inset-0 z-50 bg-ink/60 backdrop-blur-xs overflow-y-auto p-4 sm:p-6 flex items-center justify-center min-h-screen">
+            <Card className="max-w-md w-full max-h-[90vh] flex flex-col my-auto bg-sand border border-line rounded-2xl shadow-xl animate-in fade-in zoom-in-95 duration-150 overflow-hidden">
+              <CardHeader className="border-b border-line pb-4 shrink-0">
                 <CardTitle className="font-serif text-lg font-bold text-ink flex items-center gap-2">
                   <CreditCard className="w-4 h-4 text-espresso" />
                   <span>Üyeye Paket Tanımla</span>
@@ -746,7 +749,7 @@ export default function AdminMembersPage() {
                   <strong>{pkgMember.ad}</strong> üyesi için hazır veya kişiye özel paket tanımlayın.
                 </CardDescription>
               </CardHeader>
-              <CardContent className="pt-6 space-y-4">
+              <CardContent className="pt-6 space-y-4 overflow-y-auto flex-1">
                 <form onSubmit={handleAssignPackage} className="space-y-4">
                   {/* Paket Tipi Seçimi (Hazır / Özel) */}
                   <div className="flex rounded-xl bg-ivory p-1 border border-line">
@@ -820,16 +823,37 @@ export default function AdminMembersPage() {
                         </div>
 
                         <div>
-                          <label className="block text-xs font-bold text-secondary uppercase mb-1">Geçerlilik (Gün)</label>
+                          <div className="flex items-center justify-between mb-1">
+                            <label className="block text-xs font-bold text-secondary uppercase">Geçerlilik</label>
+                            <div className="flex items-center gap-1 bg-ivory p-0.5 rounded-lg border border-line">
+                              <button
+                                type="button"
+                                onClick={() => { setCustomUnit('hafta'); setCustomVal(6); }}
+                                className={`px-2 py-0.5 text-[10px] font-extrabold rounded cursor-pointer transition-all ${customUnit === 'hafta' ? 'bg-espresso text-ivory shadow-xs' : 'text-secondary hover:text-ink'}`}
+                              >
+                                Hafta
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => { setCustomUnit('gun'); setCustomVal(42); }}
+                                className={`px-2 py-0.5 text-[10px] font-extrabold rounded cursor-pointer transition-all ${customUnit === 'gun' ? 'bg-espresso text-ivory shadow-xs' : 'text-secondary hover:text-ink'}`}
+                              >
+                                Gün
+                              </button>
+                            </div>
+                          </div>
                           <Input
                             type="number"
                             min={1}
-                            max={365}
-                            value={customDays}
-                            onChange={(e) => setCustomDays(Number(e.target.value))}
+                            max={52}
+                            value={customVal}
+                            onChange={(e) => setCustomVal(Number(e.target.value))}
                             className="bg-ivory border-line text-sm font-bold text-espresso rounded-xl h-10"
                             required
                           />
+                          <span className="text-[10px] font-extrabold text-espresso mt-1 block">
+                            (= {customUnit === 'hafta' ? customVal * 7 : customVal} Gün)
+                          </span>
                         </div>
                       </div>
                     </div>

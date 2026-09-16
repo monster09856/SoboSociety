@@ -89,6 +89,43 @@ async def rsvp_studio_event(
     event.dolu_sayi += 1
 
     db.add(rsvp)
+
+    # 1. ADMİNLERE ANLIK BİLDİRİM & PUSH GÖNDER
+    try:
+        from app.settings import ayarlar
+        from app.services.bildirim import bildirim_gonder
+
+        res_admins = await db.execute(
+            select(Member).where(
+                (Member.kullanici_adi == "admin") | (Member.telefon.in_(ayarlar.admin_telefons))
+            )
+        )
+        admins = res_admins.scalars().all()
+        katilim_turu = "Tek Katılım" if tek_katilim else "Topluluk / Üye"
+        for adm in admins:
+            await bildirim_gonder(
+                db,
+                member_id=adm.id,
+                baslik="✨ Yeni Workshop Kaydı!",
+                mesaj=f"{current_member.ad} ({current_member.telefon or 'Numarasız'}), '{event.baslik}' etkinliğine kayıt oldu! ({katilim_turu} • Doluluk: {event.dolu_sayi}/{event.kontenjan})",
+                tip="WORKSHOP_RSVP",
+            )
+    except Exception as e:
+        print(f"[WORKSHOP RSVP ADMIN NOTIF ERROR] {e}")
+
+    # 2. ÜYEYE ONAY BİLDİRİMİ GÖNDER
+    try:
+        from app.services.bildirim import bildirim_gonder
+        await bildirim_gonder(
+            db,
+            member_id=current_member.id,
+            baslik=f"✨ Kaydınız Alındı: {event.baslik}",
+            mesaj=f"Tebrikler! {event.baslik} workshop kaydınız başarıyla oluşturuldu.",
+            tip="WORKSHOP_RSVP",
+        )
+    except Exception as e:
+        print(f"[WORKSHOP RSVP MEMBER NOTIF ERROR] {e}")
+
     await db.commit()
 
     return {
@@ -97,3 +134,56 @@ async def rsvp_studio_event(
         "tek_katilim": tek_katilim,
         "ucret_bilgisi": event.ucret if not tek_katilim else f"{event.tek_katilim_ucret_tl} TL (Tek Katılım)",
     }
+
+
+@router.delete("/{event_id}/rsvp", response_model=dict)
+async def cancel_rsvp_studio_event(
+    event_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_member: Member = Depends(get_current_member),
+):
+    """Üyenin kendi workshop kaydını iptal etmesi."""
+    event = await db.get(StudioEvent, event_id)
+    if not event:
+        raise HTTPException(status_code=404, detail="Etkinlik bulunamadı")
+
+    stmt_check = select(EventRSVP).where(
+        EventRSVP.event_id == event_id,
+        EventRSVP.member_id == current_member.id,
+        EventRSVP.durum == "registered",
+    )
+    res_check = await db.execute(stmt_check)
+    rsvp = res_check.scalar_one_or_none()
+
+    if not rsvp:
+        raise HTTPException(status_code=404, detail="Bu etkinlikte aktif kaydınız bulunamadı")
+
+    rsvp.durum = "cancelled"
+    if event.dolu_sayi > 0:
+        event.dolu_sayi -= 1
+
+    # Adminlere iptal bildirimi
+    try:
+        from app.settings import ayarlar
+        from app.services.bildirim import bildirim_gonder
+
+        res_admins = await db.execute(
+            select(Member).where(
+                (Member.kullanici_adi == "admin") | (Member.telefon.in_(ayarlar.admin_telefons))
+            )
+        )
+        admins = res_admins.scalars().all()
+        for adm in admins:
+            await bildirim_gonder(
+                db,
+                member_id=adm.id,
+                baslik="🚨 Workshop Kayıt İptali",
+                mesaj=f"{current_member.ad} ({current_member.telefon or 'Numarasız'}), '{event.baslik}' workshop kaydını iptal etti.",
+                tip="WORKSHOP_RSVP",
+            )
+    except Exception as e:
+        print(f"[WORKSHOP CANCEL ADMIN NOTIF ERROR] {e}")
+
+    await db.commit()
+
+    return {"mesaj": f"'{event.baslik}' kaydınız iptal edildi", "event_id": event_id}

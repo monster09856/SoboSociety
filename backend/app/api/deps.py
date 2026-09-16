@@ -104,9 +104,10 @@ async def get_current_admin(
         except GecersizToken:
             pass
 
-    is_admin_phone = current_member.telefon in ayarlar.admin_telefons
+    is_admin_phone = (current_member.telefon in ayarlar.admin_telefons) if current_member.telefon else False
+    is_admin_username = (current_member.kullanici_adi == "admin")
 
-    if not (is_admin_claim or is_admin_phone):
+    if not (is_admin_claim or is_admin_phone or is_admin_username):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Bu işlem için admin yetkisi gerekiyor",

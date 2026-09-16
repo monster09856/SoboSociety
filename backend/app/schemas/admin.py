@@ -161,6 +161,16 @@ class EventCreateRequest(BaseModel):
     tek_katilim_ucret_tl: float | None = 0.0
 
 
+class EventRSVPAttendeeResponse(BaseModel):
+    rsvp_id: int
+    member_id: int
+    ad: str
+    telefon: str
+    tek_katilim: bool = True
+    durum: str = "registered"
+    created_at: datetime | None = None
+
+
 class EventResponse(BaseModel):
     id: int
     baslik: str
@@ -173,6 +183,7 @@ class EventResponse(BaseModel):
     tek_katilim_acik: bool = True
     tek_katilim_ucret_tl: float | None = 0.0
     aktif: bool
+    katilimcilar: list[EventRSVPAttendeeResponse] = []
 
 class AdminCredentialsUpdateRequest(BaseModel):
     yeni_kullanici_adi: str | None = Field(default=None, description="Yeni Yönetici Kullanıcı Adı")

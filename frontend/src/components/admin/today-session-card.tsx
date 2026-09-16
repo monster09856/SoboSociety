@@ -402,9 +402,9 @@ export function TodaySessionCard({
 
       {/* Modal: Edit Class Hours & Details */}
       {showEditModal && (
-        <div className="fixed inset-0 z-50 bg-ink/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <Card className="max-w-md w-full bg-sand border border-line rounded-2xl shadow-xl animate-in fade-in zoom-in-95 duration-150 text-ink">
-            <CardHeader className="border-b border-line pb-4 relative">
+        <div className="fixed inset-0 z-50 bg-ink/60 backdrop-blur-xs overflow-y-auto p-4 sm:p-6 flex items-center justify-center min-h-screen">
+          <Card className="max-w-md w-full max-h-[90vh] flex flex-col my-auto bg-sand border border-line rounded-2xl shadow-xl animate-in fade-in zoom-in-95 duration-150 overflow-hidden text-ink">
+            <CardHeader className="border-b border-line pb-4 relative shrink-0">
               <button
                 type="button"
                 onClick={() => setShowEditModal(false)}
@@ -420,7 +420,7 @@ export function TodaySessionCard({
                 <strong>{classTitle}</strong> dersinin yapılacağı tarihi, saati, eğitmeni ve kontenjanını güncelleyin.
               </p>
             </CardHeader>
-            <CardContent className="pt-6 space-y-4">
+            <CardContent className="pt-6 space-y-4 overflow-y-auto flex-1">
               <form onSubmit={handleUpdateSession} className="space-y-4">
                 <div>
                   <div className="flex items-center justify-between mb-1.5">
