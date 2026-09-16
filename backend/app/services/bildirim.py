@@ -77,7 +77,6 @@ async def bildirim_gonder(
                                 alert=messaging.ApsAlert(title=baslik, body=mesaj),
                                 sound="default",
                                 badge=1,
-                                content_available=True,
                             ),
                         ),
                     ),

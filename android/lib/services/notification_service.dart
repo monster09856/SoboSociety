@@ -11,6 +11,11 @@ import 'storage_service.dart';
 
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  // On iOS, APNs natively displays the notification banner.
+  // Calling local notification here produces a duplicate alert on the lock screen.
+  if (defaultTargetPlatform == TargetPlatform.iOS) {
+    return;
+  }
   try {
     await Firebase.initializeApp();
     final String title = message.notification?.title ?? message.data['baslik'] ?? message.data['title'] ?? 'SOBO Society';
@@ -103,7 +108,20 @@ class NotificationService {
         sound: true,
       );
 
+      // On iOS, allow the system to natively display banners even when app is in foreground
+      await messaging.setForegroundNotificationPresentationOptions(
+        alert: true,
+        badge: true,
+        sound: true,
+      );
+
       FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+        // On iOS, system handles foreground banner natively via setForegroundNotificationPresentationOptions.
+        // Showing local notification here causes duplicate notifications on iOS.
+        if (defaultTargetPlatform == TargetPlatform.iOS) {
+          return;
+        }
+
         final String title = message.notification?.title ?? message.data['baslik'] ?? message.data['title'] ?? 'SOBO Society';
         final String body = message.notification?.body ?? message.data['mesaj'] ?? message.data['body'] ?? message.data['message'] ?? '';
         final int id = int.tryParse(message.data['id']?.toString() ?? '') ?? (DateTime.now().millisecondsSinceEpoch ~/ 1000);
@@ -207,12 +225,11 @@ class NotificationService {
     );
   }
 
-  /// Active polling service when app is open or in background
+  /// Keep device token registered with backend
   void startNotificationPoller() {
     _pollingTimer?.cancel();
-    _pollingTimer = Timer.periodic(const Duration(seconds: 10), (_) async {
-      await checkAndShowPendingNotifications();
-    });
+    // Native APNs / FCM push notifications are fully active.
+    // Periodic local notification popups are disabled to prevent duplicate alerts.
   }
 
   Future<void> checkAndShowPendingNotifications() async {
@@ -220,62 +237,8 @@ class NotificationService {
       final token = await StorageService.getToken();
       if (token == null || token.isEmpty) return;
 
-      // Ensure device token is registered
-      registerDeviceToken();
-
-      final prefs = await SharedPreferences.getInstance();
-      final List<String> shownIds = prefs.getStringList('shown_notif_ids') ?? <String>[];
-
-      // Call API for member notifications
-      final dynamic res = await ApiClient.get('/my/notifications');
-      List notifs = [];
-      if (res is List) {
-        notifs = res;
-      } else if (res is Map && res['data'] is List) {
-        notifs = res['data'];
-      }
-
-      for (var item in notifs) {
-        if (item is Map) {
-          final int id = item['id'] ?? DateTime.now().millisecondsSinceEpoch ~/ 1000;
-          final String idStr = id.toString();
-
-          // STRICT SINGLE-SHOW RULE: Never trigger notification if ID was already shown natively or already read!
-          final bool isRead = item['okundu'] == true;
-          if (!shownIds.contains(idStr) && !isRead) {
-            // Do not pop up notifications older than 24 hours on freshly installed app
-            if (item['olusturuldu_at'] != null) {
-              final DateTime? dt = DateTime.tryParse(item['olusturuldu_at'].toString());
-              if (dt != null && DateTime.now().difference(dt).inHours > 24) {
-                shownIds.add(idStr);
-                await prefs.setStringList('shown_notif_ids', shownIds);
-                continue;
-              }
-            }
-
-            final String title = item['baslik'] ?? item['title'] ?? 'SOBO Society';
-            final String body = item['mesaj'] ?? item['body'] ?? item['message'] ?? '';
-
-            if (body.isNotEmpty || title.isNotEmpty) {
-              await showNotification(
-                id: id,
-                title: title,
-                body: body,
-                payload: jsonEncode(item),
-              );
-
-              // Mark as shown locally
-              shownIds.add(idStr);
-              await prefs.setStringList('shown_notif_ids', shownIds);
-
-              // Mark as read on backend
-              try {
-                await ApiClient.post('/my/notifications/$id/read', <String, dynamic>{});
-              } catch (_) {}
-            }
-          }
-        }
-      }
+      // Ensure device token is registered with backend
+      await registerDeviceToken();
     } catch (e) {
       if (kDebugMode) {
         print('[NotificationService] Poll error: $e');
