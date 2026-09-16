@@ -199,6 +199,347 @@ class _WorkshopsViewState extends State<WorkshopsView> {
     );
   }
 
+  Future<void> _showAdminAttendeesModal(StudioEventItem ev) async {
+    if (!_isAdmin) return; // Guarantees regular members cannot execute this
+
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        return FutureBuilder<dynamic>(
+          future: ApiClient.get('/admin/events'),
+          builder: (fCtx, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return Container(
+                height: 250,
+                decoration: const BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+                ),
+                child: const Center(
+                  child: CircularProgressIndicator(color: SoboTheme.espresso),
+                ),
+              );
+            }
+
+            if (snapshot.hasError) {
+              return Container(
+                padding: const EdgeInsets.all(24),
+                decoration: const BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.error_outline_rounded, color: SoboTheme.clay, size: 40),
+                    const SizedBox(height: 12),
+                    Text('Katılımcı listesi yüklenemedi: ${snapshot.error}', textAlign: TextAlign.center, style: SoboTheme.fontSans(fontSize: 12)),
+                  ],
+                ),
+              );
+            }
+
+            dynamic targetEvent;
+            if (snapshot.data is List) {
+              for (final dynamic item in snapshot.data as List) {
+                if (item['id'] == ev.id) {
+                  targetEvent = item;
+                  break;
+                }
+              }
+            }
+
+            final List<dynamic> attendees = (targetEvent != null && targetEvent['katilimcilar'] is List)
+                ? (targetEvent['katilimcilar'] as List)
+                : <dynamic>[];
+
+            return StatefulBuilder(
+              builder: (modalContext, setModalState) {
+                final int count = attendees.length;
+
+                return Container(
+                  constraints: BoxConstraints(
+                    maxHeight: MediaQuery.of(ctx).size.height * 0.85,
+                  ),
+                  decoration: const BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // Handle bar
+                      Center(
+                        child: Container(
+                          margin: const EdgeInsets.only(top: 12, bottom: 8),
+                          width: 40,
+                          height: 4,
+                          decoration: BoxDecoration(
+                            color: SoboTheme.line,
+                            borderRadius: BorderRadius.circular(2),
+                          ),
+                        ),
+                      ),
+
+                      // Header
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: SoboTheme.sandLight,
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: Text(
+                                      ev.turu,
+                                      style: SoboTheme.fontSans(
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.bold,
+                                        color: SoboTheme.espresso,
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 6),
+                                  Text(
+                                    ev.baslik,
+                                    style: SoboTheme.fontSerif(
+                                      fontSize: 17,
+                                      fontWeight: FontWeight.bold,
+                                      color: SoboTheme.ink,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    'Kayıtlı Katılımcılar ($count / ${ev.kontenjan} Kişi)',
+                                    style: SoboTheme.fontSans(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.bold,
+                                      color: SoboTheme.mocha,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.close_rounded, color: SoboTheme.secondary),
+                              onPressed: () => Navigator.pop(ctx),
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      const Divider(height: 1, color: SoboTheme.line),
+
+                      // Attendees List or Empty
+                      Flexible(
+                        child: attendees.isEmpty
+                            ? Padding(
+                                padding: const EdgeInsets.all(36.0),
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    const Icon(Icons.people_outline_rounded, size: 48, color: SoboTheme.secondary),
+                                    const SizedBox(height: 12),
+                                    Text(
+                                      'Henüz kayıtlı katılımcı yok',
+                                      style: SoboTheme.fontSerif(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.bold,
+                                        color: SoboTheme.ink,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 6),
+                                    Text(
+                                      'Üyeler veya misafirler workshopa kayıt olduklarında anında burada görünecektir.',
+                                      textAlign: TextAlign.center,
+                                      style: SoboTheme.fontSans(fontSize: 12, color: SoboTheme.secondary),
+                                    ),
+                                  ],
+                                ),
+                              )
+                            : ListView.separated(
+                                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                                itemCount: attendees.length,
+                                separatorBuilder: (_, __) => const Divider(height: 20, color: SoboTheme.line),
+                                itemBuilder: (itemCtx, idx) {
+                                  final att = attendees[idx] is Map<String, dynamic>
+                                      ? attendees[idx] as Map<String, dynamic>
+                                      : Map<String, dynamic>.from(attendees[idx] as Map);
+                                  final String name = att['ad'] ?? 'İsimsiz Katılımcı';
+                                  final String phone = (att['telefon'] ?? '').toString();
+                                  final bool isSingle = att['tek_katilim'] == true;
+                                  final int rsvpId = att['rsvp_id'] ?? 0;
+                                  final String createdAt = att['created_at'] != null
+                                      ? att['created_at'].toString().substring(0, 16).replaceAll('T', ' ')
+                                      : '';
+
+                                  return Row(
+                                    crossAxisAlignment: CrossAxisAlignment.center,
+                                    children: [
+                                      CircleAvatar(
+                                        radius: 18,
+                                        backgroundColor: SoboTheme.sandLight,
+                                        child: Text(
+                                          '${idx + 1}',
+                                          style: SoboTheme.fontSans(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.bold,
+                                            color: SoboTheme.espresso,
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 12),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Row(
+                                              children: [
+                                                Flexible(
+                                                  child: Text(
+                                                    name,
+                                                    style: SoboTheme.fontSans(
+                                                      fontSize: 13.5,
+                                                      fontWeight: FontWeight.bold,
+                                                      color: SoboTheme.ink,
+                                                    ),
+                                                    overflow: TextOverflow.ellipsis,
+                                                  ),
+                                                ),
+                                                const SizedBox(width: 6),
+                                                Container(
+                                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                                  decoration: BoxDecoration(
+                                                    color: isSingle ? const Color(0xFFFEF3C7) : SoboTheme.sage.withOpacity(0.15),
+                                                    borderRadius: BorderRadius.circular(6),
+                                                    border: Border.all(
+                                                      color: isSingle ? const Color(0xFFF59E0B) : SoboTheme.sage.withOpacity(0.4),
+                                                    ),
+                                                  ),
+                                                  child: Text(
+                                                    isSingle ? 'Tek Katılım' : 'Sobo Üyesi',
+                                                    style: SoboTheme.fontSans(
+                                                      fontSize: 9.5,
+                                                      fontWeight: FontWeight.bold,
+                                                      color: isSingle ? const Color(0xFFB45309) : SoboTheme.sage,
+                                                    ),
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                            if (phone.isNotEmpty) ...[
+                                              const SizedBox(height: 2),
+                                              Text(
+                                                phone,
+                                                style: SoboTheme.fontSans(fontSize: 11.5, color: SoboTheme.secondary),
+                                              ),
+                                            ],
+                                            if (createdAt.isNotEmpty) ...[
+                                              const SizedBox(height: 2),
+                                              Text(
+                                                'Kayıt: $createdAt',
+                                                style: SoboTheme.fontSans(fontSize: 10, color: SoboTheme.secondary.withOpacity(0.8)),
+                                              ),
+                                            ],
+                                          ],
+                                        ),
+                                      ),
+                                      // Quick Call
+                                      if (phone.isNotEmpty)
+                                        IconButton(
+                                          icon: const Icon(Icons.phone_rounded, color: SoboTheme.mocha, size: 20),
+                                          tooltip: 'Ara',
+                                          onPressed: () => launchUrl(Uri.parse('tel:$phone')),
+                                        ),
+                                      // Quick WhatsApp
+                                      if (phone.isNotEmpty)
+                                        IconButton(
+                                          icon: const Icon(Icons.chat_bubble_outline_rounded, color: Color(0xFF25D366), size: 20),
+                                          tooltip: 'WhatsApp',
+                                          onPressed: () {
+                                            final digits = phone.replaceAll(RegExp(r'\D'), '');
+                                            final waNumber = digits.startsWith('90')
+                                                ? digits
+                                                : (digits.startsWith('0') ? '90${digits.substring(1)}' : '90$digits');
+                                            launchUrl(
+                                              Uri.parse('https://wa.me/$waNumber'),
+                                              mode: LaunchMode.externalApplication,
+                                            );
+                                          },
+                                        ),
+                                      // Remove Attendee
+                                      IconButton(
+                                        icon: const Icon(Icons.delete_outline_rounded, color: SoboTheme.clay, size: 20),
+                                        tooltip: 'Katılımcıyı Çıkar',
+                                        onPressed: () async {
+                                          final bool? confirm = await showDialog<bool>(
+                                            context: ctx,
+                                            builder: (dCtx) => AlertDialog(
+                                              title: Text('Katılımcıyı Çıkar', style: SoboTheme.fontSerif(fontSize: 16, fontWeight: FontWeight.bold)),
+                                              content: Text('"$name" adlı katılımcıyı bu etkinlikten çıkarmak istediğinize emin misiniz?', style: SoboTheme.fontSans(fontSize: 13)),
+                                              actions: [
+                                                TextButton(
+                                                  onPressed: () => Navigator.pop(dCtx, false),
+                                                  child: const Text('Vazgeç'),
+                                                ),
+                                                ElevatedButton(
+                                                  style: ElevatedButton.styleFrom(backgroundColor: SoboTheme.clay, foregroundColor: Colors.white),
+                                                  onPressed: () => Navigator.pop(dCtx, true),
+                                                  child: const Text('Çıkar'),
+                                                ),
+                                              ],
+                                            ),
+                                          );
+                                          if (confirm == true) {
+                                            try {
+                                              await ApiClient.delete('/admin/events/${ev.id}/rsvp/$rsvpId');
+                                              setModalState(() {
+                                                attendees.removeWhere((item) => item['rsvp_id'] == rsvpId);
+                                              });
+                                              _loadEvents();
+                                              if (mounted) {
+                                                ScaffoldMessenger.of(context).showSnackBar(
+                                                  SnackBar(content: Text('"$name" etkinlikten çıkarıldı.'), backgroundColor: SoboTheme.sage),
+                                                );
+                                              }
+                                            } catch (err) {
+                                              if (mounted) {
+                                                ScaffoldMessenger.of(context).showSnackBar(
+                                                  SnackBar(content: Text('Hata: $err'), backgroundColor: SoboTheme.clay),
+                                                );
+                                              }
+                                            }
+                                          }
+                                        },
+                                      ),
+                                    ],
+                                  );
+                                },
+                              ),
+                      ),
+
+                      // Bottom padding for safe area
+                      SizedBox(height: MediaQuery.of(ctx).padding.bottom + 12),
+                    ],
+                  ),
+                );
+              },
+            );
+          },
+        );
+      },
+    );
+  }
+
   Future<void> _showAddEventDialog() async {
     final titleCtrl = TextEditingController();
     final descCtrl = TextEditingController();
@@ -733,6 +1074,23 @@ class _WorkshopsViewState extends State<WorkshopsView> {
                               ),
                             ],
                           ),
+                          if (_isAdmin) ...[
+                            const SizedBox(height: 10),
+                            ElevatedButton.icon(
+                              onPressed: () => _showAdminAttendeesModal(ev),
+                              icon: const Icon(Icons.people_alt_rounded, size: 16, color: Colors.white),
+                              label: Text(
+                                'YÖNETİCİ: KATILIMCILARI GÖR (${ev.doluSayi} Kayıtlı)',
+                                style: SoboTheme.fontSans(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.white, letterSpacing: 0.5),
+                              ),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: SoboTheme.espresso,
+                                foregroundColor: Colors.white,
+                                minimumSize: const Size.fromHeight(40),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              ),
+                            ),
+                          ],
                         ],
                       ),
                     );
