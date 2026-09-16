@@ -745,14 +745,16 @@ class _AccountViewState extends State<AccountView> {
                             Text(_summary?.telefon ?? '', style: SoboTheme.fontSans(fontSize: 12, color: SoboTheme.secondary, fontWeight: FontWeight.w500)),
                             const SizedBox(height: 6),
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                               decoration: BoxDecoration(
                                 color: SoboTheme.sand,
-                                borderRadius: BorderRadius.circular(12),
+                                borderRadius: BorderRadius.circular(10),
                               ),
                               child: Text(
-                                'Kalan Ders Hakkınız: ${_summary?.bakiye ?? 0} Ders',
-                                style: SoboTheme.fontSans(fontSize: 12, fontWeight: FontWeight.bold, color: SoboTheme.espresso),
+                                (_summary?.aktifPaketAdi != null && _summary!.aktifPaketAdi!.isNotEmpty)
+                                    ? '${_summary!.aktifPaketAdi} • ${_summary?.bakiye ?? 0} Ders'
+                                    : 'Kalan: ${_summary?.bakiye ?? 0} Ders',
+                                style: SoboTheme.fontSans(fontSize: 11, fontWeight: FontWeight.bold, color: SoboTheme.espresso),
                               ),
                             ),
                           ],
@@ -810,6 +812,149 @@ class _AccountViewState extends State<AccountView> {
                       ),
                     ],
                   ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+
+            // Aktif Paketim & Üyelik Detayları Card
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(24),
+                border: Border.all(color: SoboTheme.line),
+                boxShadow: [
+                  BoxShadow(
+                    color: SoboTheme.espresso.withOpacity(0.04),
+                    blurRadius: 10,
+                    offset: const Offset(0, 3),
+                  ),
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: SoboTheme.sand,
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: const Icon(Icons.card_membership_rounded, size: 18, color: SoboTheme.espresso),
+                          ),
+                          const SizedBox(width: 10),
+                          Text(
+                            'AKTİF PAKETİM & ÜYELİK',
+                            style: SoboTheme.fontSerif(
+                              fontSize: 13.5,
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: 1.1,
+                              color: SoboTheme.espresso,
+                            ),
+                          ),
+                        ],
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: (_summary?.bakiye ?? 0) > 0 ? const Color(0xFFE8F5E9) : SoboTheme.sand,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Text(
+                          (_summary?.bakiye ?? 0) > 0 ? 'Aktif' : 'Paket Yok',
+                          style: SoboTheme.fontSans(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            color: (_summary?.bakiye ?? 0) > 0 ? const Color(0xFF2E7D32) : SoboTheme.secondary,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+                  const Divider(color: SoboTheme.line, height: 1),
+                  const SizedBox(height: 14),
+                  if (_summary?.aktifPaketAdi != null && _summary!.aktifPaketAdi!.isNotEmpty) ...[
+                    Text(
+                      _summary!.aktifPaketAdi!,
+                      style: SoboTheme.fontSerif(
+                        fontSize: 17,
+                        fontWeight: FontWeight.bold,
+                        color: SoboTheme.espresso,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
+                            decoration: BoxDecoration(
+                              color: SoboTheme.sandLight,
+                              borderRadius: BorderRadius.circular(14),
+                              border: Border.all(color: SoboTheme.line),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'KALAN DERS',
+                                  style: SoboTheme.fontSans(fontSize: 9.5, fontWeight: FontWeight.bold, color: SoboTheme.secondary),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  '${_summary?.bakiye ?? 0} Ders',
+                                  style: SoboTheme.fontSerif(fontSize: 18, fontWeight: FontWeight.bold, color: SoboTheme.espresso),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
+                            decoration: BoxDecoration(
+                              color: SoboTheme.sandLight,
+                              borderRadius: BorderRadius.circular(14),
+                              border: Border.all(color: SoboTheme.line),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'GEÇERLİLİK',
+                                  style: SoboTheme.fontSans(fontSize: 9.5, fontWeight: FontWeight.bold, color: SoboTheme.secondary),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  _summary?.paketBitisTarihi ?? 'Süresiz',
+                                  style: SoboTheme.fontSerif(fontSize: 14, fontWeight: FontWeight.bold, color: SoboTheme.espresso),
+                                ),
+                                if (_summary?.kalanGunSayisi != null) ...[
+                                  Text(
+                                    '${_summary!.kalanGunSayisi} gün kaldı',
+                                    style: SoboTheme.fontSans(fontSize: 10, fontWeight: FontWeight.w600, color: SoboTheme.mocha),
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ] else ...[
+                    Text(
+                      'Tanımlı aktif ders paketiniz bulunmamaktadır. Stüdyomuzla iletişime geçerek ya da Paketler menüsünden yeni paket alabilirsiniz.',
+                      style: SoboTheme.fontSans(fontSize: 12.5, color: SoboTheme.secondary, height: 1.4),
+                    ),
+                  ],
                 ],
               ),
             ),

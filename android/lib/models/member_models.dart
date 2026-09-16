@@ -34,12 +34,49 @@ class BookingResponse {
   }
 }
 
+class MemberPackageItem {
+  final int id;
+  final String ad;
+  final String baslangicTarihi;
+  final String bitisTarihi;
+  final int kalanGun;
+  final int toplamDers;
+  final bool aktif;
+
+  MemberPackageItem({
+    required this.id,
+    required this.ad,
+    required this.baslangicTarihi,
+    required this.bitisTarihi,
+    required this.kalanGun,
+    required this.toplamDers,
+    required this.aktif,
+  });
+
+  factory MemberPackageItem.fromJson(Map<String, dynamic> json) {
+    return MemberPackageItem(
+      id: json['id'] as int? ?? 0,
+      ad: json['ad'] as String? ?? 'Stüdyo Paketi',
+      baslangicTarihi: json['baslangic_tarihi'] as String? ?? '',
+      bitisTarihi: json['bitis_tarihi'] as String? ?? '',
+      kalanGun: json['kalan_gun'] as int? ?? 0,
+      toplamDers: json['toplam_ders'] as int? ?? 0,
+      aktif: json['aktif'] as bool? ?? false,
+    );
+  }
+}
+
 class MemberSummaryResponse {
   final int id;
   final String ad;
   final String? kullaniciAdi;
   final String telefon;
   final int bakiye;
+  final String? aktifPaketAdi;
+  final String? paketBitisTarihi;
+  final int? kalanGunSayisi;
+  final int? toplamDersAdedi;
+  final List<MemberPackageItem> paketler;
   final List<BookingResponse> aktifRezervasyonlar;
   final List<BookingResponse> gecmisRezervasyonlar;
 
@@ -49,6 +86,11 @@ class MemberSummaryResponse {
     this.kullaniciAdi,
     required this.telefon,
     required this.bakiye,
+    this.aktifPaketAdi,
+    this.paketBitisTarihi,
+    this.kalanGunSayisi,
+    this.toplamDersAdedi,
+    this.paketler = const <MemberPackageItem>[],
     required this.aktifRezervasyonlar,
     required this.gecmisRezervasyonlar,
   });
@@ -68,12 +110,24 @@ class MemberSummaryResponse {
       });
     }
 
+    var pkgList = <MemberPackageItem>[];
+    if (json['paketler'] != null) {
+      json['paketler'].forEach((v) {
+        pkgList.add(MemberPackageItem.fromJson(v));
+      });
+    }
+
     return MemberSummaryResponse(
       id: json['id'] as int? ?? 0,
       ad: json['ad'] as String? ?? 'Üye',
       kullaniciAdi: json['kullanici_adi'] as String?,
       telefon: json['telefon'] as String? ?? '',
       bakiye: json['bakiye'] as int? ?? 0,
+      aktifPaketAdi: json['aktif_paket_adi'] as String?,
+      paketBitisTarihi: json['paket_bitis_tarihi'] as String?,
+      kalanGunSayisi: json['kalan_gun_sayisi'] as int?,
+      toplamDersAdedi: json['toplam_ders_adedi'] as int?,
+      paketler: pkgList,
       aktifRezervasyonlar: aktifList,
       gecmisRezervasyonlar: gecmisList,
     );

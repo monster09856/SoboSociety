@@ -192,39 +192,67 @@ class _MyBookingsViewState extends State<MyBookingsView> with SingleTickerProvid
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'KALAN DERS HAKKINIZ',
-                                  style: SoboTheme.fontSans(
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.bold,
-                                    letterSpacing: 1.2,
-                                    color: SoboTheme.secondary,
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  if (_summary?.aktifPaketAdi != null && _summary!.aktifPaketAdi!.isNotEmpty) ...[
+                                    Text(
+                                      _summary!.aktifPaketAdi!,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: SoboTheme.fontSans(
+                                        fontSize: 11.5,
+                                        fontWeight: FontWeight.bold,
+                                        color: SoboTheme.mocha,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 2),
+                                  ] else ...[
+                                    Text(
+                                      'KALAN DERS HAKKINIZ',
+                                      style: SoboTheme.fontSans(
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.bold,
+                                        letterSpacing: 1.2,
+                                        color: SoboTheme.secondary,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 2),
+                                  ],
+                                  Text(
+                                    '$bakiye Ders Hakkı',
+                                    style: SoboTheme.fontSerif(
+                                      fontSize: 20,
+                                      fontWeight: FontWeight.bold,
+                                      color: SoboTheme.espresso,
+                                    ),
                                   ),
-                                ),
-                                const SizedBox(height: 2),
-                                Text(
-                                  '$bakiye Ders Hakkı',
-                                  style: SoboTheme.fontSerif(
-                                    fontSize: 20,
-                                    fontWeight: FontWeight.bold,
-                                    color: SoboTheme.espresso,
-                                  ),
-                                ),
-                              ],
+                                  if (_summary?.paketBitisTarihi != null && _summary!.paketBitisTarihi!.isNotEmpty) ...[
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      'Son Gün: ${_summary!.paketBitisTarihi}${_summary?.kalanGunSayisi != null ? ' (${_summary!.kalanGunSayisi} gün kaldı)' : ''}',
+                                      style: SoboTheme.fontSans(
+                                        fontSize: 10.5,
+                                        fontWeight: FontWeight.w600,
+                                        color: SoboTheme.secondary,
+                                      ),
+                                    ),
+                                  ],
+                                ],
+                              ),
                             ),
+                            const SizedBox(width: 8),
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                               decoration: BoxDecoration(
                                 color: SoboTheme.espresso,
                                 borderRadius: BorderRadius.circular(12),
                               ),
                               child: Text(
-                                '12 Saat İptal Kuralı ⏱️',
+                                '12 Sa. İptal ⏱️',
                                 style: SoboTheme.fontSans(
-                                  fontSize: 11,
+                                  fontSize: 10.5,
                                   fontWeight: FontWeight.bold,
                                   color: Colors.white,
                                 ),

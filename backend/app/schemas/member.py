@@ -76,12 +76,29 @@ class WaitlistResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+class MemberPackageSummary(BaseModel):
+    id: int
+    ad: str
+    baslangic_tarihi: str
+    bitis_tarihi: str
+    kalan_gun: int
+    toplam_ders: int
+    aktif: bool
+
+    model_config = ConfigDict(from_attributes=True)
+
+
 class MemberSummaryResponse(BaseModel):
     id: int
     ad: str
     kullanici_adi: str | None = None
     telefon: str | None = None
     bakiye: int
+    aktif_paket_adi: str | None = None
+    paket_bitis_tarihi: str | None = None
+    kalan_gun_sayisi: int | None = None
+    toplam_ders_adedi: int | None = None
+    paketler: list[MemberPackageSummary] = []
     aktif_rezervasyonlar: list[BookingResponse] = []
     gecmis_rezervasyonlar: list[BookingResponse] = []
 

@@ -1,15 +1,17 @@
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_member, get_db
+from app.models.kredi import MemberPackage, Package
 from app.models.rezervasyon import Booking, BookingDurumu
 from app.models.uyelik import Member, MemberMeasurementHistory
 from app.schemas.member import (
     MeasurementCreateRequest,
     MeasurementHistoryResponse,
+    MemberPackageSummary,
     MemberStatsResponse,
     MemberSummaryResponse,
 )
@@ -23,9 +25,57 @@ async def get_my_summary(
     db: AsyncSession = Depends(get_db),
     current_member: Member = Depends(get_current_member),
 ):
-    """Giriş yapmış üyenin bakiye ve rezervasyon özetini döndürür."""
+    """Giriş yapmış üyenin bakiye, paket ve rezervasyon özetini döndürür."""
     kredi_bakiye = await bakiye(db, current_member.id)
     now = datetime.now(timezone.utc)
+    today = date.today()
+
+    # Paket bilgilerini çek
+    mp_res = await db.execute(
+        select(MemberPackage, Package)
+        .join(Package, MemberPackage.package_id == Package.id)
+        .where(MemberPackage.member_id == current_member.id)
+        .order_by(MemberPackage.id.desc())
+    )
+    mp_rows = mp_res.all()
+
+    aktif_pkg_ad = None
+    pkg_bitis_str = None
+    kalan_gun = None
+    toplam_ders = None
+    paket_listesi: list[MemberPackageSummary] = []
+
+    for mp, p in mp_rows:
+        pkg_name = getattr(mp, "ozel_paket_adi", None) or (p.ad if p else "Stüdyo Ders Paketi")
+        ders_sayisi = getattr(mp, "ders_adedi", p.ders_adedi if p else 0)
+        baslangic_str = mp.baslangic.strftime("%d.%m.%Y") if mp.baslangic else ""
+        bitis_str = mp.bitis.strftime("%d.%m.%Y") if mp.bitis else ""
+        days_left = (mp.bitis - today).days if mp.bitis else 0
+        is_active = (mp.baslangic <= today < mp.bitis) if (mp.baslangic and mp.bitis) else False
+
+        paket_listesi.append(
+            MemberPackageSummary(
+                id=mp.id,
+                ad=pkg_name,
+                baslangic_tarihi=baslangic_str,
+                bitis_tarihi=bitis_str,
+                kalan_gun=max(0, days_left),
+                toplam_ders=ders_sayisi,
+                aktif=is_active,
+            )
+        )
+        if is_active and aktif_pkg_ad is None:
+            aktif_pkg_ad = pkg_name
+            pkg_bitis_str = bitis_str
+            kalan_gun = max(0, days_left)
+            toplam_ders = ders_sayisi
+
+    if aktif_pkg_ad is None and mp_rows:
+        mp, p = mp_rows[0]
+        aktif_pkg_ad = getattr(mp, "ozel_paket_adi", None) or (p.ad if p else "Stüdyo Ders Paketi")
+        pkg_bitis_str = mp.bitis.strftime("%d.%m.%Y") if mp.bitis else ""
+        kalan_gun = max(0, (mp.bitis - today).days) if mp.bitis else 0
+        toplam_ders = getattr(mp, "ders_adedi", p.ders_adedi if p else 0)
 
     stmt = (
         select(Booking)
@@ -49,6 +99,11 @@ async def get_my_summary(
         kullanici_adi=current_member.kullanici_adi,
         telefon=current_member.telefon or "",
         bakiye=kredi_bakiye,
+        aktif_paket_adi=aktif_pkg_ad,
+        paket_bitis_tarihi=pkg_bitis_str,
+        kalan_gun_sayisi=kalan_gun,
+        toplam_ders_adedi=toplam_ders,
+        paketler=paket_listesi,
         aktif_rezervasyonlar=aktif,
         gecmis_rezervasyonlar=gecmis,
     )

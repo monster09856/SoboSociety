@@ -1165,12 +1165,29 @@ class _BookingViewState extends State<BookingView> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: <Widget>[
-                          Text('Kalan Ders Hakkınız', style: SoboTheme.fontSans(fontSize: 12, color: SoboTheme.secondary, fontWeight: FontWeight.bold)),
-                          const SizedBox(height: 2),
+                          if (_summary?.aktifPaketAdi != null && _summary!.aktifPaketAdi!.isNotEmpty) ...[
+                            Text(
+                              _summary!.aktifPaketAdi!,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: SoboTheme.fontSans(fontSize: 11.5, fontWeight: FontWeight.bold, color: SoboTheme.mocha),
+                            ),
+                            const SizedBox(height: 1),
+                          ] else ...[
+                            Text('Kalan Ders Hakkınız', style: SoboTheme.fontSans(fontSize: 12, color: SoboTheme.secondary, fontWeight: FontWeight.bold)),
+                            const SizedBox(height: 2),
+                          ],
                           Text(
                             '${_summary?.bakiye ?? 0} Ders Hakkı',
-                            style: SoboTheme.fontSerif(fontSize: 26, fontWeight: FontWeight.bold, color: SoboTheme.espresso),
+                            style: SoboTheme.fontSerif(fontSize: 22, fontWeight: FontWeight.bold, color: SoboTheme.espresso),
                           ),
+                          if (_summary?.paketBitisTarihi != null && _summary!.paketBitisTarihi!.isNotEmpty) ...[
+                            const SizedBox(height: 2),
+                            Text(
+                              'Son Gün: ${_summary!.paketBitisTarihi}${_summary?.kalanGunSayisi != null ? ' • ${_summary!.kalanGunSayisi} gün kaldı' : ''}',
+                              style: SoboTheme.fontSans(fontSize: 10.5, fontWeight: FontWeight.w600, color: SoboTheme.secondary),
+                            ),
+                          ],
                         ],
                       ),
                     ),
