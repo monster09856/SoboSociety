@@ -16,7 +16,7 @@ async def list_public_packages(
     """Tüm aktif stüdyo ders paketlerini ve fiyatlarını döndürür."""
     res = await db.execute(
         select(Package)
-        .where(Package.aktif == True, Package.fiyat_kurus > 0)
+        .where(Package.aktif == True)
         .order_by(Package.id.asc())
     )
     pkgs = res.scalars().all()

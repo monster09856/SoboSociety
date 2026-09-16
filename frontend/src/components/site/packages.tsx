@@ -326,14 +326,20 @@ export function Packages() {
                           <span className="text-[11px] text-mocha font-medium block">{pkg.validity}</span>
                         </div>
                         <div className="text-right">
-                          {isLoggedIn ? (
-                            <span className="text-2xl font-extrabold text-espresso tracking-tight">
-                              ₺{pkg.fiyat_tl ? pkg.fiyat_tl.toLocaleString('tr-TR') : '---'}
-                            </span>
+                          {pkg.fiyat_tl && pkg.fiyat_tl > 0 ? (
+                            isLoggedIn ? (
+                              <span className="text-2xl font-extrabold text-espresso tracking-tight">
+                                ₺{pkg.fiyat_tl.toLocaleString('tr-TR')}
+                              </span>
+                            ) : (
+                              <span className="text-xs font-bold text-espresso bg-ivory px-3 py-1.5 rounded-xl border border-line flex items-center gap-1.5 shadow-xs">
+                                <Lock className="w-3.5 h-3.5 text-mocha" />
+                                <span>Üyelere Özel</span>
+                              </span>
+                            )
                           ) : (
-                            <span className="text-xs font-bold text-espresso bg-ivory px-3 py-1.5 rounded-xl border border-line flex items-center gap-1.5 shadow-xs">
-                              <Lock className="w-3.5 h-3.5 text-mocha" />
-                              <span>Üyelere Özel</span>
+                            <span className="text-xs font-bold text-mocha bg-mocha/10 px-3 py-1.5 rounded-xl border border-mocha/30 flex items-center gap-1.5">
+                              <span>Fiyat İçin İletişime Geçin</span>
                             </span>
                           )}
                         </div>
@@ -351,10 +357,33 @@ export function Packages() {
                   </div>
 
                   <div className="pt-4">
-                    {isLoggedIn ? (
+                    {pkg.fiyat_tl && pkg.fiyat_tl > 0 ? (
+                      isLoggedIn ? (
+                        <a
+                          href={`https://wa.me/905316033080?text=${encodeURIComponent(
+                            `Merhaba! Sobo Society'den ${pkg.title} (₺${pkg.fiyat_tl.toLocaleString('tr-TR')}) paketi hakkında bilgi almak ve satın almak istiyorum. Yardımcı olabilir misiniz?`
+                          )}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="w-full block"
+                        >
+                          <Button variant={pkg.buttonVariant} className="w-full justify-center py-3 text-sm font-medium gap-2">
+                            <MessageCircle className="w-4 h-4" />
+                            <span>Fiyat Bilgisi & Satın Al (WhatsApp)</span>
+                          </Button>
+                        </a>
+                      ) : (
+                        <Link href="/giris" className="w-full block">
+                          <Button variant={pkg.buttonVariant} className="w-full justify-center py-3 text-sm font-medium gap-2">
+                            <Lock className="w-4 h-4" />
+                            <span>Giriş Yap & Fiyatı Gör</span>
+                          </Button>
+                        </Link>
+                      )
+                    ) : (
                       <a
                         href={`https://wa.me/905316033080?text=${encodeURIComponent(
-                          `Merhaba! Sobo Society'den ${pkg.title} (₺${pkg.fiyat_tl ? pkg.fiyat_tl.toLocaleString('tr-TR') : ''}) paketi hakkında bilgi almak ve satın almak istiyorum. Yardımcı olabilir misiniz?`
+                          `Merhaba! Sobo Society'den '${pkg.title}' paketi hakkında bilgi almak ve kayıt olmak istiyorum. Yardımcı olabilir misiniz?`
                         )}`}
                         target="_blank"
                         rel="noopener noreferrer"
@@ -362,16 +391,9 @@ export function Packages() {
                       >
                         <Button variant={pkg.buttonVariant} className="w-full justify-center py-3 text-sm font-medium gap-2">
                           <MessageCircle className="w-4 h-4" />
-                          <span>Fiyat Bilgisi & Satın Al (WhatsApp)</span>
+                          <span>WhatsApp İle Bilgi Al</span>
                         </Button>
                       </a>
-                    ) : (
-                      <Link href="/giris" className="w-full block">
-                        <Button variant={pkg.buttonVariant} className="w-full justify-center py-3 text-sm font-medium gap-2">
-                          <Lock className="w-4 h-4" />
-                          <span>Giriş Yap & Fiyatı Gör</span>
-                        </Button>
-                      </Link>
                     )}
                   </div>
                 </CardContent>

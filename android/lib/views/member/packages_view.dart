@@ -164,11 +164,14 @@ class _PackagesViewState extends State<PackagesView> {
                   // Packages List
                   if (_packages.isNotEmpty)
                     ..._packages.map((pkg) {
+                      final bool hasPrice = pkg.fiyatTl > 0;
                       final bool is12Ders = pkg.dersAdedi == 12 || pkg.ad.contains('12');
                       final bool isBireysel = pkg.ad.toLowerCase().contains('bireysel') || pkg.ad.toLowerCase().contains('özel');
-                      final String priceStr = _isLoggedIn
-                          ? '₺${pkg.fiyatTl.toInt().toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.')} TL'
-                          : 'Üyelere Özel';
+                      final String priceStr = hasPrice
+                          ? (_isLoggedIn
+                              ? '₺${pkg.fiyatTl.toInt().toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.')} TL'
+                              : 'Üyelere Özel')
+                          : 'İletişime Geçin';
 
                       final String formattedVal = pkg.gecerlilikGun % 7 == 0
                           ? '${pkg.gecerlilikGun ~/ 7} Hafta Kullanım'
@@ -179,6 +182,7 @@ class _PackagesViewState extends State<PackagesView> {
                         isPopular: is12Ders,
                         badge: is12Ders ? 'POPÜLER SEÇİM ⭐ • $formattedVal' : formattedVal,
                         price: priceStr,
+                        hasPrice: hasPrice,
                         details: '${pkg.dersAdedi} Adet Class Seansı • ${isBireysel ? 'Kişiye Özel Birebir Eğitmen' : 'Butik Sınıf (Maks 5 Kişi)'} • 12 Saat Öncesine Kadar İade',
                       );
                     })
@@ -224,6 +228,7 @@ class _PackagesViewState extends State<PackagesView> {
     required String badge,
     required String price,
     required String details,
+    bool hasPrice = true,
   }) {
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
@@ -262,7 +267,9 @@ class _PackagesViewState extends State<PackagesView> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
-                  color: isPopular ? SoboTheme.espresso : SoboTheme.sand,
+                  color: !hasPrice
+                      ? SoboTheme.mocha.withOpacity(0.12)
+                      : (isPopular ? SoboTheme.espresso : SoboTheme.sand),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
@@ -270,7 +277,9 @@ class _PackagesViewState extends State<PackagesView> {
                   style: SoboTheme.fontSans(
                     fontSize: 12.5,
                     fontWeight: FontWeight.bold,
-                    color: isPopular ? Colors.white : SoboTheme.espresso,
+                    color: !hasPrice
+                        ? SoboTheme.mocha
+                        : (isPopular ? Colors.white : SoboTheme.espresso),
                   ),
                 ),
               ),
@@ -304,13 +313,15 @@ class _PackagesViewState extends State<PackagesView> {
           const SizedBox(height: 16),
           ElevatedButton.icon(
             onPressed: () => _launchWhatsApp(
-              _isLoggedIn
-                  ? "Merhaba! Sobo Society'den '$title ($price)' paketini satın almak istiyorum. Yardımcı olabilir misiniz?"
-                  : "Merhaba! Sobo Society'nin '$title' paketi ve güncel fiyatlar hakkında bilgi almak istiyorum.",
+              hasPrice
+                  ? (_isLoggedIn
+                      ? "Merhaba! Sobo Society'den '$title ($price)' paketini satın almak istiyorum. Yardımcı olabilir misiniz?"
+                      : "Merhaba! Sobo Society'nin '$title' paketi ve güncel fiyatlar hakkında bilgi almak istiyorum.")
+                  : "Merhaba! Sobo Society'den '$title' paketi hakkında detaylı bilgi ve kayıt koşullarını öğrenmek istiyorum. Yardımcı olabilir misiniz?",
             ),
             icon: const Icon(Icons.chat_bubble_rounded, size: 16, color: Colors.white),
             label: Text(
-              _isLoggedIn ? 'WHATSAPP İLE SATIN AL' : 'WHATSAPP İLE FİYAT BİLGİSİ AL',
+              hasPrice && _isLoggedIn ? 'WHATSAPP İLE SATIN AL' : 'WHATSAPP İLE BİLGİ AL',
               style: SoboTheme.fontSans(
                 fontSize: 11.5,
                 fontWeight: FontWeight.bold,

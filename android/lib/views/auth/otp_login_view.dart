@@ -94,7 +94,7 @@ class _OTPLoginViewState extends State<OTPLoginView> with SingleTickerProviderSt
         if (mounted) {
           setState(() {
             _isLoading = false;
-            _isLogin = true;
+            _mode = 0;
             _loginUsernameController.text = username;
             _loginPasswordController.clear();
           });

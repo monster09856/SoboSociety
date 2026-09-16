@@ -95,7 +95,7 @@ export default function AdminPackagesPage() {
         ad: newAd.trim(),
         ders_adedi: Number(newDersAdedi),
         gecerlilik_gun: calculatedDays,
-        fiyat_tl: Number(newFiyatTl),
+        fiyat_tl: Number(newFiyatTl) || 0,
         aktif: newAktif,
       })
       setNewAd('')
@@ -141,7 +141,7 @@ export default function AdminPackagesPage() {
         ad: editAd.trim(),
         ders_adedi: Number(editDersAdedi),
         gecerlilik_gun: calculatedEditDays,
-        fiyat_tl: Number(editFiyatTl),
+        fiyat_tl: Number(editFiyatTl) || 0,
         aktif: editAktif,
       })
       setEditingPackage(null)
@@ -296,9 +296,18 @@ export default function AdminPackagesPage() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-secondary uppercase tracking-wider mb-1.5">
-                    Paket Fiyatı (₺ TL)
-                  </label>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="block text-xs font-bold text-secondary uppercase tracking-wider">
+                      Paket Fiyatı (₺ TL)
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => setNewFiyatTl(0)}
+                      className="text-[10px] font-bold text-mocha hover:underline cursor-pointer"
+                    >
+                      Fiyatı Gizle
+                    </button>
+                  </div>
                   <Input
                     type="number"
                     min={0}
@@ -306,9 +315,11 @@ export default function AdminPackagesPage() {
                     value={newFiyatTl}
                     onChange={(e) => setNewFiyatTl(Number(e.target.value))}
                     className="bg-ivory border-line text-ink rounded-xl h-11 px-3.5 text-xs font-medium"
-                    placeholder="3200"
-                    required
+                    placeholder="0 (Fiyat gizli)"
                   />
+                  <p className="text-[10px] text-secondary mt-1">
+                    {Number(newFiyatTl) > 0 ? `₺${Number(newFiyatTl).toLocaleString('tr-TR')}` : '0 ise fiyat gizlenir'}
+                  </p>
                 </div>
 
                 <div className="lg:col-span-5 pt-2 flex items-center justify-between">
@@ -388,9 +399,15 @@ export default function AdminPackagesPage() {
                       >
                         {pkg.aktif ? 'Yayında (Aktif)' : 'Pasif'}
                       </span>
-                      <span className="text-lg font-extrabold text-espresso bg-ivory px-3 py-1 rounded-xl border border-line">
-                        ₺{pkg.fiyat_tl?.toLocaleString('tr-TR')}
-                      </span>
+                      {pkg.fiyat_tl && pkg.fiyat_tl > 0 ? (
+                        <span className="text-lg font-extrabold text-espresso bg-ivory px-3 py-1 rounded-xl border border-line">
+                          ₺{pkg.fiyat_tl?.toLocaleString('tr-TR')}
+                        </span>
+                      ) : (
+                        <span className="text-xs font-bold text-mocha bg-mocha/10 px-2.5 py-1 rounded-xl border border-mocha/30">
+                          Fiyat Gizli (İletişim)
+                        </span>
+                      )}
                     </div>
 
                     <CardTitle className="font-serif text-xl font-bold text-ink mt-3">
@@ -524,9 +541,18 @@ export default function AdminPackagesPage() {
                   </div>
 
                   <div>
-                    <label className="block text-xs font-bold text-secondary uppercase tracking-wider mb-1.5">
-                      Yeni Paket Fiyatı (₺ TL)
-                    </label>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <label className="block text-xs font-bold text-secondary uppercase tracking-wider">
+                        Yeni Paket Fiyatı (₺ TL)
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => setEditFiyatTl(0)}
+                        className="text-[11px] font-bold text-mocha hover:underline cursor-pointer"
+                      >
+                        Fiyatı Sil / Gizle
+                      </button>
+                    </div>
                     <Input
                       type="number"
                       min={0}
@@ -534,8 +560,13 @@ export default function AdminPackagesPage() {
                       value={editFiyatTl}
                       onChange={(e) => setEditFiyatTl(Number(e.target.value))}
                       className="bg-ivory border-line text-ink font-bold rounded-xl h-11 px-3 text-sm"
-                      required
+                      placeholder="0 (Fiyat gizli)"
                     />
+                    <p className="text-[11px] text-secondary mt-1">
+                      {Number(editFiyatTl) > 0
+                        ? `Üyeler sitede ve mobilde ₺${Number(editFiyatTl).toLocaleString('tr-TR')} olarak görecektir.`
+                        : '💡 0 veya boş bırakılırsa sitede ve mobilde fiyat gizlenir, "Fiyat İçin İletişime Geçin" butonu görünür.'}
+                    </p>
                   </div>
 
                   <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-ink pt-1">
