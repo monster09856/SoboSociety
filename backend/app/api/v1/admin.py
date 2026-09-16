@@ -19,6 +19,7 @@ from app.schemas.admin import (
     EventRSVPAttendeeResponse,
     MemberPackageResponse,
     MemberPackageUpdateRequest,
+    MemberPackageDetail,
     MemberAdminDetailResponse,
     PackageAssignRequest,
     QuickBookingRequest,
@@ -251,7 +252,7 @@ async def cancel_member_package_endpoint(
     db: AsyncSession = Depends(get_db),
     current_admin: Member = Depends(get_current_admin),
 ):
-    """Admin tarafından üyenin aktif paketini iptal eder ve kalan ders bakiyesini sıfırlar."""
+    """Admin tarafından üyenin aktif paketini iptal eder ve ilgili paketin ders bakiyesini düşer."""
     m = await db.get(Member, member_id)
     if not m:
         raise HTTPException(status_code=404, detail="Üye bulunamadı.")
@@ -263,15 +264,21 @@ async def cancel_member_package_endpoint(
     # 1. Paketin bitiş tarihini bugüne çekerek paketi sonlandır
     mp.bitis = date.today()
 
-    # 2. Üyenin kalan bakiyesini sıfırla
+    # 2. Üyenin bakiyesinden sadece bu paketin ders hakkını düş
+    from app.models.kredi import Package
+    p = await db.get(Package, mp.package_id)
+    pkg_credits = getattr(mp, "ders_adedi", p.ders_adedi if p else 0)
     current_b = await bakiye(db, member_id)
-    if current_b > 0:
+    deduct_amount = min(current_b, pkg_credits) if current_b > 0 else 0
+
+    if deduct_amount > 0:
+        pkg_name = getattr(mp, "ozel_paket_adi", None) or (p.ad if p else "Paket")
         await hareket_ekle(
             db,
             member_id=member_id,
             tip=LedgerTipi.ADMIN_ADJUST,
-            miktar=-current_b,
-            sebep="Aktif ders paketi yönetici tarafından iptal edildi.",
+            miktar=-deduct_amount,
+            sebep=f"'{pkg_name}' paketi yönetici tarafından iptal edildi.",
             member_package_id=member_package_id,
         )
 
@@ -747,19 +754,36 @@ async def _build_member_detail_response(db: AsyncSession, m: Member) -> MemberAd
     aktif_pkg_ad = None
     pkg_bitis_str = None
     kalan_gun = None
+    aktif_paketler = []
     pkg_history = []
 
     today = date.today()
     for mp, p in mp_rows:
         pkg_name = getattr(mp, "ozel_paket_adi", None) or (p.ad if p else "Stüdyo Ders Paketi")
         ders_sayisi = getattr(mp, "ders_adedi", p.ders_adedi if p else 0)
+        baslangic_str = mp.baslangic.strftime('%d.%m.%Y') if mp.baslangic else ""
         bitis_str = mp.bitis.strftime('%d.%m.%Y') if mp.bitis else ""
+        days_left = (mp.bitis - today).days if mp.bitis else 0
+        is_active = (mp.baslangic <= today < mp.bitis) if (mp.baslangic and mp.bitis) else False
+
         pkg_history.append(f"{pkg_name} ({ders_sayisi} Ders / Bitiş: {bitis_str})")
-        if mp.baslangic and mp.bitis and mp.baslangic <= today < mp.bitis and aktif_pkg_ad is None:
-            aktif_mp_id = mp.id
-            aktif_pkg_ad = pkg_name
-            pkg_bitis_str = bitis_str
-            kalan_gun = (mp.bitis - today).days
+        if is_active:
+            aktif_paketler.append(
+                MemberPackageDetail(
+                    id=mp.id,
+                    ad=pkg_name,
+                    baslangic_tarihi=baslangic_str,
+                    bitis_tarihi=bitis_str,
+                    kalan_gun=max(0, days_left),
+                    toplam_ders=ders_sayisi,
+                    aktif=True,
+                )
+            )
+            if aktif_pkg_ad is None:
+                aktif_mp_id = mp.id
+                aktif_pkg_ad = pkg_name
+                pkg_bitis_str = bitis_str
+                kalan_gun = max(0, days_left)
 
     # Aktif Gelecek Ders Rezervasyonlarını Çek
     now = datetime.now(timezone.utc)
@@ -806,6 +830,7 @@ async def _build_member_detail_response(db: AsyncSession, m: Member) -> MemberAd
         aktif_paket_adi=aktif_pkg_ad,
         paket_bitis_tarihi=pkg_bitis_str,
         kalan_gun_sayisi=kalan_gun,
+        aktif_paketler=aktif_paketler,
         tanimlanan_paketler=pkg_history,
         aktif_rezervasyonlar=rezerve_ders_listesi,
     )

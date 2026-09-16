@@ -31,6 +31,15 @@ interface MemberDetail {
   aktif_paket_adi?: string | null
   paket_bitis_tarihi?: string | null
   kalan_gun_sayisi?: number | null
+  aktif_paketler?: {
+    id: number
+    ad: string
+    baslangic_tarihi: string
+    bitis_tarihi: string
+    kalan_gun: number
+    toplam_ders: number
+    aktif: boolean
+  }[]
   tanimlanan_paketler?: string[]
   aktif_rezervasyonlar?: string[]
 }
@@ -204,12 +213,11 @@ export default function AdminMembersPage() {
     }
   }
 
-  const handleCancelPackage = async (m: MemberDetail) => {
-    if (!m.aktif_member_package_id) return
-    if (!confirm(`${m.ad} üyesinin '${m.aktif_paket_adi}' paketini ve kalan ders hakkını iptal etmek istediğinizden emin misiniz?`)) return
+  const handleCancelPackage = async (memberId: number, memberPackageId: number, packageName: string, memberName: string) => {
+    if (!confirm(`${memberName} üyesinin '${packageName}' paketini ve bu pakete ait ders hakkını iptal etmek istediğinizden emin misiniz?`)) return
     try {
-      await admin.cancelPackage(m.id, m.aktif_member_package_id)
-      setSuccess(`${m.ad} üyesinin aktif paketi başarıyla iptal edildi ve kalan ders hakkı sıfırlandı.`)
+      await admin.cancelPackage(memberId, memberPackageId)
+      setSuccess(`${memberName} üyesinin '${packageName}' paketi başarıyla iptal edildi.`)
       await loadMembers(search)
     } catch (err: any) {
       setError(err?.message || 'Paket iptal edilirken bir hata oluştu.')
@@ -414,13 +422,17 @@ export default function AdminMembersPage() {
                   </CardHeader>
 
                   <CardContent className="pt-4 space-y-3.5 text-xs font-medium">
-                    {/* Tanımlı Aktif Paket Rozeti */}
-                    <div className="p-3 rounded-xl bg-sand-light border border-espresso/30 space-y-1 text-[11px] shadow-2xs">
+                    {/* Tanımlı Aktif Paketler Rozeti */}
+                    <div className="p-3 rounded-xl bg-sand-light border border-espresso/30 space-y-2 text-[11px] shadow-2xs">
                       <div className="flex items-center justify-between text-secondary font-bold border-b border-line/50 pb-1">
                         <span className="flex items-center gap-1 text-espresso font-extrabold">
-                          <Package className="w-3.5 h-3.5 text-mocha" /> Tanımlı Aktif Paket
+                          <Package className="w-3.5 h-3.5 text-mocha" /> Tanımlı Aktif Paketler
                         </span>
-                        {m.aktif_paket_adi ? (
+                        {m.aktif_paketler && m.aktif_paketler.length > 0 ? (
+                          <span className="text-[10px] text-sage font-bold bg-sage/15 px-2 py-0.5 rounded-full border border-sage/40">
+                            {m.aktif_paketler.length} Aktif Paket
+                          </span>
+                        ) : m.aktif_paket_adi ? (
                           <span className="text-[10px] text-sage font-bold bg-sage/15 px-2 py-0.5 rounded-full border border-sage/40">
                             {m.kalan_gun_sayisi} Gün Kaldı
                           </span>
@@ -430,8 +442,33 @@ export default function AdminMembersPage() {
                           </span>
                         )}
                       </div>
-                      <div className="text-secondary font-medium pt-1">
-                        {m.aktif_paket_adi ? (
+                      <div className="space-y-1.5 pt-0.5">
+                        {m.aktif_paketler && m.aktif_paketler.length > 0 ? (
+                          m.aktif_paketler.map((pkg) => (
+                            <div key={pkg.id} className="p-2.5 rounded-lg bg-white/80 border border-line/70 flex items-center justify-between gap-2 shadow-2xs">
+                              <div className="space-y-0.5 min-w-0">
+                                <div className="font-bold text-ink text-xs flex items-center gap-1.5 truncate">
+                                  <CheckCircle2 className="w-3.5 h-3.5 text-sage shrink-0" />
+                                  <span className="truncate">{pkg.ad}</span>
+                                  <span className="text-[10px] text-mocha font-extrabold shrink-0">({pkg.toplam_ders} Ders)</span>
+                                </div>
+                                <div className="text-[10px] text-secondary font-medium pl-5 flex items-center gap-2">
+                                  <span>Son Gün: {pkg.bitis_tarihi}</span>
+                                  <span className="text-sage font-bold">({pkg.kalan_gun} Gün Kaldı)</span>
+                                </div>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => handleCancelPackage(m.id, pkg.id, pkg.ad, m.ad)}
+                                className="px-2 py-1 rounded-md text-[10px] font-extrabold text-clay hover:bg-clay/10 border border-clay/30 transition-all flex items-center gap-1 cursor-pointer shrink-0 shadow-2xs"
+                                title="Bu paketi iptal et"
+                              >
+                                <Trash2 className="w-3 h-3 text-clay" />
+                                <span>İptal</span>
+                              </button>
+                            </div>
+                          ))
+                        ) : m.aktif_paket_adi ? (
                           <div className="flex items-center justify-between gap-2 pt-0.5">
                             <div className="space-y-0.5">
                               <div className="font-bold text-ink text-xs flex items-center gap-1.5">
@@ -442,15 +479,17 @@ export default function AdminMembersPage() {
                                 Son Kullanma: {m.paket_bitis_tarihi}
                               </div>
                             </div>
-                            <button
-                              type="button"
-                              onClick={() => handleCancelPackage(m)}
-                              className="px-2.5 py-1 rounded-lg text-[10px] font-extrabold text-clay hover:bg-clay/10 border border-clay/30 transition-all flex items-center gap-1 cursor-pointer shrink-0 shadow-2xs"
-                              title="Bu aktif paketi ve kalan ders hakkını iptal et"
-                            >
-                              <Trash2 className="w-3 h-3 text-clay" />
-                              <span>Paketi İptal Et</span>
-                            </button>
+                            {m.aktif_member_package_id && (
+                              <button
+                                type="button"
+                                onClick={() => handleCancelPackage(m.id, m.aktif_member_package_id!, m.aktif_paket_adi!, m.ad)}
+                                className="px-2.5 py-1 rounded-lg text-[10px] font-extrabold text-clay hover:bg-clay/10 border border-clay/30 transition-all flex items-center gap-1 cursor-pointer shrink-0 shadow-2xs"
+                                title="Bu aktif paketi iptal et"
+                              >
+                                <Trash2 className="w-3 h-3 text-clay" />
+                                <span>İptal</span>
+                              </button>
+                            )}
                           </div>
                         ) : (
                           <span className="text-muted italic text-[11px] block">Henüz aktif paket tanımlanmamış.</span>
@@ -459,7 +498,7 @@ export default function AdminMembersPage() {
                     </div>
 
                     <div className="flex items-center justify-between p-3 rounded-xl bg-ivory border border-line">
-                      <span className="text-secondary font-semibold">Kalan Ders Hakkı:</span>
+                      <span className="text-secondary font-semibold">Toplam Kalan Ders Hakkı:</span>
                       <span className="font-serif text-xl font-bold text-espresso">{m.bakiye} Ders</span>
                     </div>
 

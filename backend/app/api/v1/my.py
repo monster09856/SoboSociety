@@ -64,13 +64,19 @@ async def get_my_summary(
                 aktif=is_active,
             )
         )
-        if is_active and aktif_pkg_ad is None:
-            aktif_pkg_ad = pkg_name
-            pkg_bitis_str = bitis_str
-            kalan_gun = max(0, days_left)
-            toplam_ders = ders_sayisi
-
-    if aktif_pkg_ad is None and mp_rows:
+    active_pkgs = [p for p in paket_listesi if p.aktif]
+    if len(active_pkgs) == 1:
+        aktif_pkg_ad = active_pkgs[0].ad
+        pkg_bitis_str = active_pkgs[0].bitis_tarihi
+        kalan_gun = active_pkgs[0].kalan_gun
+        toplam_ders = active_pkgs[0].toplam_ders
+    elif len(active_pkgs) > 1:
+        aktif_pkg_ad = " + ".join([p.ad for p in active_pkgs])
+        latest_pkg = max(active_pkgs, key=lambda p: p.kalan_gun)
+        pkg_bitis_str = latest_pkg.bitis_tarihi
+        kalan_gun = latest_pkg.kalan_gun
+        toplam_ders = sum(p.toplam_ders for p in active_pkgs)
+    elif mp_rows:
         mp, p = mp_rows[0]
         aktif_pkg_ad = getattr(mp, "ozel_paket_adi", None) or (p.ad if p else "Stüdyo Ders Paketi")
         pkg_bitis_str = mp.bitis.strftime("%d.%m.%Y") if mp.bitis else ""

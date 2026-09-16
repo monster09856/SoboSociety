@@ -118,6 +118,18 @@ class MemberUpdateRequest(BaseModel):
     saglik_notu: str | None = None
 
 
+class MemberPackageDetail(BaseModel):
+    id: int
+    ad: str
+    baslangic_tarihi: str
+    bitis_tarihi: str
+    kalan_gun: int
+    toplam_ders: int
+    aktif: bool
+
+    model_config = ConfigDict(from_attributes=True)
+
+
 class MemberAdminDetailResponse(BaseModel):
     id: int
     ad: str
@@ -146,6 +158,7 @@ class MemberAdminDetailResponse(BaseModel):
     aktif_paket_adi: str | None = None
     paket_bitis_tarihi: str | None = None
     kalan_gun_sayisi: int | None = None
+    aktif_paketler: list[MemberPackageDetail] = Field(default_factory=list)
     tanimlanan_paketler: list[str] = Field(default_factory=list)
     aktif_rezervasyonlar: list[str] = Field(default_factory=list)
 

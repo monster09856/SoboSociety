@@ -671,6 +671,8 @@ class _AccountViewState extends State<AccountView> {
             ? '@${_summary!.kullaniciAdi}'
             : '@${(_summary?.ad ?? "uye").toLowerCase().replaceAll(RegExp(r'\s+'), '_')}');
 
+    final activePkgs = _summary?.paketler.where((p) => p.aktif).toList() ?? <MemberPackageItem>[];
+
     return Scaffold(
       backgroundColor: SoboTheme.ivory,
       appBar: AppBar(
@@ -880,7 +882,82 @@ class _AccountViewState extends State<AccountView> {
                   const SizedBox(height: 14),
                   const Divider(color: SoboTheme.line, height: 1),
                   const SizedBox(height: 14),
-                  if (_summary?.aktifPaketAdi != null && _summary!.aktifPaketAdi!.isNotEmpty) ...[
+                  if (activePkgs.isNotEmpty) ...[
+                    ...activePkgs.map((pkg) => Container(
+                      margin: const EdgeInsets.only(bottom: 10),
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: SoboTheme.sandLight,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: SoboTheme.line),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  pkg.ad,
+                                  style: SoboTheme.fontSerif(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.bold,
+                                    color: SoboTheme.espresso,
+                                  ),
+                                ),
+                              ),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFE8F5E9),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Text(
+                                  '${pkg.toplamDers} Ders',
+                                  style: SoboTheme.fontSans(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                    color: const Color(0xFF2E7D32),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 6),
+                          Row(
+                            children: [
+                              const Icon(Icons.access_time_rounded, size: 13, color: SoboTheme.mocha),
+                              const SizedBox(width: 4),
+                              Text(
+                                'Son Gün: ${pkg.bitisTarihi}',
+                                style: SoboTheme.fontSans(fontSize: 11, fontWeight: FontWeight.w600, color: SoboTheme.secondary),
+                              ),
+                              const Spacer(),
+                              Text(
+                                '${pkg.kalanGun} Gün Kaldı',
+                                style: SoboTheme.fontSans(fontSize: 11, fontWeight: FontWeight.bold, color: SoboTheme.espresso),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    )),
+                    Container(
+                      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 14),
+                      decoration: BoxDecoration(
+                        color: SoboTheme.sand,
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text('Toplam Kalan Ders Hakkı', style: SoboTheme.fontSans(fontSize: 11.5, fontWeight: FontWeight.bold, color: SoboTheme.espresso)),
+                          Text('${_summary?.bakiye ?? 0} Ders', style: SoboTheme.fontSerif(fontSize: 17, fontWeight: FontWeight.bold, color: SoboTheme.espresso)),
+                        ],
+                      ),
+                    ),
+                  ] else if (_summary?.aktifPaketAdi != null && _summary!.aktifPaketAdi!.isNotEmpty) ...[
                     Text(
                       _summary!.aktifPaketAdi!,
                       style: SoboTheme.fontSerif(
