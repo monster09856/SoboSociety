@@ -31,6 +31,7 @@ from app.services.program_uretimi import STUDYO_TZ, uret
 from app.services.rezervasyon import rezerve_et
 from app.services.telefon import normalize_telefon
 from app.services.yoklama import yoklama_al
+from app.services.hatalar import GecersizTelefon, KayitBulunamadi
 from app.settings import ayarlar
 
 router = APIRouter(
@@ -192,6 +193,10 @@ async def assign_package(
     current_admin: Member = Depends(get_current_admin),
 ):
     """Üyeye özel veya hazır ders paketi tanımlar."""
+    m = await db.get(Member, body.member_id)
+    if not m:
+        raise HTTPException(status_code=404, detail="Üye bulunamadı.")
+
     baslangic = body.baslangic or datetime.now(timezone.utc).date()
     try:
         from app.models.kredi import Package
@@ -213,7 +218,12 @@ async def assign_package(
             target_pkg_id = pkg.id
         
         if target_pkg_id is None:
-            target_pkg_id = 1
+            first_pkg = (await db.execute(select(Package).where(Package.aktif == True).order_by(Package.id))).scalars().first()
+            if not first_pkg:
+                first_pkg = (await db.execute(select(Package).order_by(Package.id))).scalars().first()
+            if not first_pkg:
+                raise HTTPException(status_code=400, detail="Sistemde tanımlı paket bulunamadı.")
+            target_pkg_id = first_pkg.id
 
         uye_paketi = await paket_tanimla(
             db,
@@ -224,9 +234,13 @@ async def assign_package(
         await db.commit()
         await db.refresh(uye_paketi)
         return uye_paketi
+    except KayitBulunamadi as e:
+        await db.rollback()
+        raise HTTPException(status_code=404, detail=str(e))
     except Exception:
         await db.rollback()
         raise
+
 
 
 @router.post("/members/{member_id}/packages/{member_package_id}/cancel", response_model=MemberAdminDetailResponse)
@@ -777,9 +791,26 @@ async def update_admin_member(
         raise HTTPException(status_code=404, detail="Üye bulunamadı.")
 
     if body.ad is not None:
-        m.ad = body.ad
+        m.ad = body.ad.strip()
     if body.telefon is not None:
-        m.telefon = normalize_telefon(body.telefon)
+        clean_tel = body.telefon.strip()
+        if clean_tel:
+            try:
+                norm_tel = normalize_telefon(clean_tel)
+                dup = (await db.execute(
+                    select(Member).where(Member.telefon == norm_tel, Member.id != member_id)
+                )).scalar_one_or_none()
+                if dup:
+                    raise HTTPException(
+                        status_code=400,
+                        detail=f"Bu telefon numarası ({norm_tel}) zaten '{dup.ad}' isimli başka bir üyeye kayıtlı."
+                    )
+                m.telefon = norm_tel
+            except GecersizTelefon as e:
+                raise HTTPException(status_code=400, detail=str(e))
+        else:
+            # Boş string bırakıldıysa telefon silinmek istenmiş olabilir
+            m.telefon = None
     if body.aktif is not None:
         m.aktif = body.aktif
 

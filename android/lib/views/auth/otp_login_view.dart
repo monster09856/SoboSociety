@@ -65,17 +65,15 @@ class _OTPLoginViewState extends State<OTPLoginView> with SingleTickerProviderSt
     final String password = _regPasswordController.text.trim();
     final String phone = _regPhoneController.text.trim();
 
-    if (name.isEmpty || username.isEmpty || password.isEmpty) {
-      setState(() => _errorMessage = 'Lütfen Ad Soyad, Kullanıcı Adı ve Şifre alanlarını doldurun.');
+    if (name.isEmpty || username.isEmpty || password.isEmpty || phone.isEmpty) {
+      setState(() => _errorMessage = 'Lütfen Ad Soyad, Kullanıcı Adı, Şifre ve Cep Telefonu alanlarını doldurun.');
       return;
     }
 
     final String cleanPhone = phone.replaceAll(RegExp(r'\D'), '');
-    if (phone.isNotEmpty) {
-      if (cleanPhone.length < 10 || cleanPhone.length > 11 || (!cleanPhone.startsWith('5') && !cleanPhone.startsWith('05'))) {
-        setState(() => _errorMessage = 'Telefon numaranızı eksik veya yanlış tuşladınız. Lütfen kontrol ediniz (örn: 05XX XXX XX XX).');
-        return;
-      }
+    if (cleanPhone.length < 10 || cleanPhone.length > 11 || (!cleanPhone.startsWith('5') && !cleanPhone.startsWith('05'))) {
+      setState(() => _errorMessage = 'Telefon numaranızı eksik veya yanlış tuşladınız. Lütfen kontrol ediniz (örn: 05XX XXX XX XX).');
+      return;
     }
 
     setState(() {
@@ -88,7 +86,7 @@ class _OTPLoginViewState extends State<OTPLoginView> with SingleTickerProviderSt
         'ad': name,
         'kullanici_adi': username,
         'sifre': password,
-        if (phone.isNotEmpty) 'telefon': phone,
+        'telefon': phone,
       });
 
       final String accessToken = res['access_token'];
@@ -494,12 +492,12 @@ class _OTPLoginViewState extends State<OTPLoginView> with SingleTickerProviderSt
                                       onTogglePassword: () => setState(() => _obscureRegPassword = !_obscureRegPassword),
                                     ),
                                     const SizedBox(height: 12),
-                                    _buildCustomTextField(
-                                      controller: _regPhoneController,
-                                      label: 'Cep Telefonu (Opsiyonel)',
-                                      icon: Icons.phone_android_rounded,
-                                      keyboardType: TextInputType.phone,
-                                    ),
+                                      _buildCustomTextField(
+                                        controller: _regPhoneController,
+                                        label: 'Cep Telefonu * (Örn: 05XX XXX XX XX)',
+                                        icon: Icons.phone_android_rounded,
+                                        keyboardType: TextInputType.phone,
+                                      ),
                                     const SizedBox(height: 24),
                                     ElevatedButton(
                                       onPressed: _isLoading ? null : _handleRegister,

@@ -6,7 +6,7 @@ class MemberRegisterRequest(BaseModel):
     ad: str = Field(..., description="Ad Soyad")
     kullanici_adi: str = Field(..., description="Kullanıcı adı")
     sifre: str = Field(..., description="Şifre")
-    telefon: str | None = Field(default=None, description="Cep telefonu (Opsiyonel)")
+    telefon: str = Field(..., description="Cep telefonu (Zorunlu)")
 
 
 class MemberLoginRequest(BaseModel):

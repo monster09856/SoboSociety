@@ -1381,6 +1381,14 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
                           }
                         } catch (e) {
                           setModalState(() => isUpdating = false);
+                          if (mounted) {
+                            ScaffoldMessenger.of(this.context).showSnackBar(
+                              SnackBar(
+                                content: Text('Hata: ${e.toString().replaceAll('Exception: ', '')}'),
+                                backgroundColor: SoboTheme.clay,
+                              ),
+                            );
+                          }
                         }
                       },
                       style: ElevatedButton.styleFrom(
@@ -1400,6 +1408,223 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
       },
     );
   }
+
+  void _showAssignPackageModal(dynamic m) {
+    final List<dynamic> activePackages = _packages.where((p) => p['aktif'] == true).toList();
+    int? selectedPackageId = activePackages.isNotEmpty ? activePackages.first['id'] as int? : null;
+    bool isCustom = false;
+    final TextEditingController customNameCtrl = TextEditingController(text: 'Özel Ders Paketi');
+    final TextEditingController customDersCtrl = TextEditingController(text: '8');
+    final TextEditingController customGunCtrl = TextEditingController(text: '45');
+    bool isSubmitting = false;
+
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: SoboTheme.ivory,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (modalCtx, setModalState) {
+            return Padding(
+              padding: EdgeInsets.only(
+                top: 20,
+                left: 16,
+                right: 16,
+                bottom: MediaQuery.of(modalCtx).viewInsets.bottom + 20,
+              ),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text('Ders Paketi Tanımla', style: SoboTheme.fontSerif(fontSize: 18, fontWeight: FontWeight.bold, color: SoboTheme.espresso)),
+                              Text(
+                                '${m['ad']} • Mevcut Bakiye: ${m['bakiye'] ?? 0} Ders',
+                                style: SoboTheme.fontSans(fontSize: 12, color: SoboTheme.secondary),
+                              ),
+                            ],
+                          ),
+                        ),
+                        IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.pop(modalCtx)),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+
+                    Row(
+                      children: [
+                        Expanded(
+                          child: ChoiceChip(
+                            label: const Center(child: Text('Hazır Paket')),
+                            selected: !isCustom,
+                            selectedColor: SoboTheme.espresso,
+                            labelStyle: TextStyle(
+                              color: !isCustom ? Colors.white : SoboTheme.espresso,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 12,
+                            ),
+                            onSelected: (val) {
+                              if (val) setModalState(() => isCustom = false);
+                            },
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: ChoiceChip(
+                            label: const Center(child: Text('Özel Tanımla')),
+                            selected: isCustom,
+                            selectedColor: SoboTheme.espresso,
+                            labelStyle: TextStyle(
+                              color: isCustom ? Colors.white : SoboTheme.espresso,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 12,
+                            ),
+                            onSelected: (val) {
+                              if (val) setModalState(() => isCustom = true);
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+
+                    if (!isCustom) ...[
+                      if (activePackages.isNotEmpty) ...[
+                        Text('PAKET SEÇİN', style: SoboTheme.fontSans(fontSize: 11, fontWeight: FontWeight.bold, color: SoboTheme.espresso)),
+                        const SizedBox(height: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: SoboTheme.line),
+                          ),
+                          child: DropdownButtonHideUnderline(
+                            child: DropdownButton<int>(
+                              value: selectedPackageId,
+                              isExpanded: true,
+                              items: activePackages.map<DropdownMenuItem<int>>((dynamic p) {
+                                return DropdownMenuItem<int>(
+                                  value: p['id'] as int,
+                                  child: Text(
+                                    '${p['ad']} (${p['ders_adedi']} Ders / ${p['gecerlilik_gun']} Gün)',
+                                    style: SoboTheme.fontSans(fontSize: 13, fontWeight: FontWeight.w600),
+                                  ),
+                                );
+                              }).toList(),
+                              onChanged: (val) => setModalState(() => selectedPackageId = val),
+                            ),
+                          ),
+                        ),
+                      ] else ...[
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12)),
+                          child: const Text('Aktif paket bulunamadı. Lütfen "Özel Tanımla" seçeneğini kullanın.'),
+                        ),
+                      ],
+                    ] else ...[
+                      TextField(
+                        controller: customNameCtrl,
+                        decoration: const InputDecoration(labelText: 'Paket Adı', filled: true, fillColor: Colors.white),
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: TextField(
+                              controller: customDersCtrl,
+                              keyboardType: TextInputType.number,
+                              decoration: const InputDecoration(labelText: 'Ders Adedi (Kredi)', filled: true, fillColor: Colors.white),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: TextField(
+                              controller: customGunCtrl,
+                              keyboardType: TextInputType.number,
+                              decoration: const InputDecoration(labelText: 'Geçerlilik (Gün)', filled: true, fillColor: Colors.white),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+
+                    const SizedBox(height: 20),
+                    ElevatedButton(
+                      onPressed: isSubmitting
+                          ? null
+                          : () async {
+                              setModalState(() => isSubmitting = true);
+                              try {
+                                final Map<String, dynamic> payload = <String, dynamic>{
+                                  'member_id': m['id'],
+                                };
+
+                                if (isCustom) {
+                                  final int credits = int.tryParse(customDersCtrl.text) ?? 8;
+                                  final int days = int.tryParse(customGunCtrl.text) ?? 45;
+                                  payload['ozel_paket_adi'] = customNameCtrl.text.trim().isEmpty ? 'Özel Üye Paketi' : customNameCtrl.text.trim();
+                                  payload['ozel_ders_adedi'] = credits;
+                                  payload['ozel_gecerlilik_gun'] = days;
+                                } else {
+                                  payload['package_id'] = selectedPackageId;
+                                }
+
+                                await ApiClient.post('/admin/packages/assign', payload);
+
+                                if (ctx.mounted) {
+                                  Navigator.pop(ctx);
+                                }
+                                if (mounted) {
+                                  ScaffoldMessenger.of(this.context).showSnackBar(
+                                    SnackBar(
+                                      content: Text('${m['ad']} üyesine ders paketi başarıyla tanımlandı! ✨'),
+                                      backgroundColor: SoboTheme.sage,
+                                    ),
+                                  );
+                                  _loadMembers(_searchMemberCtrl.text);
+                                }
+                              } catch (e) {
+                                setModalState(() => isSubmitting = false);
+                                if (mounted) {
+                                  ScaffoldMessenger.of(this.context).showSnackBar(
+                                    SnackBar(
+                                      content: Text('Hata: ${e.toString().replaceAll('Exception: ', '')}'),
+                                      backgroundColor: SoboTheme.clay,
+                                    ),
+                                  );
+                                }
+                              }
+                            },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: SoboTheme.espresso,
+                        foregroundColor: Colors.white,
+                        minimumSize: const Size.fromHeight(48),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                      child: Text(
+                        isSubmitting ? 'TANIMLANIYOR...' : 'PAKETİ VE DERSLERİ YÜKLE',
+                        style: SoboTheme.fontSans(fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
 
   void _showSinglePushModal(dynamic m) {
     final TextEditingController tCtrl = TextEditingController();
@@ -2236,6 +2461,24 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
                         Text('Paket: $activePkgName', style: SoboTheme.fontSans(fontSize: 11, fontWeight: FontWeight.w600, color: SoboTheme.espresso)),
                         const SizedBox(height: 10),
 
+                        Row(
+                          children: [
+                            Expanded(
+                              child: ElevatedButton.icon(
+                                onPressed: () => _showAssignPackageModal(m),
+                                icon: const Icon(Icons.add_circle_outline_rounded, size: 14, color: Colors.white),
+                                label: const Text('+ Paket / Ders Tanımla', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.white)),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: SoboTheme.terracotta,
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(vertical: 8),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
                         Row(
                           children: [
                             Expanded(

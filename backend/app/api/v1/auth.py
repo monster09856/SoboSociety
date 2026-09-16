@@ -49,27 +49,33 @@ async def register_endpoint(
     if existing:
         raise HTTPException(status_code=400, detail="Bu kullanıcı adı başka bir üye tarafından kullanılıyor.")
 
-    # Telefon verildiyse kontrol et
-    norm_tel = normalize_telefon(body.telefon) if body.telefon else None
-    if norm_tel:
-        stmt_tel = select(Member).where(Member.telefon == norm_tel)
-        res_tel = await db.execute(stmt_tel)
-        existing_tel = res_tel.scalar_one_or_none()
-        if existing_tel:
-            if existing_tel.sifre_hash:
-                raise HTTPException(
-                    status_code=400,
-                    detail="Bu telefon numarası ile kayıtlı aktif bir üyelik bulunmaktadır. Lütfen kullanıcı adınız ile giriş yapınız."
-                )
-            # DM hızlı kayıt ile açılmış ve henüz şifresi oluşturulmamış üye
-            existing_tel.kullanici_adi = username
-            existing_tel.sifre_hash = hash_password(body.sifre)
-            existing_tel.ad = body.ad.strip()
-            await db.commit()
-            await db.refresh(existing_tel)
-            is_admin = norm_tel in ayarlar.admin_telefons or username == "admin"
-            token = create_access_token(subject=str(existing_tel.id), is_admin=is_admin)
-            return TokenResponse(access_token=token)
+    # Telefon zorunlu kontrolü ve formatlama
+    if not body.telefon or not body.telefon.strip():
+        raise HTTPException(status_code=400, detail="Cep telefonu numarası zorunludur.")
+
+    try:
+        norm_tel = normalize_telefon(body.telefon.strip())
+    except GecersizTelefon as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    stmt_tel = select(Member).where(Member.telefon == norm_tel)
+    res_tel = await db.execute(stmt_tel)
+    existing_tel = res_tel.scalar_one_or_none()
+    if existing_tel:
+        if existing_tel.sifre_hash:
+            raise HTTPException(
+                status_code=400,
+                detail="Bu telefon numarası ile kayıtlı aktif bir üyelik bulunmaktadır. Lütfen kullanıcı adınız ile giriş yapınız."
+            )
+        # DM hızlı kayıt ile açılmış ve henüz şifresi oluşturulmamış üye
+        existing_tel.kullanici_adi = username
+        existing_tel.sifre_hash = hash_password(body.sifre)
+        existing_tel.ad = body.ad.strip()
+        await db.commit()
+        await db.refresh(existing_tel)
+        is_admin = norm_tel in ayarlar.admin_telefons or username == "admin"
+        token = create_access_token(subject=str(existing_tel.id), is_admin=is_admin)
+        return TokenResponse(access_token=token)
 
     # Yeni üye oluştur
     pw_hash = hash_password(body.sifre)

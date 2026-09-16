@@ -197,6 +197,7 @@ async def test_register_ve_login_basarili(client: AsyncClient, db):
             "ad": "Elif Kaya",
             "kullanici_adi": "elifkaya",
             "sifre": "farklisifre",
+            "telefon": "+905334445577",
         },
     )
     assert reg_again.status_code == 400
