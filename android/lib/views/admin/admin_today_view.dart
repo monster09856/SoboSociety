@@ -1719,7 +1719,7 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
                         return ChoiceChip(
                           label: Text('+$days Gün'),
                           selected: isSelected,
-                          selectedColor: SoboTheme.terracotta,
+                          selectedColor: SoboTheme.clay,
                           labelStyle: TextStyle(
                             color: isSelected ? Colors.white : SoboTheme.espresso,
                             fontWeight: FontWeight.bold,
@@ -1868,6 +1868,72 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
             content: Text('Hata: ${e.toString().replaceAll('Exception: ', '')}'),
             backgroundColor: SoboTheme.clay,
           ),
+        );
+  }
+
+  Future<void> _handleApproveMember(dynamic m) async {
+    try {
+      await ApiClient.post('/admin/members/${m['id']}/approve', <String, dynamic>{});
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('${m['ad']} üyeliği başarıyla onaylandı ✨'),
+            backgroundColor: SoboTheme.sage,
+          ),
+        );
+        _loadMembers(_searchMemberCtrl.text);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Onaylama hatası: ${e.toString().replaceAll('Exception: ', '')}'), backgroundColor: Colors.red),
+        );
+      }
+    }
+  }
+
+  Future<void> _handleRejectMember(dynamic m) async {
+    final bool? confirm = await showDialog<bool>(
+      context: context,
+      builder: (dialogCtx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+        backgroundColor: SoboTheme.ivory,
+        title: Text('Başvuruyu Reddet', style: SoboTheme.fontSerif(fontWeight: FontWeight.bold)),
+        content: Text(
+          '${m['ad']} kullanıcısının üyelik başvurusunu reddetmek ve kaydını silmek istediğinize emin misiniz?',
+          style: SoboTheme.fontSans(fontSize: 13),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogCtx, false),
+            child: const Text('Vazgeç', style: TextStyle(color: SoboTheme.secondary)),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(dialogCtx, true),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red.shade700, foregroundColor: Colors.white),
+            child: const Text('Reddet ve Sil'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
+    try {
+      await ApiClient.post('/admin/members/${m['id']}/reject', <String, dynamic>{});
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('${m['ad']} üyelik başvurusu reddedildi.'),
+            backgroundColor: SoboTheme.clay,
+          ),
+        );
+        _loadMembers(_searchMemberCtrl.text);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Hata: ${e.toString().replaceAll('Exception: ', '')}'), backgroundColor: Colors.red),
         );
       }
     }
@@ -2631,6 +2697,9 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
 
   // TAB 4: ÜYELER & BODY MEASUREMENTS
   Widget _buildMembersTab() {
+    final List<dynamic> pendingMembers = _members.where((m) => m['aktif'] == false).toList();
+    final List<dynamic> activeMembers = _members.where((m) => m['aktif'] != false).toList();
+
     return RefreshIndicator(
       onRefresh: () => _loadMembers(_searchMemberCtrl.text),
       color: SoboTheme.espresso,
@@ -2658,25 +2727,163 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
             ),
             const SizedBox(height: 16),
 
-            Text('KAYITLI ÜYELER (${_members.length})', style: SoboTheme.fontSans(fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 1.2, color: SoboTheme.secondary)),
+            // ONAY BEKLEYEN ÜYELİK BAŞVURULARI
+            if (pendingMembers.isNotEmpty) ...[
+              Container(
+                margin: const EdgeInsets.only(bottom: 20),
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFFF9F5),
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(color: SoboTheme.clay.withOpacity(0.4), width: 1.5),
+                  boxShadow: [
+                    BoxShadow(
+                      color: SoboTheme.clay.withOpacity(0.06),
+                      blurRadius: 8,
+                      offset: const Offset(0, 3),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: SoboTheme.clay.withOpacity(0.12),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(Icons.person_add_rounded, color: SoboTheme.clay, size: 20),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'ONAY BEKLEYEN BAŞVURULAR (${pendingMembers.length})',
+                                style: SoboTheme.fontSans(fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 0.8, color: SoboTheme.clay),
+                              ),
+                              Text(
+                                'Yeni kaydolan kullanıcılar onayınızdan sonra stüdyoya erişebilir.',
+                                style: SoboTheme.fontSans(fontSize: 11, color: SoboTheme.secondary),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 14),
+                    ListView.separated(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemCount: pendingMembers.length,
+                      separatorBuilder: (_, __) => const SizedBox(height: 10),
+                      itemBuilder: (context, index) {
+                        final m = pendingMembers[index];
+                        final String username = m['kullanici_adi'] != null ? '@${m['kullanici_adi']}' : '';
+                        final String phone = m['telefon'] ?? 'Telefon Yok';
+
+                        return Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(color: SoboTheme.line),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(m['ad'] ?? 'Başvuran Üye', style: SoboTheme.fontSerif(fontSize: 16, fontWeight: FontWeight.bold, color: SoboTheme.ink)),
+                                        Text('$username • $phone', style: SoboTheme.fontSans(fontSize: 12, color: SoboTheme.secondary)),
+                                      ],
+                                    ),
+                                  ),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                    decoration: BoxDecoration(
+                                      color: Colors.amber.shade50,
+                                      border: Border.all(color: Colors.amber.shade300),
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(Icons.hourglass_empty_rounded, size: 12, color: Colors.amber.shade800),
+                                        const SizedBox(width: 4),
+                                        Text('Onay Bekliyor', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.amber.shade900)),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 12),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: ElevatedButton.icon(
+                                      onPressed: () => _handleApproveMember(m),
+                                      icon: const Icon(Icons.check_rounded, size: 16),
+                                      label: const Text('Üyeliği Onayla', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: SoboTheme.sage,
+                                        foregroundColor: Colors.white,
+                                        padding: const EdgeInsets.symmetric(vertical: 9),
+                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  OutlinedButton.icon(
+                                    onPressed: () => _handleRejectMember(m),
+                                    icon: Icon(Icons.close_rounded, size: 16, color: Colors.red.shade700),
+                                    label: Text('Reddet', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.red.shade700)),
+                                    style: OutlinedButton.styleFrom(
+                                      side: BorderSide(color: Colors.red.shade300),
+                                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
+                  ],
+                ),
+              ),
+            ],
+
+            Text('KAYITLI VE AKTİF ÜYELER (${activeMembers.length})', style: SoboTheme.fontSans(fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 1.2, color: SoboTheme.secondary)),
             const SizedBox(height: 10),
 
             if (_isLoadingMembers)
               const Center(child: Padding(padding: EdgeInsets.all(32), child: CircularProgressIndicator(color: SoboTheme.espresso)))
-            else if (_members.isEmpty)
+            else if (activeMembers.isEmpty)
               Container(
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14), border: Border.all(color: SoboTheme.line)),
-                child: Center(child: Text('Kayıtlı üye bulunamadı.', style: SoboTheme.fontSans(fontSize: 12, color: SoboTheme.secondary))),
+                child: Center(child: Text('Kayıtlı aktif üye bulunamadı.', style: SoboTheme.fontSans(fontSize: 12, color: SoboTheme.secondary))),
               )
             else
               ListView.separated(
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
-                itemCount: _members.length,
+                itemCount: activeMembers.length,
                 separatorBuilder: (_, __) => const SizedBox(height: 10),
                 itemBuilder: (context, index) {
-                  final m = _members[index];
+                  final m = activeMembers[index];
                   final String username = m['kullanici_adi'] != null ? '@${m['kullanici_adi']}' : '';
                   final String phone = m['telefon'] ?? 'Telefon Yok';
                   final int bakiye = m['bakiye'] ?? 0;
@@ -2778,7 +2985,7 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
                                   icon: const Icon(Icons.add_circle_outline_rounded, size: 14, color: Colors.white),
                                   label: const Text('+ Yeni / Ek Paket Tanımla', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.white)),
                                   style: ElevatedButton.styleFrom(
-                                    backgroundColor: SoboTheme.terracotta,
+                                    backgroundColor: SoboTheme.clay,
                                     foregroundColor: Colors.white,
                                     padding: const EdgeInsets.symmetric(vertical: 8),
                                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
@@ -2811,7 +3018,7 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
                                   icon: const Icon(Icons.add_circle_outline_rounded, size: 16, color: Colors.white),
                                   label: const Text('+ PAKET TANIMLA', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 0.5, color: Colors.white)),
                                   style: ElevatedButton.styleFrom(
-                                    backgroundColor: SoboTheme.terracotta,
+                                    backgroundColor: SoboTheme.clay,
                                     foregroundColor: Colors.white,
                                     padding: const EdgeInsets.symmetric(vertical: 10),
                                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),

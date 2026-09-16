@@ -177,7 +177,7 @@ async def test_get_current_admin_dependency(db):
 
 
 async def test_register_ve_login_basarili(client: AsyncClient, db):
-    # 1. Kayıt Ol
+    # 1. Kayıt Ol (Normal üye stüdyo onayı bekler, aktif=False)
     reg_res = await client.post(
         "/api/v1/auth/register",
         json={
@@ -188,7 +188,8 @@ async def test_register_ve_login_basarili(client: AsyncClient, db):
         },
     )
     assert reg_res.status_code == 200
-    assert "access_token" in reg_res.json()
+    reg_data = reg_res.json()
+    assert reg_data["aktif"] is False
 
     # 2. Aynı kullanıcı adı tekrar kayıt olamaz
     reg_again = await client.post(
@@ -202,7 +203,20 @@ async def test_register_ve_login_basarili(client: AsyncClient, db):
     )
     assert reg_again.status_code == 400
 
-    # 3. Giriş Yap (Kullanıcı adı + Şifre)
+    # 3. Onaysız üye giriş yapmaya çalışırsa 403 almalı
+    unapproved_login = await client.post(
+        "/api/v1/auth/login",
+        json={"kullanici_adi": "elifkaya", "sifre": "sifre123"},
+    )
+    assert unapproved_login.status_code == 403
+    assert "onaylandığında" in unapproved_login.json()["detail"]
+
+    # 4. Stüdyo yönetimi üyeyi onaylar
+    from sqlalchemy import select, update
+    await db.execute(update(Member).where(Member.kullanici_adi == "elifkaya").values(aktif=True))
+    await db.flush()
+
+    # 5. Giriş Yap (Kullanıcı adı + Şifre - Artık onaylı)
     login_res = await client.post(
         "/api/v1/auth/login",
         json={"kullanici_adi": "elifkaya", "sifre": "sifre123"},
@@ -210,7 +224,7 @@ async def test_register_ve_login_basarili(client: AsyncClient, db):
     assert login_res.status_code == 200
     assert "access_token" in login_res.json()
 
-    # 4. Hatalı Şifre
+    # 6. Hatalı Şifre
     wrong_pw = await client.post(
         "/api/v1/auth/login",
         json={"kullanici_adi": "elifkaya", "sifre": "yanlissifre"},

@@ -74,8 +74,24 @@ async def register_endpoint(
         await db.commit()
         await db.refresh(existing_tel)
         is_admin = norm_tel in ayarlar.admin_telefons or username == "admin"
+        if not existing_tel.aktif and not is_admin:
+            return TokenResponse(
+                access_token="",
+                token_type="bearer",
+                aktif=False,
+                mesaj="Üyelik başvurunuz stüdyo yönetimi tarafından incelenmektedir. Onaylandıktan sonra giriş yapabilirsiniz. ✨",
+            )
         token = create_access_token(subject=str(existing_tel.id), is_admin=is_admin)
-        return TokenResponse(access_token=token)
+        return TokenResponse(access_token=token, aktif=True, mesaj="Giriş başarılı")
+
+    is_admin = (norm_tel in ayarlar.admin_telefons) if norm_tel else (username == "admin")
+    is_apple_review = (
+        ("apple" in username.lower())
+        or ("demo" in username.lower())
+        or (norm_tel in ["+905550000000", "+905000000000", "+905555555555"])
+    )
+    # Admin ve Apple review hesapları doğrudan aktif; diğer normal kayıtlar butik stüdyo yönetici onayı bekler
+    aktif = is_admin or is_apple_review
 
     # Yeni üye oluştur
     pw_hash = hash_password(body.sifre)
@@ -84,14 +100,22 @@ async def register_endpoint(
         kullanici_adi=username,
         sifre_hash=pw_hash,
         telefon=norm_tel,
+        aktif=aktif,
     )
     db.add(new_member)
     await db.commit()
     await db.refresh(new_member)
 
-    is_admin = (norm_tel in ayarlar.admin_telefons) if norm_tel else (username == "admin")
+    if not aktif:
+        return TokenResponse(
+            access_token="",
+            token_type="bearer",
+            aktif=False,
+            mesaj="Üyelik başvurunuz stüdyo yönetimi tarafından incelenmektedir. Onaylandıktan sonra giriş yapabilirsiniz. ✨",
+        )
+
     token = create_access_token(subject=str(new_member.id), is_admin=is_admin)
-    return TokenResponse(access_token=token)
+    return TokenResponse(access_token=token, aktif=True, mesaj="Giriş başarılı")
 
 
 @router.post("/login", response_model=TokenResponse)
@@ -136,8 +160,15 @@ async def login_endpoint(
         raise HTTPException(status_code=400, detail="Kullanıcı adı veya şifre hatalı.")
 
     is_admin = (member.telefon in ayarlar.admin_telefons) or (member.kullanici_adi == "admin")
+
+    if not member.aktif and not is_admin:
+        raise HTTPException(
+            status_code=403,
+            detail="Üyelik başvurunuz stüdyo yönetimi tarafından incelenmektedir. Hesabınız onaylandığında giriş yapabileceksiniz. ✨",
+        )
+
     token = create_access_token(subject=str(member.id), is_admin=is_admin)
-    return TokenResponse(access_token=token)
+    return TokenResponse(access_token=token, aktif=True, mesaj="Giriş başarılı")
 
 
 @router.post("/otp/send", response_model=OTPSendResponse)

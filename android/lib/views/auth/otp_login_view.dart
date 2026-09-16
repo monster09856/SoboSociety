@@ -89,8 +89,65 @@ class _OTPLoginViewState extends State<OTPLoginView> with SingleTickerProviderSt
         'telefon': phone,
       });
 
-      final String accessToken = res['access_token'];
-      await StorageService.saveToken(accessToken);
+      final bool isPending = res['aktif'] == false;
+      if (isPending) {
+        if (mounted) {
+          setState(() {
+            _isLoading = false;
+            _isLogin = true;
+            _loginUsernameController.text = username;
+            _loginPasswordController.clear();
+          });
+          showDialog(
+            context: context,
+            barrierDismissible: false,
+            builder: (ctx) => AlertDialog(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+              backgroundColor: SoboTheme.ivory,
+              title: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: SoboTheme.clay.withOpacity(0.15),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.hourglass_top_rounded, color: SoboTheme.clay, size: 24),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      'Başvurunuz Alındı ✨',
+                      style: SoboTheme.fontSerif(fontSize: 20, fontWeight: FontWeight.bold, color: SoboTheme.ink),
+                    ),
+                  ),
+                ],
+              ),
+              content: Text(
+                'Sobo Pilates butik stüdyomuza üyeliğiniz yönetici tarafından incelenmektedir.\n\nBaşvurunuz stüdyo yönetimi tarafından onaylandıktan sonra kullanıcı adı ve şifrenizle giriş yapabilir, ders takvimini ve paketleri görüntüleyebilirsiniz.',
+                style: SoboTheme.fontSans(fontSize: 14, height: 1.5, color: SoboTheme.secondary),
+              ),
+              actions: [
+                ElevatedButton(
+                  onPressed: () => Navigator.of(ctx).pop(),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: SoboTheme.espresso,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
+                  ),
+                  child: const Text('Tamam, Bekliyorum', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                ),
+              ],
+            ),
+          );
+        }
+        return;
+      }
+
+      final String accessToken = res['access_token'] ?? '';
+      if (accessToken.isNotEmpty) {
+        await StorageService.saveToken(accessToken);
+      }
 
       bool isAdmin = false;
       try {

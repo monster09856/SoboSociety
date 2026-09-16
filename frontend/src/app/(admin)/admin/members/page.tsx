@@ -6,7 +6,7 @@ import { buyukHarf } from '@/lib/utils'
 import { AdminNav } from '@/components/admin/admin-nav'
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
-import { Users, Search, Plus, CreditCard, Send, Edit2, ShieldAlert, CheckCircle2, Loader2, Sparkles, UserCheck, AtSign, Phone, Ruler, X, Package, Trash2, UserX } from 'lucide-react'
+import { Users, Search, Plus, CreditCard, Send, Edit2, ShieldAlert, CheckCircle2, Loader2, Sparkles, UserCheck, AtSign, Phone, Ruler, X, Package, Trash2, UserX, Clock, XCircle } from 'lucide-react'
 
 interface MemberDetail {
   id: number
@@ -227,6 +227,30 @@ export default function AdminMembersPage() {
     }
   }
 
+  const handleApproveMember = async (m: MemberDetail) => {
+    try {
+      await admin.approveMember(m.id)
+      setSuccess(`${m.ad} üyeliği başarıyla onaylandı ve hesabı aktif edildi. ✨`)
+      await loadMembers(search)
+    } catch (err: any) {
+      setError(err?.message || 'Üyelik onaylanırken bir hata oluştu.')
+    }
+  }
+
+  const handleRejectMember = async (m: MemberDetail) => {
+    if (!confirm(`${m.ad} (${m.telefon || 'Telefon Yok'}) kullanıcısının üyelik başvurusunu reddetmek ve kaydını silmek istediğinize emin misiniz?`)) return
+    try {
+      await admin.rejectMember(m.id)
+      setSuccess(`${m.ad} üyelik başvurusu reddedildi.`)
+      await loadMembers(search)
+    } catch (err: any) {
+      setError(err?.message || 'Üyelik başvurusu reddedilirken bir hata oluştu.')
+    }
+  }
+
+  const pendingMembers = members.filter((m) => m.aktif === false)
+  const activeMembers = members.filter((m) => m.aktif !== false)
+
   return (
     <div className="min-h-screen bg-ivory text-ink font-sans antialiased relative">
       <AdminNav />
@@ -286,24 +310,77 @@ export default function AdminMembersPage() {
           </form>
         </Card>
 
+        {/* Onay Bekleyen Üyelik Başvuruları */}
+        {pendingMembers.length > 0 && (
+          <div className="p-6 rounded-2xl bg-amber-500/10 border-2 border-clay/40 space-y-4 shadow-sm">
+            <div className="flex items-center gap-3">
+              <span className="p-2.5 rounded-xl bg-clay/20 text-clay">
+                <Clock className="w-5 h-5" />
+              </span>
+              <div>
+                <h3 className="font-serif text-lg font-bold text-ink flex items-center gap-2">
+                  <span>Onay Bekleyen Üyelik Başvuruları</span>
+                  <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-clay text-white">
+                    {pendingMembers.length}
+                  </span>
+                </h3>
+                <p className="text-xs text-secondary">
+                  Yeni kaydolan kullanıcılar onayınızdan sonra stüdyo derslerini ve paketlerini görüntüleyebilir.
+                </p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {pendingMembers.map((m) => (
+                <div key={m.id} className="p-4 rounded-xl bg-white border border-line shadow-xs space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-ink text-sm">{m.ad}</span>
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-300">
+                      Onay Bekliyor
+                    </span>
+                  </div>
+                  <div className="text-xs text-secondary space-y-0.5 font-mono">
+                    {m.kullanici_adi && <div className="text-espresso font-bold">@{m.kullanici_adi}</div>}
+                    <div>{m.telefon || 'Telefon Eklenmedi'}</div>
+                  </div>
+                  <div className="flex items-center gap-2 pt-1">
+                    <button
+                      onClick={() => handleApproveMember(m)}
+                      className="flex-1 py-2 px-3 rounded-lg text-xs font-bold bg-sage text-white hover:bg-sage/90 transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-2xs"
+                    >
+                      <CheckCircle2 className="w-4 h-4" /> Üyeliği Onayla
+                    </button>
+                    <button
+                      onClick={() => handleRejectMember(m)}
+                      className="py-2 px-3 rounded-lg text-xs font-bold border border-red-300 text-red-700 hover:bg-red-50 transition-all flex items-center justify-center gap-1 cursor-pointer"
+                    >
+                      <XCircle className="w-4 h-4" /> Reddet
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Members Grid */}
         <div className="space-y-4">
           <h2 className="font-serif text-xl font-bold text-ink flex items-center gap-2">
             <Users className="w-5 h-5 text-espresso" />
-            <span>Kayıtlı Üyeler ({members.length})</span>
+            <span>Kayıtlı ve Aktif Üyeler ({activeMembers.length})</span>
           </h2>
 
           {loading ? (
             <div className="flex h-32 items-center justify-center rounded-2xl bg-sand border border-line">
               <Loader2 className="w-6 h-6 animate-spin text-espresso" />
             </div>
-          ) : members.length === 0 ? (
+          ) : activeMembers.length === 0 ? (
             <div className="p-8 text-center bg-sand border border-line rounded-2xl text-xs text-secondary font-medium">
-              Arama kriterlerine uygun üye bulunamadı.
+              Arama kriterlerine uygun aktif üye bulunamadı.
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-              {members.map((m) => (
+              {activeMembers.map((m) => (
                 <Card key={m.id} className="border border-line bg-sand rounded-2xl overflow-hidden hover:border-espresso/40 transition-all shadow-xs">
                   <CardHeader className="pb-3 border-b border-line/60 bg-sand-light/50">
                     <div className="flex items-center justify-between">

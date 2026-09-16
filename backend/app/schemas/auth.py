@@ -32,6 +32,8 @@ class OTPVerifyRequest(BaseModel):
 class TokenResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
+    aktif: bool = True
+    mesaj: str | None = None
 
 
 class MemberMeResponse(BaseModel):

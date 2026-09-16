@@ -956,6 +956,72 @@ async def delete_admin_member(
         raise HTTPException(status_code=500, detail=f"Üye silinirken bir hata oluştu: {str(e)}")
 
 
+@router.post("/members/{member_id}/approve", response_model=MemberAdminDetailResponse)
+async def approve_admin_member(
+    member_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_admin: Member = Depends(get_current_admin),
+):
+    """Admin yeni üyelik başvurusunu onaylar ve hesabı aktif hale getirir."""
+    m = await db.get(Member, member_id)
+    if not m:
+        raise HTTPException(status_code=404, detail="Üye bulunamadı.")
+
+    m.aktif = True
+    await db.commit()
+    await db.refresh(m)
+
+    # Üyeye push bildirim gönder
+    try:
+        from app.services.bildirim import bildirim_gonder
+        await bildirim_gonder(
+            db,
+            member_id=m.id,
+            baslik="Üyeliğiniz Onaylandı ✨",
+            mesaj="Sobo Pilates üyeliğiniz stüdyo yönetimi tarafından onaylandı. Hoş geldiniz! Artık ders takvimini ve paketleri inceleyebilirsiniz.",
+            tip="UYELIK_ONAY",
+        )
+        await db.commit()
+    except Exception:
+        pass
+
+    return await _build_member_detail_response(db, m)
+
+
+@router.post("/members/{member_id}/reject")
+async def reject_admin_member(
+    member_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_admin: Member = Depends(get_current_admin),
+):
+    """Admin üyelik başvurusunu reddeder; rezervasyonu/paketi yoksa siler, varsa pasife alır."""
+    m = await db.get(Member, member_id)
+    if not m:
+        raise HTTPException(status_code=404, detail="Üye bulunamadı.")
+
+    if m.id == current_admin.id or m.kullanici_adi == "admin" or (m.telefon and m.telefon in ayarlar.admin_telefons):
+        raise HTTPException(status_code=400, detail="Yönetici (Admin) hesabı reddedilemez.")
+
+    has_bookings = (await db.execute(select(Booking.id).where(Booking.member_id == member_id))).first() is not None
+    has_pkgs = (await db.execute(select(MemberPackage.id).where(MemberPackage.member_id == member_id))).first() is not None
+
+    if not has_bookings and not has_pkgs:
+        member_name = m.ad
+        subq_booking_ids = select(Booking.id).where(Booking.member_id == member_id)
+        await db.execute(delete(CreditLedger).where(CreditLedger.booking_id.in_(subq_booking_ids)))
+        await db.execute(delete(CreditLedger).where(CreditLedger.member_id == member_id))
+        await db.execute(delete(DeviceToken).where(DeviceToken.member_id == member_id))
+        await db.execute(delete(Notification).where(Notification.member_id == member_id))
+        await db.execute(delete(WaitlistEntry).where(WaitlistEntry.member_id == member_id))
+        await db.delete(m)
+        await db.commit()
+        return {"status": "deleted", "mesaj": f"{member_name} üyelik başvurusu reddedildi ve sistemden silindi.", "member_id": member_id}
+    else:
+        m.aktif = False
+        await db.commit()
+        return {"status": "deactivated", "mesaj": f"{m.ad} üyeliği reddedildi ve pasife alındı.", "member_id": member_id}
+
+
 # --- Admin Events & Workshops Endpoints ---
 
 @router.get("/events", response_model=list[EventResponse])

@@ -359,3 +359,33 @@ async def test_delete_member_endpoint(client: AsyncClient, admin_fixtures, db):
     # Silinen üyeyi kontrol et
     check = await db.get(Member, del_member.id)
     assert check is None
+
+
+async def test_approve_and_reject_member_endpoints(client: AsyncClient, admin_fixtures, db):
+    headers = admin_fixtures["admin_headers"]
+
+    # 1. Onay bekleyen üye
+    pending_m = Member(ad="Başvuran Üye", telefon="+905551112233", aktif=False)
+    db.add(pending_m)
+    await db.commit()
+    await db.refresh(pending_m)
+    assert pending_m.aktif is False
+
+    # 2. Admin onaylar
+    res_approve = await client.post(f"/api/v1/admin/members/{pending_m.id}/approve", headers=headers)
+    assert res_approve.status_code == 200
+    assert res_approve.json()["aktif"] is True
+
+    # 3. Reddedilecek üye
+    reject_m = Member(ad="Reddedilecek Üye", telefon="+905551112244", aktif=False)
+    db.add(reject_m)
+    await db.commit()
+    await db.refresh(reject_m)
+
+    res_reject = await client.post(f"/api/v1/admin/members/{reject_m.id}/reject", headers=headers)
+    assert res_reject.status_code == 200
+    assert res_reject.json()["status"] == "deleted"
+
+    # Veritabanında kalmamalı
+    check = await db.get(Member, reject_m.id)
+    assert check is None
