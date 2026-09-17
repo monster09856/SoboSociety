@@ -76,6 +76,7 @@ class MemberSummaryResponse {
   final String? paketBitisTarihi;
   final int? kalanGunSayisi;
   final int? toplamDersAdedi;
+  final String? sabitDersSaatleri;
   final List<MemberPackageItem> paketler;
   final List<BookingResponse> aktifRezervasyonlar;
   final List<BookingResponse> gecmisRezervasyonlar;
@@ -90,6 +91,7 @@ class MemberSummaryResponse {
     this.paketBitisTarihi,
     this.kalanGunSayisi,
     this.toplamDersAdedi,
+    this.sabitDersSaatleri,
     this.paketler = const <MemberPackageItem>[],
     required this.aktifRezervasyonlar,
     required this.gecmisRezervasyonlar,
@@ -127,6 +129,7 @@ class MemberSummaryResponse {
       paketBitisTarihi: json['paket_bitis_tarihi'] as String?,
       kalanGunSayisi: json['kalan_gun_sayisi'] as int?,
       toplamDersAdedi: json['toplam_ders_adedi'] as int?,
+      sabitDersSaatleri: json['sabit_ders_saatleri'] as String?,
       paketler: pkgList,
       aktifRezervasyonlar: aktifList,
       gecmisRezervasyonlar: gecmisList,

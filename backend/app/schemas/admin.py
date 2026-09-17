@@ -53,6 +53,12 @@ class PackageAssignRequest(BaseModel):
     ozel_paket_adi: str | None = Field(default=None, description="Özelleştirilmiş paket adı")
     ozel_ders_adedi: int | None = Field(default=None, description="Özelleştirilmiş ders kredisi adedi")
     ozel_gecerlilik_gun: int | None = Field(default=None, description="Özelleştirilmiş geçerlilik gün sayısı")
+    sabit_ders_saatleri: str | None = Field(default=None, description="Haftalık sabit gün ve saatler (örn: Salı, Perşembe 11:30)")
+    session_id: int | None = Field(default=None, description="Opsiyonel ilk ders oturumu ID'si")
+
+
+class AdminBookSessionRequest(BaseModel):
+    session_id: int = Field(..., description="Üyenin kaydedileceği ders oturumu ID'si")
 
 
 class MemberPackageResponse(BaseModel):

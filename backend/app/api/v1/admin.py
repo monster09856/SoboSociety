@@ -1,4 +1,5 @@
 from datetime import date, datetime, time, timezone, timedelta
+import logging
 
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy import select, delete
@@ -11,6 +12,7 @@ from app.models import (
     StudioEvent, EventRSVP,
 )
 from app.schemas.admin import (
+    AdminBookSessionRequest,
     AttendanceSubmitRequest,
     AttendanceSubmitResponse,
     AttendeeResponse,
@@ -28,6 +30,7 @@ from app.schemas.admin import (
     TodaySessionResponse,
 )
 from app.schemas.member import BookingResponse
+from app.services.bildirim import bildirim_gonder
 from app.services.kredi import paket_tanimla, hareket_ekle
 from app.services.program_uretimi import STUDYO_TZ, uret
 from app.services.rezervasyon import rezerve_et
@@ -35,6 +38,8 @@ from app.services.telefon import normalize_telefon
 from app.services.yoklama import yoklama_al
 from app.services.hatalar import GecersizTelefon, KayitBulunamadi
 from app.settings import ayarlar
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(
     prefix="/admin",
@@ -194,7 +199,7 @@ async def assign_package(
     db: AsyncSession = Depends(get_db),
     current_admin: Member = Depends(get_current_admin),
 ):
-    """Üyeye özel veya hazır ders paketi tanımlar."""
+    """Üyeye özel veya hazır ders paketi tanımlar, sabit günleri kaydeder, opsiyonel ilk derse kaydeder ve anında push bildirim gönderir."""
     m = await db.get(Member, body.member_id)
     if not m:
         raise HTTPException(status_code=404, detail="Üye bulunamadı.")
@@ -203,6 +208,7 @@ async def assign_package(
     try:
         from app.models.kredi import Package
         target_pkg_id = body.package_id
+        pkg_name = None
         if body.ozel_paket_adi or body.ozel_ders_adedi:
             custom_name = body.ozel_paket_adi.strip() if body.ozel_paket_adi else "Özel Üye Paketi"
             custom_credits = body.ozel_ders_adedi if (body.ozel_ders_adedi and body.ozel_ders_adedi > 0) else 10
@@ -218,6 +224,7 @@ async def assign_package(
             db.add(pkg)
             await db.flush()
             target_pkg_id = pkg.id
+            pkg_name = custom_name
         
         if target_pkg_id is None:
             first_pkg = (await db.execute(select(Package).where(Package.aktif == True).order_by(Package.id))).scalars().first()
@@ -226,6 +233,10 @@ async def assign_package(
             if not first_pkg:
                 raise HTTPException(status_code=400, detail="Sistemde tanımlı paket bulunamadı.")
             target_pkg_id = first_pkg.id
+            pkg_name = first_pkg.ad
+        elif not pkg_name:
+            p_obj = await db.get(Package, target_pkg_id)
+            pkg_name = p_obj.ad if p_obj else "Ders Paketi"
 
         uye_paketi = await paket_tanimla(
             db,
@@ -233,8 +244,42 @@ async def assign_package(
             package_id=target_pkg_id,
             baslangic=baslangic,
         )
+
+        if body.sabit_ders_saatleri is not None:
+            m.sabit_ders_saatleri = body.sabit_ders_saatleri.strip()
+
+        # Opsiyonel: İlk ders seansına doğrudan kayıt
+        booked_session_info = ""
+        if body.session_id is not None:
+            try:
+                await rezerve_et(
+                    db,
+                    member_id=m.id,
+                    session_id=body.session_id,
+                    now=datetime.now(timezone.utc),
+                    kaynak=BookingKaynagi.ADMIN,
+                )
+                session_obj = await db.get(ClassSession, body.session_id)
+                if session_obj:
+                    c_name = session_obj.class_type.ad if session_obj.class_type else "Ders"
+                    t_str = session_obj.baslangic.strftime("%d.%m.%Y %H:%M")
+                    booked_session_info = f"\n🗓 İlk Dersiniz: {c_name} ({t_str})"
+            except Exception as b_err:
+                logger.warning("assign_package auto book session warning: %s", b_err)
+
+        # Üyeye otomatik harika bildirim gönder
+        saat_txt = f"\n⏰ Sabit Ders Saatleriniz: {m.sabit_ders_saatleri}" if m.sabit_ders_saatleri else ""
+        await bildirim_gonder(
+            db,
+            member_id=m.id,
+            baslik="🌸 Yeni Ders Paketiniz Hazır!",
+            mesaj=f"Merhaba {m.ad}, {pkg_name} paketiniz ({uye_paketi.bitis.strftime('%d.%m.%Y')} tarihine kadar) stüdyo profilinize yüklendi.{saat_txt}{booked_session_info}\nDers programınızı ve kalan haklarınızı Derslerim sayfasından inceleyebilirsiniz ✨",
+            tip="PACKAGE_ASSIGN",
+        )
+
         await db.commit()
         await db.refresh(uye_paketi)
+
         return uye_paketi
     except KayitBulunamadi as e:
         await db.rollback()
@@ -242,6 +287,51 @@ async def assign_package(
     except Exception:
         await db.rollback()
         raise
+
+
+@router.post("/members/{member_id}/book-session")
+async def admin_book_session_for_member(
+    member_id: int,
+    body: AdminBookSessionRequest,
+    db: AsyncSession = Depends(get_db),
+    current_admin: Member = Depends(get_current_admin),
+):
+    """Admin üyenin adına dilediği bir ders oturumuna rezervasyon kaydeder ve anında push bildirim gönderir."""
+    m = await db.get(Member, member_id)
+    if not m:
+        raise HTTPException(status_code=404, detail="Üye bulunamadı.")
+
+    session = await db.get(ClassSession, body.session_id)
+    if not session:
+        raise HTTPException(status_code=404, detail="Ders oturumu bulunamadı.")
+
+    now = datetime.now(timezone.utc)
+    try:
+        booking = await rezerve_et(
+            db,
+            member_id=m.id,
+            session_id=body.session_id,
+            now=now,
+            kaynak=BookingKaynagi.ADMIN,
+        )
+        await db.commit()
+        await db.refresh(booking)
+
+        class_ad = session.class_type.ad if session.class_type else "Ders"
+        ders_tarih = session.baslangic.strftime("%d.%m.%Y %H:%M")
+        await bildirim_gonder(
+            db,
+            member_id=m.id,
+            baslik="🎯 Yeni Ders Kaydınız Yapıldı!",
+            mesaj=f"Merhaba {m.ad}, {class_ad} ({ders_tarih}) seansına kaydınız stüdyomuz tarafından başarıyla yapıldı. Derslerim ekranından detayları görebilirsiniz ✨",
+            tip="REZERVE_ONAY",
+        )
+        await db.commit()
+        return {"booking_id": booking.id, "mesaj": f"{m.ad} üyesi {class_ad} ({ders_tarih}) seansına başarıyla kaydedildi."}
+    except Exception as e:
+        await db.rollback()
+        raise HTTPException(status_code=400, detail=str(e))
+
 
 
 

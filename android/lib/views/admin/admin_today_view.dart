@@ -2439,9 +2439,156 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
     );
   }
 
+  void _showBookSessionModal(dynamic m) {
+    if (_allSessions.isEmpty) {
+      _loadScheduleData();
+    }
+
+    int? selectedSessionId = _allSessions.isNotEmpty ? (_allSessions.first['id'] as int?) : null;
+    bool isSubmitting = false;
+
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: SoboTheme.ivory,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (modalCtx, setModalState) {
+            return Padding(
+              padding: EdgeInsets.only(
+                top: 20,
+                left: 16,
+                right: 16,
+                bottom: MediaQuery.of(modalCtx).viewInsets.bottom + 20,
+              ),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text('Üyeyi Derse Kaydet', style: SoboTheme.fontSerif(fontSize: 18, fontWeight: FontWeight.bold, color: SoboTheme.espresso)),
+                              Text(
+                                '${m['ad']} • Kalan Bakiye: ${m['bakiye'] ?? 0} Ders',
+                                style: SoboTheme.fontSans(fontSize: 12, color: SoboTheme.secondary),
+                              ),
+                            ],
+                          ),
+                        ),
+                        IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.pop(modalCtx)),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+
+                    Text('KAYDEDİLECEK DERS OTURUMU', style: SoboTheme.fontSans(fontSize: 10, fontWeight: FontWeight.bold, color: SoboTheme.secondary)),
+                    const SizedBox(height: 8),
+
+                    if (_allSessions.isEmpty)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        child: Text('Takvimde aktif ders oturumu bulunamadı. Lütfen önce Dersler sekmesinden seans ekleyin.', style: SoboTheme.fontSans(fontSize: 12, color: SoboTheme.secondary)),
+                      )
+                    else
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: SoboTheme.line),
+                        ),
+                        child: DropdownButtonHideUnderline(
+                          child: DropdownButton<int>(
+                            value: selectedSessionId ?? (_allSessions.first['id'] as int?),
+                            isExpanded: true,
+                            items: _allSessions.map<DropdownMenuItem<int>>((dynamic s) {
+                              final String cName = s['class_type'] != null ? s['class_type']['ad'] : 'Ders';
+                              final String dt = s['baslangic'] != null ? s['baslangic'].toString().substring(5, 16).replaceAll('T', ' ') : '';
+                              final String inst = s['instructor'] != null ? s['instructor']['ad'] : '';
+                              final int spotsLeft = (s['kontenjan'] ?? 0) - (s['dolu_sayi'] ?? 0);
+                              return DropdownMenuItem<int>(
+                                value: s['id'] as int,
+                                child: Text(
+                                  '$cName • $dt ${inst.isNotEmpty ? "($inst)" : ""} (Boş: $spotsLeft)',
+                                  style: SoboTheme.fontSans(fontSize: 12, fontWeight: FontWeight.w600),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              );
+                            }).toList(),
+                            onChanged: (val) => setModalState(() => selectedSessionId = val),
+                          ),
+                        ),
+                      ),
+
+                    const SizedBox(height: 20),
+                    ElevatedButton(
+                      onPressed: (_allSessions.isEmpty || isSubmitting || selectedSessionId == null)
+                          ? null
+                          : () async {
+                              setModalState(() => isSubmitting = true);
+                              try {
+                                final dynamic res = await ApiClient.post('/admin/members/${m['id']}/book-session', <String, dynamic>{
+                                  'session_id': selectedSessionId,
+                                });
+
+                                if (ctx.mounted) {
+                                  Navigator.pop(ctx);
+                                }
+                                if (mounted) {
+                                  ScaffoldMessenger.of(this.context).showSnackBar(
+                                    SnackBar(
+                                      content: Text(res != null && res['mesaj'] != null ? res['mesaj'] as String : '${m['ad']} derse kaydedildi ve bildirim gönderildi! ✨'),
+                                      backgroundColor: SoboTheme.forest,
+                                    ),
+                                  );
+                                  _loadMembers(_searchMemberCtrl.text);
+                                  _loadTodaySessions();
+                                }
+                              } catch (e) {
+                                setModalState(() => isSubmitting = false);
+                                if (mounted) {
+                                  ScaffoldMessenger.of(this.context).showSnackBar(
+                                    SnackBar(
+                                      content: Text('Hata: ${e.toString().replaceAll('Exception: ', '')}'),
+                                      backgroundColor: SoboTheme.clay,
+                                    ),
+                                  );
+                                }
+                              }
+                            },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: SoboTheme.espresso,
+                        foregroundColor: Colors.white,
+                        minimumSize: const Size.fromHeight(48),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                      child: Text(
+                        isSubmitting ? 'KAYDEDİLİYOR...' : 'ÜYEYİ DERSE KAYDET VE BİLDİRİM GÖNDER',
+                        style: SoboTheme.fontSans(fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
   void _showAssignPackageModal(dynamic m) {
     if (_packages.isEmpty) {
       _loadPackages();
+    }
+    if (_allSessions.isEmpty) {
+      _loadScheduleData();
     }
 
     final List<Map<String, dynamic>> fallbackPackages = [
@@ -2463,6 +2610,7 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
     }
 
     int? selectedPackageId = activePackages.isNotEmpty ? (activePackages.first['id'] as int?) : 11;
+    int? selectedInitialSessionId;
     bool isCustom = false;
     final TextEditingController customNameCtrl = TextEditingController(text: '${m['ad'] ?? "Özel"} Paket');
     final TextEditingController customDersCtrl = TextEditingController(text: '10');
@@ -2690,6 +2838,45 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
                       ),
                     ),
 
+                    const SizedBox(height: 14),
+                    Text('İLK DERSİ TAKVİME EKLE (OPSİYONEL)', style: SoboTheme.fontSans(fontSize: 10, fontWeight: FontWeight.bold, color: SoboTheme.secondary)),
+                    const SizedBox(height: 6),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: SoboTheme.line),
+                      ),
+                      child: DropdownButtonHideUnderline(
+                        child: DropdownButton<int?>(
+                          value: selectedInitialSessionId,
+                          isExpanded: true,
+                          hint: Text('Ders Seçin (İlk dersi hemen rezerve etmek için)', style: SoboTheme.fontSans(fontSize: 12, color: SoboTheme.secondary)),
+                          items: [
+                            DropdownMenuItem<int?>(
+                              value: null,
+                              child: Text('Ders Seçilmedi (Yalnızca Paket Tanımla)', style: SoboTheme.fontSans(fontSize: 12, color: SoboTheme.secondary)),
+                            ),
+                            ..._allSessions.map<DropdownMenuItem<int?>>((dynamic s) {
+                              final String cName = s['class_type'] != null ? s['class_type']['ad'] : 'Ders';
+                              final String dt = s['baslangic'] != null ? s['baslangic'].toString().substring(5, 16).replaceAll('T', ' ') : '';
+                              final String inst = s['instructor'] != null ? s['instructor']['ad'] : '';
+                              return DropdownMenuItem<int?>(
+                                value: s['id'] as int?,
+                                child: Text(
+                                  '$cName • $dt ${inst.isNotEmpty ? "($inst)" : ""}',
+                                  style: SoboTheme.fontSans(fontSize: 12, fontWeight: FontWeight.w600),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              );
+                            }),
+                          ],
+                          onChanged: (val) => setModalState(() => selectedInitialSessionId = val),
+                        ),
+                      ),
+                    ),
+
                     const SizedBox(height: 20),
                     ElevatedButton(
                       onPressed: isSubmitting
@@ -2712,6 +2899,13 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
                                   payload['package_id'] = selectedPackageId ?? 11;
                                 }
 
+                                if (sabitDersPkgCtrl.text.trim().isNotEmpty) {
+                                  payload['sabit_ders_saatleri'] = sabitDersPkgCtrl.text.trim();
+                                }
+                                if (selectedInitialSessionId != null) {
+                                  payload['session_id'] = selectedInitialSessionId;
+                                }
+
                                 await ApiClient.post('/admin/packages/assign', payload);
 
                                 if (sabitDersPkgCtrl.text.trim().isNotEmpty) {
@@ -2728,11 +2922,12 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
                                 if (mounted) {
                                   ScaffoldMessenger.of(this.context).showSnackBar(
                                     SnackBar(
-                                      content: Text('${m['ad']} üyesine ders paketi başarıyla tanımlandı! ✨'),
-                                      backgroundColor: SoboTheme.sage,
+                                      content: Text('${m['ad']} üyesine ders paketi ve programı tanımlandı! Bildirim gönderildi ✨'),
+                                      backgroundColor: SoboTheme.forest,
                                     ),
                                   );
                                   _loadMembers(_searchMemberCtrl.text);
+                                  _loadTodaySessions();
                                 }
                               } catch (e) {
                                 setModalState(() => isSubmitting = false);
@@ -4803,7 +4998,7 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
                         ),
                         const SizedBox(height: 8),
 
-                        // 4 Actions (Web Panel 1:1)
+                        // Paket Tanımla ve Derse Kaydet
                         Row(
                           children: [
                             Expanded(
@@ -4821,12 +5016,13 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
                             ),
                             const SizedBox(width: 8),
                             Expanded(
-                              child: OutlinedButton.icon(
-                                onPressed: () => _showMemberEditModal(m),
-                                icon: const Icon(Icons.edit_note_rounded, size: 14),
-                                label: const Text('Ölçü/Müdahale', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
-                                style: OutlinedButton.styleFrom(
-                                  foregroundColor: SoboTheme.espresso,
+                              child: ElevatedButton.icon(
+                                onPressed: () => _showBookSessionModal(m),
+                                icon: const Icon(Icons.calendar_month_rounded, size: 14, color: Colors.white),
+                                label: const Text('+ Derse Kaydet', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.white)),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: SoboTheme.espresso,
+                                  foregroundColor: Colors.white,
                                   padding: const EdgeInsets.symmetric(vertical: 8),
                                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                                 ),
@@ -4838,13 +5034,12 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
                         Row(
                           children: [
                             Expanded(
-                              child: ElevatedButton.icon(
-                                onPressed: () => _showSinglePushModal(m),
-                                icon: const Icon(Icons.send_rounded, size: 13, color: Colors.white),
-                                label: const Text('Bildirim', style: TextStyle(fontSize: 11, color: Colors.white, fontWeight: FontWeight.bold)),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: SoboTheme.espresso,
-                                  foregroundColor: Colors.white,
+                              child: OutlinedButton.icon(
+                                onPressed: () => _showMemberEditModal(m),
+                                icon: const Icon(Icons.edit_note_rounded, size: 14),
+                                label: const Text('Ölçü/Müdahale', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: SoboTheme.espresso,
                                   padding: const EdgeInsets.symmetric(vertical: 8),
                                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                                 ),
@@ -4853,26 +5048,25 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
                             const SizedBox(width: 8),
                             Expanded(
                               child: OutlinedButton.icon(
-                                onPressed: isAdminMember ? null : () => _handleDeleteMember(m),
-                                icon: Icon(
-                                  Icons.delete_forever_rounded,
-                                  size: 14,
-                                  color: isAdminMember ? Colors.grey : Colors.red.shade700,
-                                ),
-                                label: Text(
-                                  'Üyeyi Sil',
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.bold,
-                                    color: isAdminMember ? Colors.grey : Colors.red.shade700,
-                                  ),
-                                ),
+                                onPressed: () => _showSinglePushModal(m),
+                                icon: const Icon(Icons.send_rounded, size: 13, color: SoboTheme.espresso),
+                                label: const Text('Bildirim', style: TextStyle(fontSize: 11, color: SoboTheme.espresso, fontWeight: FontWeight.bold)),
                                 style: OutlinedButton.styleFrom(
-                                  side: BorderSide(color: isAdminMember ? Colors.grey.shade300 : Colors.red.shade300),
+                                  foregroundColor: SoboTheme.espresso,
                                   padding: const EdgeInsets.symmetric(vertical: 8),
                                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                                 ),
                               ),
+                            ),
+                            const SizedBox(width: 4),
+                            IconButton(
+                              onPressed: isAdminMember ? null : () => _handleDeleteMember(m),
+                              icon: Icon(
+                                Icons.delete_forever_rounded,
+                                size: 18,
+                                color: isAdminMember ? Colors.grey : Colors.red.shade700,
+                              ),
+                              tooltip: 'Üyeyi Sil',
                             ),
                           ],
                         ),

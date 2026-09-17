@@ -98,6 +98,7 @@ class MemberSummaryResponse(BaseModel):
     paket_bitis_tarihi: str | None = None
     kalan_gun_sayisi: int | None = None
     toplam_ders_adedi: int | None = None
+    sabit_ders_saatleri: str | None = None
     paketler: list[MemberPackageSummary] = []
     aktif_rezervasyonlar: list[BookingResponse] = []
     gecmis_rezervasyonlar: list[BookingResponse] = []

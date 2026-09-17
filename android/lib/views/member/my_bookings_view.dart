@@ -270,7 +270,68 @@ class _MyBookingsViewState extends State<MyBookingsView> with SingleTickerProvid
                           ],
                         ),
                       ),
-                      const SizedBox(height: 20),
+                      const SizedBox(height: 16),
+
+                      // Sabit Ders Saatleri Banner (Eğer Admin Tanımladıysa)
+                      if (_summary?.sabitDersSaatleri != null && _summary!.sabitDersSaatleri!.trim().isNotEmpty) ...[
+                        Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: SoboTheme.sage.withOpacity(0.12),
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(color: SoboTheme.sage.withOpacity(0.4)),
+                          ),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(10),
+                                decoration: BoxDecoration(
+                                  color: SoboTheme.forest,
+                                  borderRadius: BorderRadius.circular(14),
+                                ),
+                                child: const Icon(Icons.alarm_on_rounded, color: Colors.white, size: 22),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'HAFTALIK SABİT DERS PROGRAMINIZ',
+                                      style: SoboTheme.fontSans(
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.bold,
+                                        letterSpacing: 1.2,
+                                        color: SoboTheme.forest,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      _summary!.sabitDersSaatleri!,
+                                      style: SoboTheme.fontSerif(
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.bold,
+                                        color: SoboTheme.ink,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      'Stüdyomuzdaki yeriniz bu gün ve saatler için sabittir. Seansınıza geldiğinizde eğitmeniniz yoklamanızı işleyecektir ✨',
+                                      style: SoboTheme.fontSans(
+                                        fontSize: 11.5,
+                                        color: SoboTheme.secondary,
+                                        height: 1.3,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                      ],
 
                       if (activeBookings.isEmpty)
                         Container(
@@ -281,7 +342,9 @@ class _MyBookingsViewState extends State<MyBookingsView> with SingleTickerProvid
                               const Icon(Icons.event_available_rounded, size: 48, color: SoboTheme.muted),
                               const SizedBox(height: 12),
                               Text(
-                                'Henüz yaklaşan bir ders rezervasyonunuz bulunmuyor.',
+                                (_summary?.sabitDersSaatleri != null && _summary!.sabitDersSaatleri!.trim().isNotEmpty)
+                                    ? 'Haftalık sabit dersleriniz yukarıda tanımlıdır.'
+                                    : 'Henüz yaklaşan bir ders rezervasyonunuz bulunmuyor.',
                                 textAlign: TextAlign.center,
                                 style: SoboTheme.fontSans(
                                   fontSize: 13,
@@ -291,7 +354,9 @@ class _MyBookingsViewState extends State<MyBookingsView> with SingleTickerProvid
                               ),
                               const SizedBox(height: 8),
                               Text(
-                                'Ders Programı sekmesinden dilediğiniz seansa tek tıkla kaydolabilirsiniz.',
+                                (_summary?.sabitDersSaatleri != null && _summary!.sabitDersSaatleri!.trim().isNotEmpty)
+                                    ? 'Sabit saatlerinizin haricinde farklı bir seansa katılmak isterseniz Ders Programı sekmesinden rezervasyon oluşturabilirsiniz.'
+                                    : 'Ders Programı sekmesinden dilediğiniz seansa tek tıkla kaydolabilirsiniz.',
                                 textAlign: TextAlign.center,
                                 style: SoboTheme.fontSans(
                                   fontSize: 11.5,

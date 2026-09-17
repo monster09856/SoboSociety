@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../models/package_dto.dart';
+import '../../models/session_models.dart';
 import '../../services/api_client.dart';
 import '../../theme/sobo_theme.dart';
 import 'package:url_launcher/url_launcher.dart';

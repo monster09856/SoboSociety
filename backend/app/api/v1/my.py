@@ -109,6 +109,7 @@ async def get_my_summary(
         paket_bitis_tarihi=pkg_bitis_str,
         kalan_gun_sayisi=kalan_gun,
         toplam_ders_adedi=toplam_ders,
+        sabit_ders_saatleri=current_member.sabit_ders_saatleri,
         paketler=paket_listesi,
         aktif_rezervasyonlar=aktif,
         gecmis_rezervasyonlar=gecmis,
