@@ -20,11 +20,16 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
   bool _isLoadingMembers = false;
   bool _isLoadingPackages = false;
   bool _isLoadingWorkshops = false;
+  bool _isLoadingCampaigns = false;
 
   // Workshop & Events State
   List<dynamic> _workshops = <dynamic>[];
 
+  // Scheduled Notification Campaigns State
+  List<dynamic> _campaigns = <dynamic>[];
+
   // 1. Today Sessions & Quick Booking State
+  DateTime _todaySelectedDate = DateTime.now();
   List<dynamic> _todaySessions = <dynamic>[];
   final TextEditingController _quickPhoneController = TextEditingController();
   final TextEditingController _quickNameController = TextEditingController();
@@ -108,24 +113,47 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
     _loadMembers();
     _loadPackages();
     _loadNotificationStats();
+    _loadCampaigns();
     _loadWorkshops();
   }
 
-  Future<void> _loadTodaySessions() async {
+  Future<void> _loadTodaySessions([DateTime? date]) async {
+    if (date != null) {
+      _todaySelectedDate = date;
+    }
     setState(() => _isLoadingToday = true);
     try {
-      final dynamic res = await ApiClient.get('/admin/today');
+      final String dateStr =
+          '${_todaySelectedDate.year}-${_todaySelectedDate.month.toString().padLeft(2, '0')}-${_todaySelectedDate.day.toString().padLeft(2, '0')}';
+      final dynamic res = await ApiClient.get('/admin/today?tarih=$dateStr');
       if (mounted) {
         setState(() {
           _todaySessions = res is List ? res : <dynamic>[];
           if (_todaySessions.isNotEmpty && _selectedQuickSessionId == null) {
             _selectedQuickSessionId = _todaySessions.first['id'];
+          } else if (_todaySessions.isEmpty) {
+            _selectedQuickSessionId = null;
           }
           _isLoadingToday = false;
         });
       }
     } catch (_) {
       if (mounted) setState(() => _isLoadingToday = false);
+    }
+  }
+
+  Future<void> _loadCampaigns() async {
+    setState(() => _isLoadingCampaigns = true);
+    try {
+      final dynamic res = await ApiClient.get('/admin/notifications/campaigns');
+      if (mounted) {
+        setState(() {
+          _campaigns = res is List ? res : <dynamic>[];
+          _isLoadingCampaigns = false;
+        });
+      }
+    } catch (_) {
+      if (mounted) setState(() => _isLoadingCampaigns = false);
     }
   }
 
@@ -918,6 +946,851 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
     );
   }
 
+  void _makePhoneCall(String? phone) {
+    if (phone == null || phone.trim().isEmpty || phone == 'Telefon Yok') return;
+    launchUrl(Uri.parse('tel:$phone'));
+  }
+
+  void _openWhatsApp(String? phone, {String? message}) {
+    if (phone == null || phone.trim().isEmpty || phone == 'Telefon Yok') return;
+    final digits = phone.replaceAll(RegExp(r'\D'), '');
+    if (digits.isEmpty) return;
+    final waNumber = digits.startsWith('90')
+        ? digits
+        : (digits.startsWith('0') ? '90${digits.substring(1)}' : '90$digits');
+    final Uri uri = Uri.parse(
+      message != null && message.isNotEmpty
+          ? 'https://wa.me/$waNumber?text=${Uri.encodeComponent(message)}'
+          : 'https://wa.me/$waNumber',
+    );
+    launchUrl(uri, mode: LaunchMode.externalApplication);
+  }
+
+  String _formatDateDisplay(DateTime d) {
+    const days = ['Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi', 'Pazar'];
+    const months = ['', 'Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
+    final dayName = days[d.weekday - 1];
+    final monthName = months[d.month];
+    final isToday = d.year == DateTime.now().year && d.month == DateTime.now().month && d.day == DateTime.now().day;
+    final prefix = isToday ? 'Bugün • ' : '';
+    return '$prefix${d.day} $monthName $dayName';
+  }
+
+  Future<void> _showGenerateScheduleModal() async {
+    DateTime startDate = DateTime.now();
+    DateTime endDate = DateTime.now().add(const Duration(days: 7));
+    bool generating = false;
+    String? errorMsg;
+
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setModalState) {
+          return Container(
+            padding: EdgeInsets.only(
+              bottom: MediaQuery.of(ctx).viewInsets.bottom + 20,
+              top: 20,
+              left: 20,
+              right: 20,
+            ),
+            decoration: const BoxDecoration(
+              color: SoboTheme.ivory,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+            ),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Row(
+                        children: [
+                          const Icon(Icons.auto_fix_high_rounded, color: SoboTheme.espresso, size: 22),
+                          const SizedBox(width: 8),
+                          Text('Otomatik Program Üret', style: SoboTheme.fontSerif(fontSize: 18, fontWeight: FontWeight.bold, color: SoboTheme.ink)),
+                        ],
+                      ),
+                      IconButton(icon: const Icon(Icons.close_rounded), onPressed: () => Navigator.pop(ctx)),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    'Haftalık şablondan seçilen tarih aralığı için tüm stüdyo derslerini otomatik oluşturur.',
+                    style: SoboTheme.fontSans(fontSize: 12, color: SoboTheme.secondary),
+                  ),
+                  const SizedBox(height: 16),
+
+                  Text('HIZLI ARALIK SEÇİMİ', style: SoboTheme.fontSans(fontSize: 11, fontWeight: FontWeight.bold, color: SoboTheme.secondary)),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: () {
+                            setModalState(() {
+                              startDate = DateTime.now();
+                              endDate = DateTime.now().add(const Duration(days: 7));
+                            });
+                          },
+                          child: const Text('1 Hafta', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: () {
+                            setModalState(() {
+                              startDate = DateTime.now();
+                              endDate = DateTime.now().add(const Duration(days: 14));
+                            });
+                          },
+                          child: const Text('2 Hafta', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: () {
+                            setModalState(() {
+                              startDate = DateTime.now();
+                              endDate = DateTime.now().add(const Duration(days: 30));
+                            });
+                          },
+                          child: const Text('1 Ay', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('Başlangıç', style: SoboTheme.fontSans(fontSize: 11, fontWeight: FontWeight.bold)),
+                            const SizedBox(height: 4),
+                            OutlinedButton.icon(
+                              onPressed: () async {
+                                final p = await showDatePicker(
+                                  context: ctx,
+                                  initialDate: startDate,
+                                  firstDate: DateTime.now().subtract(const Duration(days: 30)),
+                                  lastDate: DateTime.now().add(const Duration(days: 180)),
+                                );
+                                if (p != null) setModalState(() => startDate = p);
+                              },
+                              icon: const Icon(Icons.calendar_today_rounded, size: 14),
+                              label: Text('${startDate.day}.${startDate.month}.${startDate.year}', style: const TextStyle(fontSize: 12)),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('Bitiş', style: SoboTheme.fontSans(fontSize: 11, fontWeight: FontWeight.bold)),
+                            const SizedBox(height: 4),
+                            OutlinedButton.icon(
+                              onPressed: () async {
+                                final p = await showDatePicker(
+                                  context: ctx,
+                                  initialDate: endDate,
+                                  firstDate: startDate,
+                                  lastDate: DateTime.now().add(const Duration(days: 180)),
+                                );
+                                if (p != null) setModalState(() => endDate = p);
+                              },
+                              icon: const Icon(Icons.event_rounded, size: 14),
+                              label: Text('${endDate.day}.${endDate.month}.${endDate.year}', style: const TextStyle(fontSize: 12)),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+
+                  if (errorMsg != null) ...[
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(color: SoboTheme.clay.withOpacity(0.12), borderRadius: BorderRadius.circular(10)),
+                      child: Text(errorMsg!, style: const TextStyle(color: SoboTheme.clay, fontSize: 12, fontWeight: FontWeight.bold)),
+                    ),
+                    const SizedBox(height: 12),
+                  ],
+
+                  ElevatedButton.icon(
+                    onPressed: generating
+                        ? null
+                        : () async {
+                            setModalState(() {
+                              generating = true;
+                              errorMsg = null;
+                            });
+                            try {
+                              final startStr = '${startDate.year}-${startDate.month.toString().padLeft(2, '0')}-${startDate.day.toString().padLeft(2, '0')}';
+                              final endStr = '${endDate.year}-${endDate.month.toString().padLeft(2, '0')}-${endDate.day.toString().padLeft(2, '0')}';
+                              final dynamic res = await ApiClient.post('/admin/sessions/generate', <String, dynamic>{
+                                'baslangic': startStr,
+                                'bitis': endStr,
+                              });
+                              final int count = (res is Map && res['uretilen_oturum_sayisi'] != null) ? res['uretilen_oturum_sayisi'] as int : 0;
+                              if (mounted) {
+                                Navigator.pop(ctx);
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(content: Text('✨ $count ders oturumu başarıyla üretildi!'), backgroundColor: SoboTheme.sage),
+                                );
+                                _loadScheduleData();
+                                _loadTodaySessions();
+                              }
+                            } catch (e) {
+                              setModalState(() {
+                                generating = false;
+                                errorMsg = e.toString().replaceAll('Exception: ', '');
+                              });
+                            }
+                          },
+                    icon: generating
+                        ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                        : const Icon(Icons.flash_on_rounded, color: Colors.white),
+                    label: Text(generating ? 'Program Üretiliyor...' : 'PROGRAMI OTOMATİK ÜRET', style: SoboTheme.fontSans(fontWeight: FontWeight.bold)),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: SoboTheme.espresso,
+                      foregroundColor: Colors.white,
+                      minimumSize: const Size.fromHeight(48),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Future<void> _showAddClassTypeDialog() async {
+    final nameCtrl = TextEditingController();
+    final bool? created = await showDialog<bool>(
+      context: context,
+      builder: (dCtx) => AlertDialog(
+        title: Text('Yeni Ders Tipi Ekle', style: SoboTheme.fontSerif(fontSize: 16, fontWeight: FontWeight.bold)),
+        content: TextField(
+          controller: nameCtrl,
+          autofocus: true,
+          decoration: const InputDecoration(labelText: 'Ders Tipi Adı (Örn: Reformer Pilates, HIIT)'),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(dCtx, false), child: const Text('İptal')),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: SoboTheme.espresso, foregroundColor: Colors.white),
+            onPressed: () => Navigator.pop(dCtx, true),
+            child: const Text('Ekle'),
+          ),
+        ],
+      ),
+    );
+    if (created == true && nameCtrl.text.trim().isNotEmpty) {
+      try {
+        final dynamic res = await ApiClient.post('/admin/class-types', <String, dynamic>{'ad': nameCtrl.text.trim()});
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Yeni ders tipi eklendi! ✨'), backgroundColor: SoboTheme.sage),
+          );
+          await _loadScheduleData();
+          if (res is Map && res['id'] != null) {
+            setState(() => _newClassTypeId = res['id'] as int);
+          }
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(e.toString().replaceAll('Exception: ', '')), backgroundColor: SoboTheme.clay),
+          );
+        }
+      }
+    }
+  }
+
+  Future<void> _showAddInstructorDialog() async {
+    final nameCtrl = TextEditingController();
+    final bool? created = await showDialog<bool>(
+      context: context,
+      builder: (dCtx) => AlertDialog(
+        title: Text('Yeni Eğitmen Ekle', style: SoboTheme.fontSerif(fontSize: 16, fontWeight: FontWeight.bold)),
+        content: TextField(
+          controller: nameCtrl,
+          autofocus: true,
+          decoration: const InputDecoration(labelText: 'Eğitmen Adı Soyadı (Örn: Selin Yılmaz)'),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(dCtx, false), child: const Text('İptal')),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: SoboTheme.espresso, foregroundColor: Colors.white),
+            onPressed: () => Navigator.pop(dCtx, true),
+            child: const Text('Ekle'),
+          ),
+        ],
+      ),
+    );
+    if (created == true && nameCtrl.text.trim().isNotEmpty) {
+      try {
+        final dynamic res = await ApiClient.post('/admin/instructors', <String, dynamic>{'ad': nameCtrl.text.trim()});
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Yeni eğitmen eklendi! ✨'), backgroundColor: SoboTheme.sage),
+          );
+          await _loadScheduleData();
+          if (res is Map && res['id'] != null) {
+            setState(() => _newInstructorId = res['id'] as int);
+          }
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(e.toString().replaceAll('Exception: ', '')), backgroundColor: SoboTheme.clay),
+          );
+        }
+      }
+    }
+  }
+
+  Future<void> _showEditSessionModal(dynamic s) async {
+    final int sessionId = s['id'] as int;
+    int classTypeId = (s['class_type'] != null ? s['class_type']['id'] : _classList.firstOrNull?['id'] ?? 1) as int;
+    int instructorId = (s['instructor'] != null ? s['instructor']['id'] : _instructorList.firstOrNull?['id'] ?? 1) as int;
+    DateTime sessionDate = DateTime.tryParse(s['baslangic']?.toString() ?? '') ?? DateTime.now();
+    TimeOfDay sessionTime = TimeOfDay(hour: sessionDate.hour, minute: sessionDate.minute);
+    final capCtrl = TextEditingController(text: '${s['kontenjan'] ?? 5}');
+    final priceCtrl = TextEditingController(text: '${s['fiyat_tl'] ?? 900}');
+    bool tekDersAcik = s['tek_ders_acik'] == true;
+    bool saving = false;
+    String? errorMsg;
+
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setModalState) {
+          return Container(
+            padding: EdgeInsets.only(
+              bottom: MediaQuery.of(ctx).viewInsets.bottom + 20,
+              top: 20,
+              left: 20,
+              right: 20,
+            ),
+            decoration: const BoxDecoration(
+              color: SoboTheme.ivory,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+            ),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Row(
+                        children: [
+                          const Icon(Icons.edit_calendar_rounded, color: SoboTheme.espresso, size: 22),
+                          const SizedBox(width: 8),
+                          Text('Dersi Düzenle', style: SoboTheme.fontSerif(fontSize: 18, fontWeight: FontWeight.bold, color: SoboTheme.ink)),
+                        ],
+                      ),
+                      IconButton(icon: const Icon(Icons.close_rounded), onPressed: () => Navigator.pop(ctx)),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+
+                  if (_classList.isNotEmpty)
+                    DropdownButtonFormField<int>(
+                      value: classTypeId,
+                      decoration: InputDecoration(labelText: 'Ders Tipi', filled: true, fillColor: Colors.white, border: OutlineInputBorder(borderRadius: BorderRadius.circular(12))),
+                      items: _classList.map<DropdownMenuItem<int>>((dynamic c) {
+                        return DropdownMenuItem<int>(value: c['id'] as int, child: Text(c['ad'] as String));
+                      }).toList(),
+                      onChanged: (val) {
+                        if (val != null) setModalState(() => classTypeId = val);
+                      },
+                    ),
+                  const SizedBox(height: 10),
+
+                  if (_instructorList.isNotEmpty)
+                    DropdownButtonFormField<int>(
+                      value: instructorId,
+                      decoration: InputDecoration(labelText: 'Eğitmen', filled: true, fillColor: Colors.white, border: OutlineInputBorder(borderRadius: BorderRadius.circular(12))),
+                      items: _instructorList.map<DropdownMenuItem<int>>((dynamic i) {
+                        return DropdownMenuItem<int>(value: i['id'] as int, child: Text(i['ad'] as String));
+                      }).toList(),
+                      onChanged: (val) {
+                        if (val != null) setModalState(() => instructorId = val);
+                      },
+                    ),
+                  const SizedBox(height: 10),
+
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: () async {
+                            final picked = await showDatePicker(
+                              context: ctx,
+                              initialDate: sessionDate,
+                              firstDate: DateTime.now().subtract(const Duration(days: 30)),
+                              lastDate: DateTime.now().add(const Duration(days: 120)),
+                            );
+                            if (picked != null) setModalState(() => sessionDate = picked);
+                          },
+                          icon: const Icon(Icons.calendar_today_rounded, size: 16),
+                          label: Text('${sessionDate.day}.${sessionDate.month}.${sessionDate.year}'),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: () async {
+                            final picked = await showTimePicker(context: ctx, initialTime: sessionTime);
+                            if (picked != null) setModalState(() => sessionTime = picked);
+                          },
+                          icon: const Icon(Icons.access_time_rounded, size: 16),
+                          label: Text('${sessionTime.hour.toString().padLeft(2, '0')}:${sessionTime.minute.toString().padLeft(2, '0')}'),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: capCtrl,
+                          keyboardType: TextInputType.number,
+                          decoration: InputDecoration(labelText: 'Kontenjan', filled: true, fillColor: Colors.white, border: OutlineInputBorder(borderRadius: BorderRadius.circular(12))),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: TextField(
+                          controller: priceCtrl,
+                          keyboardType: TextInputType.number,
+                          decoration: InputDecoration(labelText: 'Tekil Fiyat (₺)', filled: true, fillColor: Colors.white, border: OutlineInputBorder(borderRadius: BorderRadius.circular(12))),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+
+                  SwitchListTile(
+                    title: Text('Sitede Üyeliksiz Satışa Açık', style: SoboTheme.fontSans(fontSize: 11, fontWeight: FontWeight.bold)),
+                    value: tekDersAcik,
+                    activeColor: SoboTheme.espresso,
+                    onChanged: (val) => setModalState(() => tekDersAcik = val),
+                  ),
+                  const SizedBox(height: 14),
+
+                  if (errorMsg != null) ...[
+                    Text(errorMsg!, style: const TextStyle(color: SoboTheme.clay, fontSize: 12, fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 10),
+                  ],
+
+                  ElevatedButton.icon(
+                    onPressed: saving
+                        ? null
+                        : () async {
+                            setModalState(() {
+                              saving = true;
+                              errorMsg = null;
+                            });
+                            try {
+                              final combined = DateTime(sessionDate.year, sessionDate.month, sessionDate.day, sessionTime.hour, sessionTime.minute);
+                              await ApiClient.put('/admin/sessions/$sessionId', <String, dynamic>{
+                                'class_type_id': classTypeId,
+                                'instructor_id': instructorId,
+                                'baslangic': combined.toUtc().toIso8601String(),
+                                'kontenjan': int.tryParse(capCtrl.text) ?? 5,
+                                'fiyat_tl': double.tryParse(priceCtrl.text) ?? 900.0,
+                                'tek_ders_acik': tekDersAcik,
+                              });
+                              if (mounted) {
+                                Navigator.pop(ctx);
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text('Ders başarıyla güncellendi! ✨'), backgroundColor: SoboTheme.sage),
+                                );
+                                _loadScheduleData();
+                                _loadTodaySessions();
+                              }
+                            } catch (e) {
+                              setModalState(() {
+                                saving = false;
+                                errorMsg = e.toString().replaceAll('Exception: ', '');
+                              });
+                            }
+                          },
+                    icon: saving
+                        ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                        : const Icon(Icons.check_rounded, color: Colors.white),
+                    label: Text(saving ? 'Kaydediliyor...' : 'DEĞİŞİKLİKLERİ KAYDET', style: SoboTheme.fontSans(fontWeight: FontWeight.bold)),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: SoboTheme.espresso,
+                      foregroundColor: Colors.white,
+                      minimumSize: const Size.fromHeight(48),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Future<void> _showEditPackageModal(dynamic pkg) async {
+    final int pkgId = pkg['id'] as int;
+    final nameCtrl = TextEditingController(text: pkg['ad']?.toString() ?? '');
+    final dersCtrl = TextEditingController(text: '${pkg['ders_adedi'] ?? 8}');
+    final gunCtrl = TextEditingController(text: '${pkg['gecerlilik_gun'] ?? 45}');
+    final int existingPrice = (pkg['fiyat_tl'] != null) ? (pkg['fiyat_tl'] as num).toInt() : 0;
+    final priceCtrl = TextEditingController(text: '$existingPrice');
+    bool aktif = pkg['aktif'] != false;
+    bool saving = false;
+    String? errorMsg;
+
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setModalState) {
+          return Container(
+            padding: EdgeInsets.only(
+              bottom: MediaQuery.of(ctx).viewInsets.bottom + 20,
+              top: 20,
+              left: 20,
+              right: 20,
+            ),
+            decoration: const BoxDecoration(
+              color: SoboTheme.ivory,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+            ),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Row(
+                        children: [
+                          const Icon(Icons.edit_outlined, color: SoboTheme.espresso, size: 22),
+                          const SizedBox(width: 8),
+                          Text('Paketi Düzenle', style: SoboTheme.fontSerif(fontSize: 18, fontWeight: FontWeight.bold, color: SoboTheme.ink)),
+                        ],
+                      ),
+                      IconButton(icon: const Icon(Icons.close_rounded), onPressed: () => Navigator.pop(ctx)),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+
+                  TextField(
+                    controller: nameCtrl,
+                    decoration: InputDecoration(labelText: 'Paket Adı', filled: true, fillColor: Colors.white, border: OutlineInputBorder(borderRadius: BorderRadius.circular(12))),
+                  ),
+                  const SizedBox(height: 10),
+
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: dersCtrl,
+                          keyboardType: TextInputType.number,
+                          decoration: InputDecoration(labelText: 'Ders Adedi', filled: true, fillColor: Colors.white, border: OutlineInputBorder(borderRadius: BorderRadius.circular(12))),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: TextField(
+                          controller: gunCtrl,
+                          keyboardType: TextInputType.number,
+                          decoration: InputDecoration(labelText: 'Geçerlilik (Gün)', filled: true, fillColor: Colors.white, border: OutlineInputBorder(borderRadius: BorderRadius.circular(12))),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+
+                  TextField(
+                    controller: priceCtrl,
+                    keyboardType: TextInputType.number,
+                    decoration: InputDecoration(labelText: 'Ücret (₺ TL)', filled: true, fillColor: Colors.white, border: OutlineInputBorder(borderRadius: BorderRadius.circular(12))),
+                  ),
+                  const SizedBox(height: 10),
+
+                  SwitchListTile(
+                    title: Text('Paket Sitede & Uygulamada Yayında Olsun', style: SoboTheme.fontSans(fontSize: 11, fontWeight: FontWeight.bold)),
+                    value: aktif,
+                    activeColor: SoboTheme.espresso,
+                    onChanged: (val) => setModalState(() => aktif = val),
+                  ),
+                  const SizedBox(height: 14),
+
+                  if (errorMsg != null) ...[
+                    Text(errorMsg!, style: const TextStyle(color: SoboTheme.clay, fontSize: 12, fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 10),
+                  ],
+
+                  ElevatedButton.icon(
+                    onPressed: saving
+                        ? null
+                        : () async {
+                            if (nameCtrl.text.trim().isEmpty) {
+                              setModalState(() => errorMsg = 'Lütfen paket adını yazınız.');
+                              return;
+                            }
+                            setModalState(() {
+                              saving = true;
+                              errorMsg = null;
+                            });
+                            try {
+                              await ApiClient.put('/admin/packages/$pkgId', <String, dynamic>{
+                                'ad': nameCtrl.text.trim(),
+                                'ders_adedi': int.tryParse(dersCtrl.text) ?? 8,
+                                'gecerlilik_gun': int.tryParse(gunCtrl.text) ?? 45,
+                                'fiyat_tl': double.tryParse(priceCtrl.text) ?? 0.0,
+                                'aktif': aktif,
+                              });
+                              if (mounted) {
+                                Navigator.pop(ctx);
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text('Paket güncellendi! ✨'), backgroundColor: SoboTheme.sage),
+                                );
+                                _loadPackages();
+                              }
+                            } catch (e) {
+                              setModalState(() {
+                                saving = false;
+                                errorMsg = e.toString().replaceAll('Exception: ', '');
+                              });
+                            }
+                          },
+                    icon: saving
+                        ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                        : const Icon(Icons.check_rounded, color: Colors.white),
+                    label: Text(saving ? 'Kaydediliyor...' : 'PAKETİ GÜNCELLE', style: SoboTheme.fontSans(fontWeight: FontWeight.bold)),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: SoboTheme.espresso,
+                      foregroundColor: Colors.white,
+                      minimumSize: const Size.fromHeight(48),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Future<void> _showAddCampaignModal() async {
+    final titleCtrl = TextEditingController();
+    final msgCtrl = TextEditingController();
+    TimeOfDay time = const TimeOfDay(hour: 10, minute: 0);
+    String target = 'TUM_UYELER';
+    bool saving = false;
+    String? errorMsg;
+
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setModalState) {
+          return Container(
+            padding: EdgeInsets.only(
+              bottom: MediaQuery.of(ctx).viewInsets.bottom + 20,
+              top: 20,
+              left: 20,
+              right: 20,
+            ),
+            decoration: const BoxDecoration(
+              color: SoboTheme.ivory,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+            ),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Row(
+                        children: [
+                          const Icon(Icons.schedule_rounded, color: SoboTheme.espresso, size: 22),
+                          const SizedBox(width: 8),
+                          Text('Yeni Günlük Kampanya', style: SoboTheme.fontSerif(fontSize: 18, fontWeight: FontWeight.bold, color: SoboTheme.ink)),
+                        ],
+                      ),
+                      IconButton(icon: const Icon(Icons.close_rounded), onPressed: () => Navigator.pop(ctx)),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    'Her gün belirlenen saatte otomatik olarak hedeflenen üyelere push bildirim gönderir.',
+                    style: SoboTheme.fontSans(fontSize: 12, color: SoboTheme.secondary),
+                  ),
+                  const SizedBox(height: 14),
+
+                  DropdownButtonFormField<String>(
+                    value: target,
+                    decoration: InputDecoration(labelText: 'Hedef Kitle', filled: true, fillColor: Colors.white, border: OutlineInputBorder(borderRadius: BorderRadius.circular(12))),
+                    items: const [
+                      DropdownMenuItem(value: 'TUM_UYELER', child: Text('Tüm Aktif Üyeler')),
+                      DropdownMenuItem(value: 'AKTIF_PAKETLI', child: Text('Aktif Paketi Olanlar')),
+                    ],
+                    onChanged: (val) {
+                      if (val != null) setModalState(() => target = val);
+                    },
+                  ),
+                  const SizedBox(height: 10),
+
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: () async {
+                            final p = await showTimePicker(context: ctx, initialTime: time);
+                            if (p != null) setModalState(() => time = p);
+                          },
+                          icon: const Icon(Icons.alarm_rounded, size: 16),
+                          label: Text('Gönderim Saati: ${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}'),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+
+                  TextField(
+                    controller: titleCtrl,
+                    decoration: InputDecoration(labelText: 'Bildirim Başlığı', filled: true, fillColor: Colors.white, border: OutlineInputBorder(borderRadius: BorderRadius.circular(12))),
+                  ),
+                  const SizedBox(height: 10),
+
+                  TextField(
+                    controller: msgCtrl,
+                    maxLines: 3,
+                    decoration: InputDecoration(labelText: 'Bildirim Mesajı', filled: true, fillColor: Colors.white, border: OutlineInputBorder(borderRadius: BorderRadius.circular(12))),
+                  ),
+                  const SizedBox(height: 14),
+
+                  if (errorMsg != null) ...[
+                    Text(errorMsg!, style: const TextStyle(color: SoboTheme.clay, fontSize: 12, fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 10),
+                  ],
+
+                  ElevatedButton(
+                    onPressed: saving
+                        ? null
+                        : () async {
+                            if (titleCtrl.text.trim().isEmpty || msgCtrl.text.trim().isEmpty) {
+                              setModalState(() => errorMsg = 'Lütfen başlık ve mesajı doldurunuz.');
+                              return;
+                            }
+                            setModalState(() {
+                              saving = true;
+                              errorMsg = null;
+                            });
+                            try {
+                              final saatStr = '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}';
+                              await ApiClient.post('/admin/notifications/campaigns', <String, dynamic>{
+                                'baslik': titleCtrl.text.trim(),
+                                'mesaj': msgCtrl.text.trim(),
+                                'hedef_kitle': target,
+                                'zamanlama_tipi': 'GUNLUK_TEKRAR',
+                                'zamanlama_saat': saatStr,
+                              });
+                              if (mounted) {
+                                Navigator.pop(ctx);
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text('Otomatik günlük kampanya oluşturuldu! ✨'), backgroundColor: SoboTheme.sage),
+                                );
+                                _loadCampaigns();
+                              }
+                            } catch (e) {
+                              setModalState(() {
+                                saving = false;
+                                errorMsg = e.toString().replaceAll('Exception: ', '');
+                              });
+                            }
+                          },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: SoboTheme.espresso,
+                      foregroundColor: Colors.white,
+                      minimumSize: const Size.fromHeight(48),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                    child: Text(saving ? 'Kaydediliyor...' : 'KAMPANYAYI KAYDET', style: SoboTheme.fontSans(fontWeight: FontWeight.bold)),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Future<void> _handleDeleteCampaign(int id, String title) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (dCtx) => AlertDialog(
+        title: Text('Kampanyayı Sil', style: SoboTheme.fontSerif(fontSize: 16, fontWeight: FontWeight.bold)),
+        content: Text('"$title" adlı otomatik bildirim kampanyasını silmek istediğinize emin misiniz?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(dCtx, false), child: const Text('İptal')),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: SoboTheme.clay, foregroundColor: Colors.white),
+            onPressed: () => Navigator.pop(dCtx, true),
+            child: const Text('Evet, Sil'),
+          ),
+        ],
+      ),
+    );
+    if (confirm == true) {
+      try {
+        await ApiClient.delete('/admin/notifications/campaigns/$id');
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Kampanya silindi.'), backgroundColor: SoboTheme.sage),
+          );
+          _loadCampaigns();
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(e.toString().replaceAll('Exception: ', '')), backgroundColor: SoboTheme.clay),
+          );
+        }
+      }
+    }
+  }
+
   // --- Handlers ---
   Future<void> _handleQuickBooking() async {
     if (_selectedQuickSessionId == null || _quickPhoneController.text.isEmpty) {
@@ -1073,7 +1946,7 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
         'session_id': _guestSessionId,
         'ad': _guestNameCtrl.text.trim(),
         'telefon': _guestPhoneCtrl.text.trim(),
-        'fiyat_tl': double.tryParse(_guestPriceCtrl.text) ?? 900.0,
+        'durum': 'booked',
       });
 
       if (mounted) {
@@ -1716,9 +2589,14 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
     );
   }
 
-  void _showEditMemberPackageModal(dynamic m) {
-    final int memberPackageId = m['aktif_member_package_id'] ?? 0;
+  void _showEditMemberPackageModal(dynamic m, [dynamic pkg]) {
+    final int memberPackageId = (pkg != null && pkg['id'] != null)
+        ? pkg['id'] as int
+        : ((m['aktif_member_package_id'] ?? 0) as int);
     if (memberPackageId == 0) return;
+    final String activePkgName = (pkg != null && pkg['ad'] != null)
+        ? pkg['ad'] as String
+        : (m['aktif_paket_adi'] as String? ?? "Ders Paketi");
 
     final TextEditingController remainingLessonsCtrl = TextEditingController(text: (m['bakiye'] ?? 0).toString());
     int? additionalDays;
@@ -1754,7 +2632,7 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
                             children: [
                               Text('Paket & Ders Düzenle', style: SoboTheme.fontSerif(fontSize: 18, fontWeight: FontWeight.bold, color: SoboTheme.espresso)),
                               Text(
-                                '${m['ad']} • ${m['aktif_paket_adi'] ?? "Ders Paketi"}',
+                                '${m['ad']} • $activePkgName',
                                 style: SoboTheme.fontSans(fontSize: 12, color: SoboTheme.secondary),
                               ),
                             ],
@@ -2310,6 +3188,78 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            // Date Navigator Bar
+            Container(
+              margin: const EdgeInsets.only(bottom: 16),
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: SoboTheme.line),
+              ),
+              child: Row(
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.chevron_left_rounded, color: SoboTheme.espresso),
+                    tooltip: 'Önceki Gün',
+                    onPressed: () {
+                      final prev = _todaySelectedDate.subtract(const Duration(days: 1));
+                      _loadTodaySessions(prev);
+                    },
+                  ),
+                  Expanded(
+                    child: InkWell(
+                      onTap: () async {
+                        final picked = await showDatePicker(
+                          context: context,
+                          initialDate: _todaySelectedDate,
+                          firstDate: DateTime.now().subtract(const Duration(days: 90)),
+                          lastDate: DateTime.now().add(const Duration(days: 90)),
+                        );
+                        if (picked != null) {
+                          _loadTodaySessions(picked);
+                        }
+                      },
+                      borderRadius: BorderRadius.circular(10),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 6),
+                        child: Column(
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                const Icon(Icons.calendar_month_rounded, size: 16, color: SoboTheme.espresso),
+                                const SizedBox(width: 6),
+                                Text(
+                                  _formatDateDisplay(_todaySelectedDate),
+                                  style: SoboTheme.fontSans(fontSize: 13, fontWeight: FontWeight.bold, color: SoboTheme.ink),
+                                ),
+                              ],
+                            ),
+                            if (_todaySelectedDate.year != DateTime.now().year ||
+                                _todaySelectedDate.month != DateTime.now().month ||
+                                _todaySelectedDate.day != DateTime.now().day)
+                              Padding(
+                                padding: const EdgeInsets.only(top: 2),
+                                child: Text('Bugüne dönmek için dokunun', style: TextStyle(fontSize: 10, color: SoboTheme.clay, fontWeight: FontWeight.bold)),
+                              ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.chevron_right_rounded, color: SoboTheme.espresso),
+                    tooltip: 'Sonraki Gün',
+                    onPressed: () {
+                      final next = _todaySelectedDate.add(const Duration(days: 1));
+                      _loadTodaySessions(next);
+                    },
+                  ),
+                ],
+              ),
+            ),
+
             Container(
               padding: const EdgeInsets.all(18),
               decoration: BoxDecoration(
@@ -2385,13 +3335,13 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
                       child: Text('DERSE EKLE', style: SoboTheme.fontSans(fontWeight: FontWeight.bold, letterSpacing: 1)),
                     ),
                   ] else
-                    Text('Bugün için tanımlı ders oturumu bulunmuyor.', style: SoboTheme.fontSans(fontSize: 12, color: SoboTheme.secondary)),
+                    Text('Seçili tarih için tanımlı ders oturumu bulunmuyor.', style: SoboTheme.fontSans(fontSize: 12, color: SoboTheme.secondary)),
                 ],
               ),
             ),
             const SizedBox(height: 24),
 
-            Text('BUGÜNKÜ DERSLER VE KATILIMCILAR', style: SoboTheme.fontSans(fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 1.5, color: SoboTheme.secondary)),
+            Text('SEÇİLİ GÜNÜN DERSLERİ VE KATILIMCILAR', style: SoboTheme.fontSans(fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 1.5, color: SoboTheme.secondary)),
             const SizedBox(height: 12),
 
             if (_isLoadingToday)
@@ -2400,7 +3350,7 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
               Container(
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14), border: Border.all(color: SoboTheme.line)),
-                child: Center(child: Text('Bugün için ders oturumu yok.', style: SoboTheme.fontSans(fontSize: 12, color: SoboTheme.secondary))),
+                child: Center(child: Text('Seçili tarih için ders oturumu yok.', style: SoboTheme.fontSans(fontSize: 12, color: SoboTheme.secondary))),
               )
             else
               ListView.separated(
@@ -2507,6 +3457,48 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            // Otomatik Program Üret Banner
+            Container(
+              margin: const EdgeInsets.only(bottom: 16),
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: SoboTheme.sandLight,
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(color: SoboTheme.line),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(color: SoboTheme.espresso, borderRadius: BorderRadius.circular(12)),
+                    child: const Icon(Icons.auto_fix_high_rounded, color: Colors.white, size: 20),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Otomatik Program Üret', style: SoboTheme.fontSerif(fontSize: 15, fontWeight: FontWeight.bold, color: SoboTheme.ink)),
+                        const SizedBox(height: 2),
+                        Text('Haftalık şablondan 1-4 haftalık dersleri tek tıkla üretin.', style: SoboTheme.fontSans(fontSize: 11, color: SoboTheme.secondary)),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  ElevatedButton(
+                    onPressed: _showGenerateScheduleModal,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: SoboTheme.espresso,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                    ),
+                    child: const Text('Üret', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                  ),
+                ],
+              ),
+            ),
+
             Container(
               padding: const EdgeInsets.all(18),
               decoration: BoxDecoration(
@@ -2521,24 +3513,48 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
                   const SizedBox(height: 14),
 
                   if (_classList.isNotEmpty)
-                    DropdownButtonFormField<int>(
-                      value: _newClassTypeId,
-                      decoration: InputDecoration(labelText: 'Ders Tipi', filled: true, fillColor: SoboTheme.ivory, border: OutlineInputBorder(borderRadius: BorderRadius.circular(12))),
-                      items: _classList.map<DropdownMenuItem<int>>((dynamic c) {
-                        return DropdownMenuItem<int>(value: c['id'] as int, child: Text(c['ad'] as String));
-                      }).toList(),
-                      onChanged: (val) => setState(() => _newClassTypeId = val),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: DropdownButtonFormField<int>(
+                            value: _newClassTypeId,
+                            decoration: InputDecoration(labelText: 'Ders Tipi', filled: true, fillColor: SoboTheme.ivory, border: OutlineInputBorder(borderRadius: BorderRadius.circular(12))),
+                            items: _classList.map<DropdownMenuItem<int>>((dynamic c) {
+                              return DropdownMenuItem<int>(value: c['id'] as int, child: Text(c['ad'] as String));
+                            }).toList(),
+                            onChanged: (val) => setState(() => _newClassTypeId = val),
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        IconButton.filledTonal(
+                          icon: const Icon(Icons.add_rounded, size: 18),
+                          tooltip: 'Yeni Ders Tipi Ekle',
+                          onPressed: _showAddClassTypeDialog,
+                        ),
+                      ],
                     ),
                   const SizedBox(height: 10),
 
                   if (_instructorList.isNotEmpty)
-                    DropdownButtonFormField<int>(
-                      value: _newInstructorId,
-                      decoration: InputDecoration(labelText: 'Eğitmen', filled: true, fillColor: SoboTheme.ivory, border: OutlineInputBorder(borderRadius: BorderRadius.circular(12))),
-                      items: _instructorList.map<DropdownMenuItem<int>>((dynamic i) {
-                        return DropdownMenuItem<int>(value: i['id'] as int, child: Text(i['ad'] as String));
-                      }).toList(),
-                      onChanged: (val) => setState(() => _newInstructorId = val),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: DropdownButtonFormField<int>(
+                            value: _newInstructorId,
+                            decoration: InputDecoration(labelText: 'Eğitmen', filled: true, fillColor: SoboTheme.ivory, border: OutlineInputBorder(borderRadius: BorderRadius.circular(12))),
+                            items: _instructorList.map<DropdownMenuItem<int>>((dynamic i) {
+                              return DropdownMenuItem<int>(value: i['id'] as int, child: Text(i['ad'] as String));
+                            }).toList(),
+                            onChanged: (val) => setState(() => _newInstructorId = val),
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        IconButton.filledTonal(
+                          icon: const Icon(Icons.add_rounded, size: 18),
+                          tooltip: 'Yeni Eğitmen Ekle',
+                          onPressed: _showAddInstructorDialog,
+                        ),
+                      ],
                     ),
                   const SizedBox(height: 10),
 
@@ -2653,9 +3669,20 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
                                 Text('Eğitmen: $instructorAd • ₺$price', style: SoboTheme.fontSans(fontSize: 12, color: SoboTheme.secondary)),
                               ],
                             ),
-                            IconButton(
-                              icon: const Icon(Icons.delete_outline_rounded, color: SoboTheme.clay),
-                              onPressed: () => _handleDeleteSession(s['id']),
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                IconButton(
+                                  icon: const Icon(Icons.edit_outlined, color: SoboTheme.espresso, size: 20),
+                                  tooltip: 'Dersi Düzenle',
+                                  onPressed: () => _showEditSessionModal(s),
+                                ),
+                                IconButton(
+                                  icon: const Icon(Icons.delete_outline_rounded, color: SoboTheme.clay, size: 20),
+                                  tooltip: 'Dersi Sil',
+                                  onPressed: () => _handleDeleteSession(s['id']),
+                                ),
+                              ],
                             ),
                           ],
                         ),
@@ -2820,8 +3847,29 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
                             ),
                           ],
                         ),
-                        const SizedBox(height: 4),
-                        Text('Telefon: $phone • Ders: $sessionTitle', style: SoboTheme.fontSans(fontSize: 12, color: SoboTheme.secondary)),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Expanded(
+                              child: Text('Telefon: $phone • Ders: $sessionTitle', style: SoboTheme.fontSans(fontSize: 12, color: SoboTheme.secondary)),
+                            ),
+                            if (phone.isNotEmpty) ...[
+                              IconButton(
+                                icon: const Icon(Icons.phone_rounded, color: SoboTheme.mocha, size: 20),
+                                tooltip: 'Ara',
+                                onPressed: () => _makePhoneCall(phone),
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.chat_bubble_outline_rounded, color: Color(0xFF25D366), size: 20),
+                                tooltip: 'WhatsApp',
+                                onPressed: () => _openWhatsApp(
+                                  phone,
+                                  message: 'Merhaba $memberName, Sobo Society $sessionTitle ders talebiniz hakkında ulaşıyorum.',
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
                         const SizedBox(height: 8),
 
                         if (isPending)
@@ -3106,9 +4154,35 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
                                     ],
                                   ),
                                   const SizedBox(height: 2),
-                                  Text(
-                                    '$username • $phone',
-                                    style: SoboTheme.fontSans(fontSize: 11, color: SoboTheme.secondary),
+                                  Row(
+                                    children: [
+                                      Flexible(
+                                        child: Text(
+                                          '$username • $phone',
+                                          style: SoboTheme.fontSans(fontSize: 11, color: SoboTheme.secondary),
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                      if (phone.isNotEmpty && phone != 'Telefon Yok') ...[
+                                        const SizedBox(width: 4),
+                                        InkWell(
+                                          onTap: () => _makePhoneCall(phone),
+                                          borderRadius: BorderRadius.circular(4),
+                                          child: const Padding(
+                                            padding: EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                                            child: Icon(Icons.phone_rounded, size: 14, color: SoboTheme.mocha),
+                                          ),
+                                        ),
+                                        InkWell(
+                                          onTap: () => _openWhatsApp(phone, message: 'Merhaba ${m['ad']}, Sobo Society stüdyomuzdan ulaşıyorum.'),
+                                          borderRadius: BorderRadius.circular(4),
+                                          child: const Padding(
+                                            padding: EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                                            child: Icon(Icons.chat_bubble_outline_rounded, size: 14, color: Color(0xFF25D366)),
+                                          ),
+                                        ),
+                                      ],
+                                    ],
                                   ),
                                 ],
                               ),
@@ -3222,25 +4296,51 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
                                             ],
                                           ),
                                         ),
-                                        InkWell(
-                                          onTap: () => _handleCancelMemberPackage(m, packageId: pkg['id'] as int?, packageName: pkg['ad'] as String?),
-                                          borderRadius: BorderRadius.circular(6),
-                                          child: Container(
-                                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                            decoration: BoxDecoration(
-                                              color: SoboTheme.clay.withOpacity(0.08),
+                                        Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            InkWell(
+                                              onTap: () => _showEditMemberPackageModal(m, pkg),
                                               borderRadius: BorderRadius.circular(6),
-                                              border: Border.all(color: SoboTheme.clay.withOpacity(0.3)),
+                                              child: Container(
+                                                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
+                                                margin: const EdgeInsets.only(right: 6),
+                                                decoration: BoxDecoration(
+                                                  color: SoboTheme.sand,
+                                                  borderRadius: BorderRadius.circular(6),
+                                                  border: Border.all(color: SoboTheme.line),
+                                                ),
+                                                child: Row(
+                                                  mainAxisSize: MainAxisSize.min,
+                                                  children: [
+                                                    const Icon(Icons.more_time_rounded, size: 12, color: SoboTheme.espresso),
+                                                    const SizedBox(width: 3),
+                                                    Text('Uzat/Düzenle', style: SoboTheme.fontSans(fontSize: 10, fontWeight: FontWeight.bold, color: SoboTheme.espresso)),
+                                                  ],
+                                                ),
+                                              ),
                                             ),
-                                            child: Row(
-                                              mainAxisSize: MainAxisSize.min,
-                                              children: [
-                                                const Icon(Icons.delete_outline_rounded, size: 12, color: SoboTheme.clay),
-                                                const SizedBox(width: 2),
-                                                Text('İptal', style: SoboTheme.fontSans(fontSize: 10, fontWeight: FontWeight.bold, color: SoboTheme.clay)),
-                                              ],
+                                            InkWell(
+                                              onTap: () => _handleCancelMemberPackage(m, packageId: pkg['id'] as int?, packageName: pkg['ad'] as String?),
+                                              borderRadius: BorderRadius.circular(6),
+                                              child: Container(
+                                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                                decoration: BoxDecoration(
+                                                  color: SoboTheme.clay.withOpacity(0.08),
+                                                  borderRadius: BorderRadius.circular(6),
+                                                  border: Border.all(color: SoboTheme.clay.withOpacity(0.3)),
+                                                ),
+                                                child: Row(
+                                                  mainAxisSize: MainAxisSize.min,
+                                                  children: [
+                                                    const Icon(Icons.delete_outline_rounded, size: 12, color: SoboTheme.clay),
+                                                    const SizedBox(width: 2),
+                                                    Text('İptal', style: SoboTheme.fontSans(fontSize: 10, fontWeight: FontWeight.bold, color: SoboTheme.clay)),
+                                                  ],
+                                                ),
+                                              ),
                                             ),
-                                          ),
+                                          ],
                                         ),
                                       ],
                                     ),
@@ -3266,25 +4366,55 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
                                         ],
                                       ),
                                     ),
-                                    InkWell(
-                                      onTap: () => _handleCancelMemberPackage(m, packageId: m['aktif_member_package_id'] as int?, packageName: m['aktif_paket_adi'] as String?),
-                                      borderRadius: BorderRadius.circular(6),
-                                      child: Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                        decoration: BoxDecoration(
-                                          color: SoboTheme.clay.withOpacity(0.08),
+                                    Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        InkWell(
+                                          onTap: () => _showEditMemberPackageModal(m, <String, dynamic>{
+                                            'id': m['aktif_member_package_id'],
+                                            'ad': m['aktif_paket_adi'],
+                                            'kalan_ders': m['bakiye'],
+                                          }),
                                           borderRadius: BorderRadius.circular(6),
-                                          border: Border.all(color: SoboTheme.clay.withOpacity(0.3)),
+                                          child: Container(
+                                            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
+                                            margin: const EdgeInsets.only(right: 6),
+                                            decoration: BoxDecoration(
+                                              color: SoboTheme.sand,
+                                              borderRadius: BorderRadius.circular(6),
+                                              border: Border.all(color: SoboTheme.line),
+                                            ),
+                                            child: Row(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                const Icon(Icons.more_time_rounded, size: 12, color: SoboTheme.espresso),
+                                                const SizedBox(width: 3),
+                                                Text('Uzat/Düzenle', style: SoboTheme.fontSans(fontSize: 10, fontWeight: FontWeight.bold, color: SoboTheme.espresso)),
+                                              ],
+                                            ),
+                                          ),
                                         ),
-                                        child: Row(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            const Icon(Icons.delete_outline_rounded, size: 12, color: SoboTheme.clay),
-                                            const SizedBox(width: 2),
-                                            Text('İptal', style: SoboTheme.fontSans(fontSize: 10, fontWeight: FontWeight.bold, color: SoboTheme.clay)),
-                                          ],
+                                        InkWell(
+                                          onTap: () => _handleCancelMemberPackage(m, packageId: m['aktif_member_package_id'] as int?, packageName: m['aktif_paket_adi'] as String?),
+                                          borderRadius: BorderRadius.circular(6),
+                                          child: Container(
+                                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                            decoration: BoxDecoration(
+                                              color: SoboTheme.clay.withOpacity(0.08),
+                                              borderRadius: BorderRadius.circular(6),
+                                              border: Border.all(color: SoboTheme.clay.withOpacity(0.3)),
+                                            ),
+                                            child: Row(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                const Icon(Icons.delete_outline_rounded, size: 12, color: SoboTheme.clay),
+                                                const SizedBox(width: 2),
+                                                Text('İptal', style: SoboTheme.fontSans(fontSize: 10, fontWeight: FontWeight.bold, color: SoboTheme.clay)),
+                                              ],
+                                            ),
+                                          ),
                                         ),
-                                      ),
+                                      ],
                                     ),
                                   ],
                                 ),
@@ -3561,6 +4691,106 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
               ],
             ),
           ),
+          const SizedBox(height: 16),
+
+          // Scheduled Campaigns Card
+          Container(
+            padding: const EdgeInsets.all(18),
+            decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20), border: Border.all(color: SoboTheme.line)),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: [
+                        const Icon(Icons.alarm_on_rounded, color: SoboTheme.espresso, size: 20),
+                        const SizedBox(width: 6),
+                        Text('GÜNLÜK OTOMATİK KAMPANYALAR', style: SoboTheme.fontSans(fontSize: 12, fontWeight: FontWeight.bold, color: SoboTheme.espresso)),
+                      ],
+                    ),
+                    ElevatedButton.icon(
+                      onPressed: _showAddCampaignModal,
+                      icon: const Icon(Icons.add_rounded, size: 14),
+                      label: const Text('Yeni Kampanya', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: SoboTheme.espresso,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                Text('Belirlenen saatte her gün otomatik olarak push bildirimi iletir.', style: SoboTheme.fontSans(fontSize: 11, color: SoboTheme.secondary)),
+                const SizedBox(height: 12),
+
+                if (_isLoadingCampaigns)
+                  const Center(child: Padding(padding: EdgeInsets.all(12), child: CircularProgressIndicator(color: SoboTheme.espresso)))
+                else if (_campaigns.isEmpty)
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(color: SoboTheme.sandLight, borderRadius: BorderRadius.circular(10)),
+                    child: Center(
+                      child: Text('Henüz zamanlanmış otomatik kampanya yok.', style: SoboTheme.fontSans(fontSize: 11, fontStyle: FontStyle.italic, color: SoboTheme.secondary)),
+                    ),
+                  )
+                else
+                  ListView.separated(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: _campaigns.length,
+                    separatorBuilder: (_, __) => const SizedBox(height: 8),
+                    itemBuilder: (context, index) {
+                      final c = _campaigns[index];
+                      final String time = c['zamanlama_saat'] ?? '10:00';
+                      final String kitle = c['hedef_kitle'] == 'AKTIF_PAKETLI' ? 'Aktif Paketliler' : 'Tüm Üyeler';
+                      return Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(color: SoboTheme.sandLight, borderRadius: BorderRadius.circular(12), border: Border.all(color: SoboTheme.line)),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                        decoration: BoxDecoration(color: SoboTheme.espresso, borderRadius: BorderRadius.circular(6)),
+                                        child: Text('⏰ $time', style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.white)),
+                                      ),
+                                      const SizedBox(width: 6),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                        decoration: BoxDecoration(color: SoboTheme.sand, borderRadius: BorderRadius.circular(6), border: Border.all(color: SoboTheme.line)),
+                                        child: Text(kitle, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: SoboTheme.espresso)),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(c['baslik'] ?? 'Kampanya', style: SoboTheme.fontSans(fontSize: 13, fontWeight: FontWeight.bold, color: SoboTheme.ink)),
+                                  Text(c['mesaj'] ?? '', style: SoboTheme.fontSans(fontSize: 11, color: SoboTheme.secondary)),
+                                ],
+                              ),
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.delete_outline_rounded, color: SoboTheme.clay, size: 20),
+                              tooltip: 'Kampanyayı Sil',
+                              onPressed: () => _handleDeleteCampaign(c['id'] as int, c['baslik']?.toString() ?? ''),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+              ],
+            ),
+          ),
           const SizedBox(height: 20),
 
           // Packages Section
@@ -3665,7 +4895,13 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
                         children: [
                           Text('₺$price', style: SoboTheme.fontSans(fontSize: 16, fontWeight: FontWeight.bold, color: SoboTheme.espresso)),
                           IconButton(
-                            icon: const Icon(Icons.delete_outline_rounded, color: SoboTheme.clay),
+                            icon: const Icon(Icons.edit_outlined, color: SoboTheme.espresso, size: 20),
+                            tooltip: 'Paketi Düzenle',
+                            onPressed: () => _showEditPackageModal(pkg),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.delete_outline_rounded, color: SoboTheme.clay, size: 20),
+                            tooltip: 'Paketi Sil',
                             onPressed: () => _handleDeletePackage(pkg['id'], pkg['ad']),
                           ),
                         ],
