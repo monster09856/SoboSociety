@@ -68,30 +68,6 @@ async def cancel_booking(
     now = datetime.now(timezone.utc)
     try:
         sonuc = await iptal_et(db, booking_id=booking_id, now=now)
-
-        # Yöneticilere (Hocalara) üyenin ders iptal bildirimini gönder
-        oturum = await db.get(ClassSession, sonuc.booking.session_id)
-        class_type_ad = "Ders"
-        if oturum and oturum.class_type_id:
-            ct = await db.get(ClassType, oturum.class_type_id)
-            if ct:
-                class_type_ad = ct.ad
-
-        res_admins = await db.execute(
-            select(Member).where(
-                (Member.kullanici_adi == "admin") | (Member.telefon.in_(ayarlar.admin_telefons))
-            )
-        )
-        admins = res_admins.scalars().all()
-        for adm in admins:
-            await bildirim_gonder(
-                db,
-                member_id=adm.id,
-                baslik="🚨 Üye Ders İptali",
-                mesaj=f"{current_member.ad} üyesi {class_type_ad} dersindeki rezervasyonunu iptal etti.",
-                tip="DERS_IPTALI",
-            )
-
         await db.commit()
         await db.refresh(sonuc.booking)
         return sonuc.booking
@@ -106,7 +82,7 @@ async def create_waitlist_entry(
     db: AsyncSession = Depends(get_db),
     current_member: Member = Depends(get_current_member),
 ):
-    """Dolu derse bekleme sırası kaydı açar."""
+    """Dolu derse bekleme sırası kaydı açar ve adminlere anında bildirim gönderir."""
     now = datetime.now(timezone.utc)
     try:
         entry = await siraya_gir(
@@ -114,6 +90,16 @@ async def create_waitlist_entry(
             member_id=current_member.id,
             session_id=body.session_id,
             now=now,
+        )
+        from app.services.bildirim import adminlere_bildirim_gonder
+        session = await db.get(ClassSession, body.session_id)
+        ct_name = session.class_type.ad if session and session.class_type else "Ders"
+        saat_str = session.baslangic.strftime("%d.%m %H:%M") if session else ""
+        await adminlere_bildirim_gonder(
+            db,
+            baslik="📋 Bekleme Listesi Kaydı",
+            mesaj=f"{current_member.ad} üyesi {ct_name} ({saat_str}) dersi için bekleme sırasına girdi (Sıra No: {entry.sira}).",
+            tip="BEKLEME_LISTESI",
         )
         await db.commit()
         await db.refresh(entry)
@@ -193,20 +179,13 @@ async def create_guest_booking(
         if ct:
             ct_ad = ct.ad
 
-    res_admins = await db.execute(
-        select(Member).where(
-            (Member.kullanici_adi == "admin") | (Member.telefon.in_(ayarlar.admin_telefons))
-        )
+    from app.services.bildirim import adminlere_bildirim_gonder
+    await adminlere_bildirim_gonder(
+        db,
+        baslik="⏳ Misafir Tek Ders Talebi!",
+        mesaj=f"{ad_str} ({norm_tel}), {ct_ad} dersi için tek ders talebi oluşturdu.",
+        tip="MISAFIR_TALEP",
     )
-    admins = res_admins.scalars().all()
-    for adm in admins:
-        await bildirim_gonder(
-            db,
-            member_id=adm.id,
-            baslik="⏳ Üyeliksiz Tek Ders Talebi!",
-            mesaj=f"{ad_str} ({norm_tel}) üyesi {ct_ad} dersi için ödeme bekleyen talep oluşturdu.",
-            tip="YENI_REZERVASYON",
-        )
 
     await db.commit()
     await db.refresh(booking)

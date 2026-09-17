@@ -139,12 +139,23 @@ async def rezerve_et(
         member_package_id=paket.id if paket is not None else None,
         booking_id=kayit.id,
     )
-    from app.services.bildirim import bildirim_gonder
+    from app.services.bildirim import bildirim_gonder, adminlere_bildirim_gonder
     await bildirim_gonder(
         db,
         member_id=member_id,
         baslik="Rezervasyon Onayı 🎯",
         mesaj=f"{tip.ad} dersine yeriniz ayrıldı ({oturum.baslangic:%d.%m %H:%M}).",
         tip="REZERVE_ONAY",
+    )
+
+    # Adminlere (Eda Hanım'a) anlık bildirim & push
+    member_rec = await db.get(Member, member_id)
+    member_ad = member_rec.ad if member_rec else f"Üye #{member_id}"
+    ders_saat_str = oturum.baslangic.strftime("%d.%m %H:%M")
+    await adminlere_bildirim_gonder(
+        db,
+        baslik="📅 Yeni Ders Rezervasyonu!",
+        mesaj=f"{member_ad} üyesi {tip.ad} ({ders_saat_str}) dersine rezervasyon yaptı. (Doluluk: {oturum.dolu_sayi}/{oturum.kontenjan})",
+        tip="YENI_REZERVASYON",
     )
     return kayit

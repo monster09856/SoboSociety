@@ -242,9 +242,6 @@ export function TodaySessionCard({
                 <Clock className="w-3.5 h-3.5" />
                 {startTime}
               </span>
-              <span className="inline-flex items-center gap-1 px-3 py-0.5 rounded-full text-xs font-extrabold bg-sand text-espresso border border-line">
-                ₺{session.fiyat_tl ?? 900}
-              </span>
               <span
                 className={`inline-flex items-center gap-1 px-3 py-0.5 rounded-full text-xs font-bold ${
                   session.dolu_sayi >= session.kontenjan

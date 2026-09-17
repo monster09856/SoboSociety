@@ -500,9 +500,6 @@ export default function AdminSchedulePage() {
                         {s.class_type?.ad || 'Ders'}
                       </span>
                       <div className="flex items-center gap-2">
-                        <span className="inline-block px-2 py-0.5 rounded-md text-[11px] font-extrabold bg-ivory text-espresso border border-line">
-                          ₺{s.fiyat_tl ?? 900}
-                        </span>
                         <span className="text-xs font-extrabold text-espresso">
                           {s.dolu_sayi} / {s.kontenjan} Üye (%{Math.round((s.dolu_sayi / (s.kontenjan || 1)) * 100)})
                         </span>

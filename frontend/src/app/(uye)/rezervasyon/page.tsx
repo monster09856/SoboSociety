@@ -260,6 +260,22 @@ export default function RezervasyonPage() {
           </div>
         )}
 
+        {/* Sabit Ders Saatleri Banner (Eda Hanım WhatsApp 1. Madde) */}
+        {isLoggedIn && summary?.sabit_ders_saatleri && summary.sabit_ders_saatleri.trim().length > 0 && (
+          <div className="p-4 rounded-2xl bg-espresso/5 border border-espresso/20 flex items-start gap-3 shadow-xs">
+            <div className="w-8 h-8 rounded-full bg-espresso text-ivory flex items-center justify-center shrink-0 mt-0.5">
+              <CalendarIcon className="w-4 h-4" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-[10px] font-bold text-espresso uppercase tracking-wider">Haftalık Sabit Ders Programınız</p>
+              <p className="text-sm font-serif font-bold text-ink mt-0.5">{summary.sabit_ders_saatleri}</p>
+              <p className="text-[11px] text-secondary mt-1 leading-relaxed">
+                Stüdyodaki yeriniz bu gün ve saatler için sabittir. Gelemediğiniz günlerde en geç 12 saat öncesinden iptal ederek ders hakkınızı koruyabilir, başka bir açık seansa telafi kaydı yapabilirsiniz ✨
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* Title Section */}
         <div className="flex items-end justify-between">
           <div>

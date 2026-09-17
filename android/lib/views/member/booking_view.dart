@@ -1370,6 +1370,67 @@ class _BookingViewState extends State<BookingView> {
               ),
               const SizedBox(height: 16),
 
+              // Sabit Ders Saatleri Banner (Eda Hanım WhatsApp 1. Madde)
+              if (_summary?.sabitDersSaatleri != null && _summary!.sabitDersSaatleri!.trim().isNotEmpty) ...[
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: SoboTheme.sage.withOpacity(0.12),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: SoboTheme.sage.withOpacity(0.4)),
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: SoboTheme.forest,
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        child: const Icon(Icons.alarm_on_rounded, color: Colors.white, size: 22),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'HAFTALIK SABİT DERS PROGRAMINIZ',
+                              style: SoboTheme.fontSans(
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                                letterSpacing: 1.1,
+                                color: SoboTheme.forest,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              _summary!.sabitDersSaatleri!,
+                              style: SoboTheme.fontSerif(
+                                fontSize: 17,
+                                fontWeight: FontWeight.bold,
+                                color: SoboTheme.ink,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Sabit saatleriniz haftalıktır. Katılamayacağınız seansları 12 saat öncesinden iptal ederek ders hakkınızı koruyabilir ve başka açık seanslara telafi oluşturabilirsiniz ✨',
+                              style: SoboTheme.fontSans(
+                                fontSize: 11.5,
+                                color: SoboTheme.secondary,
+                                height: 1.3,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+              ],
+
               // Active Bookings Quick Cancel Card (Ana Ekranda Doğrudan İptal Butonu)
               if (_summary != null && _summary!.aktifRezervasyonlar.isNotEmpty) ...[
                 Container(

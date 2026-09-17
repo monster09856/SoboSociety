@@ -278,8 +278,15 @@ export interface WaitlistResponse {
 export interface MemberSummaryResponse {
   id: number
   ad: string
+  kullanici_adi?: string | null
   telefon: string
   bakiye: number
+  sabit_ders_saatleri?: string | null
+  aktif_paket_adi?: string | null
+  paket_bitis_tarihi?: string | null
+  kalan_gun_sayisi?: number | null
+  toplam_ders_adedi?: number | null
+  paketler?: any[]
   aktif_rezervasyonlar: BookingResponse[]
   gecmis_rezervasyonlar: BookingResponse[]
 }
@@ -339,6 +346,45 @@ export const api = {
       apiFetch<{ mesaj: string; event_id: number }>(`/events/${eventId}/rsvp?tek_katilim=${tekKatilim}`, {
         method: 'POST',
       }),
+    cancelRsvp: (eventId: number) =>
+      apiFetch<{ mesaj: string; event_id: number }>(`/events/${eventId}/rsvp`, {
+        method: 'DELETE',
+      }),
+    myRsvps: () =>
+      apiFetch<
+        {
+          id: number
+          baslik: string
+          turu: string
+          tarih_saat: string
+          aciklama: string
+          kontenjan: number
+          dolu_sayi: number
+          ucret: string
+          aktif: boolean
+          is_registered?: boolean
+        }[]
+      >('/events/my/rsvps'),
+  },
+  notifications: {
+    list: () =>
+      apiFetch<
+        {
+          id: number
+          member_id: number
+          baslik: string
+          mesaj: string
+          tip: string
+          okundu: boolean
+          created_at?: string
+        }[]
+      >('/my/notifications'),
+    markRead: (id: number) =>
+      apiFetch<{ mesaj: string }>(`/my/notifications/${id}/read`, { method: 'POST' }),
+    delete: (id: number) =>
+      apiFetch<{ mesaj: string }>(`/my/notifications/${id}`, { method: 'DELETE' }),
+    deleteAll: () =>
+      apiFetch<{ mesaj: string }>('/my/notifications', { method: 'DELETE' }),
   },
   bookings: {
     create: (data: BookingCreateRequest) =>
@@ -514,6 +560,11 @@ export const adminApi = {
     apiFetch<MemberPackageResponse>('/admin/packages/assign', {
       method: 'POST',
       body: JSON.stringify(data),
+    }),
+  bookSessionForMember: (memberId: number, sessionId: number) =>
+    apiFetch<{ booking_id: number; mesaj: string }>(`/admin/members/${memberId}/book-session`, {
+      method: 'POST',
+      body: JSON.stringify({ session_id: sessionId }),
     }),
   generateSessions: (data: SessionGenerateRequest) =>
     apiFetch<SessionGenerateResponse>('/admin/sessions/generate', {

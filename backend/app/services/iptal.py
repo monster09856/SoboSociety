@@ -94,4 +94,30 @@ async def iptal_et(
 
     await db.flush()
     await db.refresh(kayit)
+
+    # Bildirimler: Hem üyeye hem de adminlere (Eda Hanım) anlık push & in-app
+    from app.services.bildirim import bildirim_gonder, adminlere_bildirim_gonder
+    member_rec = await db.get(Member, kayit.member_id)
+    member_ad = member_rec.ad if member_rec else f"Üye #{kayit.member_id}"
+    ders_saat_str = oturum.baslangic.strftime("%d.%m %H:%M")
+    durum_aciklama = "1 ders hakkı hesabınıza iade edildi." if iade else "Geç iptal (12 saatten az kala) sebebiyle ders hakkı iadesi yapılamadı."
+
+    # Üyeye bildirim
+    await bildirim_gonder(
+        db,
+        member_id=kayit.member_id,
+        baslik="Ders İptal Onayı ⏱️",
+        mesaj=f"{tip.ad} ({ders_saat_str}) ders rezervasyonunuz iptal edildi. {durum_aciklama}",
+        tip="DERS_IPTALI",
+    )
+
+    # Adminlere (Eda Hanım'a) anlık bildirim & push
+    kalan_bos_yer = oturum.kontenjan - oturum.dolu_sayi
+    await adminlere_bildirim_gonder(
+        db,
+        baslik="🚨 Üye Ders İptali!",
+        mesaj=f"{member_ad} üyesi {tip.ad} ({ders_saat_str}) dersini iptal etti. Yeri boşaldı! (Kalan Boş Yer: {kalan_bos_yer}/{oturum.kontenjan} • {durum_aciklama})",
+        tip="DERS_IPTALI",
+    )
+
     return IptalSonucu(booking=kayit, iade_edildi=iade, bosalan_yer=bosalan_yer)

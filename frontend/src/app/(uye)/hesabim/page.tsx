@@ -24,14 +24,17 @@ import {
   Activity,
   Save,
   Ruler,
+  X,
 } from 'lucide-react'
 
 export default function HesabimPage() {
   const router = useRouter()
   const [summary, setSummary] = useState<MemberSummaryResponse | null>(null)
   const [me, setMe] = useState<MemberMeResponse | null>(null)
+  const [myWorkshops, setMyWorkshops] = useState<any[]>([])
   const [loading, setLoading] = useState<boolean>(true)
   const [cancelLoadingId, setCancelLoadingId] = useState<number | null>(null)
+  const [cancelWorkshopId, setCancelWorkshopId] = useState<number | null>(null)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
   const [successMsg, setSuccessMsg] = useState<string | null>(null)
 
@@ -59,12 +62,14 @@ export default function HesabimPage() {
     }
 
     try {
-      const [sumData, meData] = await Promise.all([
+      const [sumData, meData, workshopsData] = await Promise.all([
         api.my.getSummary(),
         api.auth.getMe(),
+        api.events.myRsvps().catch(() => []),
       ])
       setSummary(sumData)
       setMe(meData)
+      setMyWorkshops(workshopsData || [])
 
       // Prefill measurement fields
       setBel(meData.bel || '')
@@ -123,13 +128,14 @@ export default function HesabimPage() {
     }
   }
 
-  const handleCancelBooking = async (bookingId: number) => {
+  const handleCancelBooking = async (bookingId: number, classTitle?: string) => {
+    if (!confirm(`"${classTitle || 'Ders'}" rezervasyonunuzu iptal etmek istediğinizden emin misiniz? 1 ders hakkınız hesabınıza iade edilecek ve sınıfta yer açılacaktır.`)) return
     setCancelLoadingId(bookingId)
     setErrorMsg(null)
     setSuccessMsg(null)
     try {
       await api.bookings.cancel(bookingId)
-      setSuccessMsg('Rezervasyonunuz başarıyla iptal edildi.')
+      setSuccessMsg('Rezervasyonunuz başarıyla iptal edildi ve 1 ders hakkınız iade edildi.')
       await fetchSummary()
     } catch (err) {
       const msg =
@@ -137,6 +143,22 @@ export default function HesabimPage() {
       setErrorMsg(msg)
     } finally {
       setCancelLoadingId(null)
+    }
+  }
+
+  const handleCancelWorkshop = async (eventId: number, eventTitle: string) => {
+    if (!confirm(`"${eventTitle}" workshop kaydınızı iptal etmek istediğinizden emin misiniz?`)) return
+    setCancelWorkshopId(eventId)
+    setErrorMsg(null)
+    setSuccessMsg(null)
+    try {
+      await api.events.cancelRsvp(eventId)
+      setSuccessMsg(`"${eventTitle}" workshop kaydınız başarıyla iptal edildi.`)
+      setMyWorkshops((prev) => prev.filter((w) => w.id !== eventId))
+    } catch (err: any) {
+      setErrorMsg(err?.message || 'Workshop iptal edilirken bir hata oluştu.')
+    } finally {
+      setCancelWorkshopId(null)
     }
   }
 
@@ -287,6 +309,24 @@ export default function HesabimPage() {
                 </Link>
               </div>
             </div>
+
+            {/* Haftalık Sabit Ders Programı (Eda Hanım Tanımlı) */}
+            {summary.sabit_ders_saatleri && summary.sabit_ders_saatleri.trim().length > 0 && (
+              <div className="pt-4 border-t border-line/80 space-y-2">
+                <div className="p-4 rounded-2xl bg-sage/15 border border-sage/40 space-y-1.5">
+                  <div className="flex items-center gap-2 text-sage font-extrabold text-xs uppercase tracking-wider">
+                    <Clock className="w-4 h-4 text-sage" />
+                    <span>HAFTALIK SABİT DERS PROGRAMINIZ</span>
+                  </div>
+                  <div className="font-serif text-xl font-bold text-ink">
+                    {summary.sabit_ders_saatleri}
+                  </div>
+                  <p className="text-[11px] text-secondary leading-relaxed">
+                    Stüdyomuzdaki yeriniz bu gün ve saatler için sabittir. Seansınıza gelemediğiniz haftalarda aşağıdaki seans listesinden iptal ederek yerinizi açabilir ve hakkınızı iade alabilirsiniz ✨
+                  </p>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
@@ -478,24 +518,26 @@ export default function HesabimPage() {
                       {getStatusBadge(booking.durum)}
                     </div>
 
-                    <div className="flex items-center justify-between pt-2.5 border-t border-line/60 text-xs">
-                      <div className="flex items-center gap-1.5 font-medium text-secondary">
-                        <Clock className="w-3.5 h-3.5 text-espresso" />
-                        <span>{formatDateTime(session?.baslangic)}</span>
+                    <div className="pt-2.5 border-t border-line/60 space-y-3 text-xs">
+                      <div className="flex items-center gap-1.5 font-bold text-ink">
+                        <Clock className="w-4 h-4 text-espresso" />
+                        <span>Tarih & Saat: {formatDateTime(session?.baslangic)}</span>
                       </div>
 
                       {booking.durum === 'booked' && (
                         <Button
                           variant="destructive"
-                          size="sm"
                           disabled={cancelLoadingId === booking.id}
-                          onClick={() => handleCancelBooking(booking.id)}
-                          className="h-7 text-xs px-3 font-bold bg-clay hover:bg-clay/90 text-white rounded-xl shadow-xs border-none"
+                          onClick={() => handleCancelBooking(booking.id, classType?.ad || 'Ders')}
+                          className="w-full h-10 text-xs font-bold bg-clay hover:bg-clay/90 text-white rounded-xl shadow-xs border-none flex items-center justify-center gap-2 cursor-pointer transition-all"
                         >
                           {cancelLoadingId === booking.id ? (
-                            <Loader2 className="w-3 h-3 animate-spin" />
+                            <Loader2 className="w-4 h-4 animate-spin" />
                           ) : (
-                            'İptal Et'
+                            <>
+                              <X className="w-4 h-4" />
+                              <span>REZERVASYONU İPTAL ET (1 DERS İADE AL)</span>
+                            </>
                           )}
                         </Button>
                       )}
@@ -505,8 +547,83 @@ export default function HesabimPage() {
               })}
             </div>
           ) : (
-            <div className="p-4 rounded-2xl bg-sand/40 border border-dashed border-line text-center text-xs text-secondary font-medium">
-              Aktif bir ders rezervasyonunuz bulunmamaktadır.
+            <div className="p-4 rounded-2xl bg-sand/40 border border-dashed border-line text-center text-xs text-secondary font-medium flex flex-col items-center gap-2">
+              <span>Aktif bir ders rezervasyonunuz bulunmamaktadır.</span>
+              <Link href="/rezervasyon" className="text-espresso font-bold underline hover:text-mocha">
+                Ders Programından Seans Seç →
+              </Link>
+            </div>
+          )}
+        </div>
+
+        {/* Workshop & Etkinlik Kayıtlarım Section */}
+        <div className="space-y-3 pt-2">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-mocha" />
+              <h3 className="font-serif text-lg font-bold text-ink tracking-wide">
+                Workshop & Etkinlik Kayıtlarım
+              </h3>
+            </div>
+            {myWorkshops.length > 0 && (
+              <span className="text-xs font-bold text-sage bg-sage/15 px-2.5 py-0.5 rounded-full border border-sage/30">
+                {myWorkshops.length} Kayıt
+              </span>
+            )}
+          </div>
+
+          {myWorkshops && myWorkshops.length > 0 ? (
+            <div className="space-y-3">
+              {myWorkshops.map((ev) => (
+                <div
+                  key={ev.id}
+                  className="p-4 rounded-2xl bg-sand/80 border border-line shadow-xs flex flex-col gap-3 hover:border-mocha/60 transition-all"
+                >
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <span className="inline-block px-2.5 py-0.5 rounded-md text-[10px] font-bold bg-sage/15 text-sage border border-sage/30 uppercase mb-1">
+                        {ev.turu || 'Workshop'}
+                      </span>
+                      <h4 className="font-serif text-base font-bold text-ink">
+                        {ev.baslik}
+                      </h4>
+                    </div>
+                    <span className="text-[11px] font-bold text-sage bg-ivory px-2.5 py-1 rounded-full border border-line shadow-2xs">
+                      Kayıtlısınız ✨
+                    </span>
+                  </div>
+
+                  <div className="pt-2 border-t border-line/60 space-y-3 text-xs">
+                    <div className="flex items-center gap-1.5 font-bold text-ink">
+                      <Clock className="w-4 h-4 text-espresso" />
+                      <span>{ev.tarih_saat}</span>
+                    </div>
+
+                    <Button
+                      variant="destructive"
+                      disabled={cancelWorkshopId === ev.id}
+                      onClick={() => handleCancelWorkshop(ev.id, ev.baslik)}
+                      className="w-full h-10 text-xs font-bold bg-clay hover:bg-clay/90 text-white rounded-xl shadow-xs border-none flex items-center justify-center gap-2 cursor-pointer transition-all"
+                    >
+                      {cancelWorkshopId === ev.id ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <>
+                          <X className="w-4 h-4" />
+                          <span>WORKSHOP KAYDINI İPTAL ET</span>
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="p-4 rounded-2xl bg-sand/40 border border-dashed border-line text-center text-xs text-secondary font-medium flex flex-col items-center gap-2">
+              <span>Kayıtlı bir workshop veya atölye etkinliğiniz bulunmamaktadır.</span>
+              <a href="/#workshoplar" className="text-espresso font-bold underline hover:text-mocha">
+                Workshop & Etkinlikleri İncele →
+              </a>
             </div>
           )}
         </div>

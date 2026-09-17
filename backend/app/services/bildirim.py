@@ -121,3 +121,41 @@ async def device_token_kaydet(
     await db.refresh(dt)
     logger.info(f"[DEVICE TOKEN] Saved new device token for member {member_id}: {device_token[:15]}...")
     return dt
+
+
+async def adminlere_bildirim_gonder(
+    db: AsyncSession,
+    baslik: str,
+    mesaj: str,
+    tip: str = "ADMIN_ALERT",
+) -> list[Notification]:
+    """Tüm yöneticilere (Eda Hanım ve stüdyo adminlerine) hem veritabanı bildirimi hem de anlık mobil Push (FCM/APNs) gönderir."""
+    try:
+        from app.settings import ayarlar
+        from app.models.uyelik import Member
+        from sqlalchemy import or_
+
+        res_admins = await db.execute(
+            select(Member).where(
+                or_(
+                    Member.kullanici_adi == "admin",
+                    Member.telefon.in_(ayarlar.admin_telefons),
+                )
+            )
+        )
+        admins = res_admins.scalars().all()
+        created = []
+        for adm in admins:
+            n = await bildirim_gonder(
+                db,
+                member_id=adm.id,
+                baslik=baslik,
+                mesaj=mesaj,
+                tip=tip,
+            )
+            created.append(n)
+        return created
+    except Exception as err:
+        logger.error(f"[ADMIN PUSH ERROR] adminlere_bildirim_gonder failed: {err}")
+        return []
+

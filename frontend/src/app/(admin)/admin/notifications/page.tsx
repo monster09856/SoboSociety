@@ -2,10 +2,20 @@
 
 import React, { useEffect, useState } from 'react'
 import { Bell, Send, Clock, Trash2, CheckCircle2, AlertCircle, Sparkles, Users } from 'lucide-react'
-import { adminApi } from '@/lib/api'
+import { adminApi, api } from '@/lib/api'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+
+interface LiveNotificationItem {
+  id: number
+  member_id: number
+  baslik: string
+  mesaj: string
+  tip: string
+  okundu: boolean
+  created_at?: string
+}
 
 interface CampaignItem {
   id: number
@@ -19,7 +29,9 @@ interface CampaignItem {
 }
 
 export default function AdminNotificationsPage() {
-  const [activeTab, setActiveTab] = useState<'instant' | 'scheduled'>('instant')
+  const [activeTab, setActiveTab] = useState<'live' | 'instant' | 'scheduled'>('live')
+  const [liveNotifications, setLiveNotifications] = useState<LiveNotificationItem[]>([])
+  const [loadingLive, setLoadingLive] = useState(false)
 
   // Instant Push Form
   const [instantBaslik, setInstantBaslik] = useState('')
@@ -39,6 +51,15 @@ export default function AdminNotificationsPage() {
   const [membersList, setMembersList] = useState<{ id: number; ad: string; kullanici_adi?: string | null; telefon?: string | null }[]>([])
   const [loadingList, setLoadingList] = useState(true)
 
+  const loadLiveNotifications = async () => {
+    try {
+      const data = await api.notifications.list()
+      setLiveNotifications(data || [])
+    } catch (err) {
+      console.error('Canlı bildirimler çekilemedi:', err)
+    }
+  }
+
   const loadData = async () => {
     try {
       setLoadingList(true)
@@ -48,6 +69,7 @@ export default function AdminNotificationsPage() {
       ])
       setCampaigns(cData || [])
       setMembersList(mData || [])
+      await loadLiveNotifications()
     } catch (err) {
       console.error('Veriler yüklenemedi:', err)
     } finally {
@@ -57,6 +79,8 @@ export default function AdminNotificationsPage() {
 
   useEffect(() => {
     loadData()
+    const timer = setInterval(loadLiveNotifications, 5000)
+    return () => clearInterval(timer)
   }, [])
 
   const handleInstantSend = async (e: React.FormEvent) => {
@@ -103,6 +127,21 @@ export default function AdminNotificationsPage() {
     }
   }
 
+  const handleDeleteLiveNotification = async (id: number) => {
+    try {
+      await api.notifications.delete(id)
+      setLiveNotifications((prev) => prev.filter((n) => n.id !== id))
+    } catch (_) {}
+  }
+
+  const handleClearAllLiveNotifications = async () => {
+    if (!confirm('Tüm canlı hareket bildirimlerini temizlemek istediğinize emin misiniz?')) return
+    try {
+      await api.notifications.deleteAll()
+      setLiveNotifications([])
+    } catch (_) {}
+  }
+
   const handleDeleteCampaign = async (id: number) => {
     if (!confirm('Bu kampanyayı silmek istediğinize emin misiniz?')) return
     try {
@@ -124,15 +163,27 @@ export default function AdminNotificationsPage() {
                 <Bell className="w-5 h-5" />
               </span>
               <h1 className="font-serif text-3xl font-medium tracking-wide text-ink">
-                Bildirim & Push Konsolu
+                Bildirim & Canlı Hareketler
               </h1>
             </div>
             <p className="text-secondary text-xs mt-1">
-              Özel Firebase / APNs Push Konsolu: Anlık toplu bildirim gönderin veya günlük otomatik hatırlatma kampanyaları zamanlayın.
+              Eda Hanım Stüdyo Akışı: Üye ders iptalleri, yeni rezervasyonlar ve anlık bildirim yönetimi.
             </p>
           </div>
 
           <div className="flex items-center gap-2 bg-sand-light p-1 rounded-input border border-line">
+            <button
+              onClick={() => setActiveTab('live')}
+              className={`px-4 py-2 text-xs font-bold rounded-chip transition-all flex items-center gap-1.5 cursor-pointer ${
+                activeTab === 'live'
+                  ? 'bg-espresso text-white shadow-xs'
+                  : 'text-secondary hover:text-ink'
+              }`}
+            >
+              <Bell className="w-3.5 h-3.5" />
+              <span>Canlı Akış ({liveNotifications.length})</span>
+            </button>
+
             <button
               onClick={() => setActiveTab('instant')}
               className={`px-4 py-2 text-xs font-medium rounded-chip transition-all flex items-center gap-1.5 cursor-pointer ${
@@ -158,6 +209,103 @@ export default function AdminNotificationsPage() {
             </button>
           </div>
         </div>
+
+        {/* Tab 0: Live Activity Feed */}
+        {activeTab === 'live' && (
+          <div className="space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-sand-light p-4 rounded-2xl border border-line">
+              <div>
+                <h3 className="font-serif text-base font-bold text-ink flex items-center gap-2">
+                  <Sparkles className="w-4 h-4 text-mocha" />
+                  <span>Canlı Üye Hareketleri & İptal Akışı</span>
+                </h3>
+                <p className="text-xs text-secondary mt-0.5">
+                  Üyelerinizin ders iptalleri, rezervasyonları, bekleme sırası ve workshop kayıtları burada anlık listelenir ve iPhone cihazınıza push olarak iletilir.
+                </p>
+              </div>
+
+              {liveNotifications.length > 0 && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleClearAllLiveNotifications}
+                  className="text-xs text-clay border-clay/40 hover:bg-clay/10 gap-1.5 shrink-0"
+                >
+                  <Trash2 className="w-3.5 h-3.5 text-clay" />
+                  <span>Tümünü Temizle</span>
+                </Button>
+              )}
+            </div>
+
+            {liveNotifications.length === 0 ? (
+              <Card className="p-12 text-center border-dashed border-line bg-sand/30 rounded-2xl">
+                <div className="w-12 h-12 rounded-full bg-sand flex items-center justify-center mx-auto mb-3 text-secondary">
+                  <Bell className="w-6 h-6 text-mocha" />
+                </div>
+                <h4 className="font-serif text-base font-bold text-ink">Henüz yeni bir hareket yok</h4>
+                <p className="text-xs text-secondary mt-1 max-w-sm mx-auto">
+                  Üyeleriniz ders iptal ettiğinde veya rezervasyon yaptığında burada canlı olarak görünecektir.
+                </p>
+              </Card>
+            ) : (
+              <div className="space-y-3">
+                {liveNotifications.map((notif) => {
+                  const isCancel = notif.tip.includes('IPTAL') || notif.baslik.toLowerCase().includes('iptal')
+                  const isBooking = notif.tip.includes('REZERVASYON') || notif.baslik.toLowerCase().includes('rezervasyon')
+                  const isWaitlist = notif.tip.includes('BEKLEME') || notif.baslik.toLowerCase().includes('bekleme')
+
+                  return (
+                    <Card
+                      key={notif.id}
+                      className={`p-4 rounded-2xl border transition-all shadow-xs flex items-start justify-between gap-4 ${
+                        isCancel
+                          ? 'bg-rose-50/60 border-rose-200'
+                          : isBooking
+                          ? 'bg-emerald-50/60 border-emerald-200'
+                          : isWaitlist
+                          ? 'bg-amber-50/60 border-amber-200'
+                          : 'bg-sand/60 border-line'
+                      }`}
+                    >
+                      <div className="space-y-1.5 flex-1">
+                        <div className="flex items-center gap-2">
+                          <span
+                            className={`px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wide border ${
+                              isCancel
+                                ? 'bg-rose-100 text-rose-700 border-rose-300'
+                                : isBooking
+                                ? 'bg-emerald-100 text-emerald-700 border-emerald-300'
+                                : isWaitlist
+                                ? 'bg-amber-100 text-amber-800 border-amber-300'
+                                : 'bg-sand text-espresso border-line'
+                            }`}
+                          >
+                            {notif.tip}
+                          </span>
+                          <h4 className="font-serif text-sm font-bold text-ink">
+                            {notif.baslik}
+                          </h4>
+                        </div>
+                        <p className="text-xs text-ink/90 leading-relaxed font-medium">
+                          {notif.mesaj}
+                        </p>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteLiveNotification(notif.id)}
+                        className="p-1.5 rounded-lg text-secondary hover:text-clay hover:bg-clay/10 transition-colors cursor-pointer shrink-0"
+                        title="Sil"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </Card>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Tab 1: Instant Push Console */}
         {activeTab === 'instant' && (

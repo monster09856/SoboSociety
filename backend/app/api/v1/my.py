@@ -83,8 +83,16 @@ async def get_my_summary(
         kalan_gun = max(0, (mp.bitis - today).days) if mp.bitis else 0
         toplam_ders = getattr(mp, "ders_adedi", p.ders_adedi if p else 0)
 
+    from sqlalchemy.orm import selectinload
+    from app.models.program import ClassSession
+
     stmt = (
         select(Booking)
+        .options(
+            selectinload(Booking.session).selectinload(ClassSession.class_type),
+            selectinload(Booking.session).selectinload(ClassSession.instructor),
+            selectinload(Booking.session).selectinload(ClassSession.room),
+        )
         .where(Booking.member_id == current_member.id)
         .order_by(Booking.id.desc())
     )
@@ -213,6 +221,15 @@ async def update_my_measurements(
         sol_kol=current_member.sol_kol,
     )
     db.add(history)
+
+    from app.services.bildirim import adminlere_bildirim_gonder
+    await adminlere_bildirim_gonder(
+        db,
+        baslik="📏 Üye Form / Ölçü Güncellemesi",
+        mesaj=f"{current_member.ad} üyesi vücut ölçülerini ve form bilgilerini güncelledi.",
+        tip="UYE_GUNCELLEME",
+    )
+
     await db.commit()
 
     return {"mesaj": "Vücut ölçüleriniz ve gelişim geçmişiniz başarıyla güncellendi!"}

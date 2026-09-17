@@ -399,15 +399,9 @@ export default function AdminPackagesPage() {
                       >
                         {pkg.aktif ? 'Yayında (Aktif)' : 'Pasif'}
                       </span>
-                      {pkg.fiyat_tl && pkg.fiyat_tl > 0 ? (
-                        <span className="text-lg font-extrabold text-espresso bg-ivory px-3 py-1 rounded-xl border border-line">
-                          ₺{pkg.fiyat_tl?.toLocaleString('tr-TR')}
-                        </span>
-                      ) : (
-                        <span className="text-xs font-bold text-mocha bg-mocha/10 px-2.5 py-1 rounded-xl border border-mocha/30">
-                          Fiyat Gizli (İletişim)
-                        </span>
-                      )}
+                      <span className="text-xs font-bold text-mocha bg-mocha/10 px-2.5 py-1 rounded-xl border border-mocha/30">
+                        Fiyat: WhatsApp İletişim
+                      </span>
                     </div>
 
                     <CardTitle className="font-serif text-xl font-bold text-ink mt-3">

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { Calendar, Users, Sparkles, MapPin, Clock, MessageCircle, ArrowRight, CheckCircle2, Compass, Lock } from 'lucide-react'
+import { Calendar, Users, Sparkles, MapPin, Clock, MessageCircle, ArrowRight, CheckCircle2, Compass, Lock, X, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
@@ -21,35 +21,62 @@ interface WorkshopItem {
   tek_katilim_acik?: boolean
   tek_katilim_ucret_tl?: number
   aktif: boolean
+  is_registered?: boolean
 }
 
 export function Workshops() {
   const [events, setEvents] = useState<WorkshopItem[]>([])
   const [loading, setLoading] = useState(true)
   const [isLoggedIn, setIsLoggedIn] = useState(false)
+  const [actionLoadingId, setActionLoadingId] = useState<number | null>(null)
+
+  const fetchEvents = async () => {
+    try {
+      const data = await api.events.list()
+      if (data && data.length > 0) {
+        setEvents(data)
+      } else {
+        setEvents(defaultWorkshops)
+      }
+    } catch (err) {
+      console.error('Workshoplar çekilemedi:', err)
+      setEvents(defaultWorkshops)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   useEffect(() => {
     setIsLoggedIn(isAuthenticated())
-  }, [])
-
-  useEffect(() => {
-    async function fetchEvents() {
-      try {
-        const data = await api.events.list()
-        if (data && data.length > 0) {
-          setEvents(data)
-        } else {
-          setEvents(defaultWorkshops)
-        }
-      } catch (err) {
-        console.error('Workshoplar çekilemedi:', err)
-        setEvents(defaultWorkshops)
-      } finally {
-        setLoading(false)
-      }
-    }
     fetchEvents()
   }, [])
+
+  const handleCancelRsvp = async (eventId: number, eventTitle: string) => {
+    if (!confirm(`"${eventTitle}" workshop kaydınızı iptal etmek istediğinizden emin misiniz?`)) return
+    setActionLoadingId(eventId)
+    try {
+      await api.events.cancelRsvp(eventId)
+      await fetchEvents()
+      alert(`"${eventTitle}" workshop kaydınız iptal edildi.`)
+    } catch (err: any) {
+      alert(err?.message || 'İptal işlemi yapılamadı.')
+    } finally {
+      setActionLoadingId(null)
+    }
+  }
+
+  const handleRsvp = async (eventId: number, eventTitle: string) => {
+    setActionLoadingId(eventId)
+    try {
+      await api.events.rsvp(eventId)
+      await fetchEvents()
+      alert(`Tebrikler! "${eventTitle}" workshop kaydınız oluşturuldu. ✨`)
+    } catch (err: any) {
+      alert(err?.message || 'Kayıt işlemi yapılamadı.')
+    } finally {
+      setActionLoadingId(null)
+    }
+  }
 
   const defaultWorkshops: WorkshopItem[] = [
     {
@@ -185,27 +212,61 @@ export function Workshops() {
                       </div>
                     )}
 
-                    <div className="flex flex-col sm:flex-row gap-2">
-                      <a
-                        href={`https://wa.me/905316033080?text=${encodeURIComponent(
-                          `Merhaba! Sobo Society'nin "${ev.baslik}" (${ev.tarih_saat}) etkinliği hakkında bilgi almak ve yerimi ayırtmak istiyorum.`
-                        )}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex-1"
-                      >
-                        <Button variant="secondary" className="w-full text-xs font-medium justify-center gap-1.5 py-2.5">
-                          <MessageCircle className="w-3.5 h-3.5" />
-                          <span>WhatsApp İle Kayıt</span>
+                    {ev.is_registered ? (
+                      <div className="space-y-2">
+                        <div className="bg-sage/15 border border-sage/40 rounded-xl p-2.5 flex items-center justify-between text-xs text-sage font-bold">
+                          <span className="flex items-center gap-1.5">
+                            <CheckCircle2 className="w-4 h-4 text-sage" />
+                            Bu Atölyeye Kayıtlısınız ✨
+                          </span>
+                        </div>
+                        <Button
+                          variant="destructive"
+                          disabled={actionLoadingId === ev.id}
+                          onClick={() => handleCancelRsvp(ev.id, ev.baslik)}
+                          className="w-full text-xs font-bold justify-center gap-1.5 py-2.5 bg-clay hover:bg-clay/90 text-white border-none rounded-xl cursor-pointer"
+                        >
+                          {actionLoadingId === ev.id ? (
+                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          ) : (
+                            <>
+                              <X className="w-3.5 h-3.5" />
+                              <span>Workshop Kaydını İptal Et</span>
+                            </>
+                          )}
                         </Button>
-                      </a>
-                      <Link href="/giris" className="flex-1">
-                        <Button variant="primary" className="w-full text-xs font-medium justify-center gap-1 py-2.5">
-                          <span>Uygulamada Aç</span>
-                          <ArrowRight className="w-3.5 h-3.5" />
-                        </Button>
-                      </Link>
-                    </div>
+                      </div>
+                    ) : (
+                      <div className="flex flex-col sm:flex-row gap-2">
+                        {isLoggedIn && (
+                          <Button
+                            variant="primary"
+                            disabled={actionLoadingId === ev.id || kalan === 0}
+                            onClick={() => handleRsvp(ev.id, ev.baslik)}
+                            className="flex-1 text-xs font-bold justify-center gap-1.5 py-2.5 bg-espresso hover:bg-espresso-dark text-ivory border-none rounded-xl cursor-pointer disabled:opacity-50"
+                          >
+                            {actionLoadingId === ev.id ? (
+                              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                            ) : (
+                              <span>{kalan === 0 ? 'Kontenjan Dolu' : 'Hemen Kaydol'}</span>
+                            )}
+                          </Button>
+                        )}
+                        <a
+                          href={`https://wa.me/905316033080?text=${encodeURIComponent(
+                            `Merhaba! Sobo Society'nin "${ev.baslik}" (${ev.tarih_saat}) etkinliği hakkında bilgi almak ve yerimi ayırtmak istiyorum.`
+                          )}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className={isLoggedIn ? 'flex-1' : 'w-full'}
+                        >
+                          <Button variant="secondary" className="w-full text-xs font-medium justify-center gap-1.5 py-2.5">
+                            <MessageCircle className="w-3.5 h-3.5" />
+                            <span>WhatsApp İle Kayıt</span>
+                          </Button>
+                        </a>
+                      </div>
+                    )}
                   </div>
                 </CardContent>
               </Card>

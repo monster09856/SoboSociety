@@ -368,7 +368,7 @@ export default function SingleBookingsAdminPage() {
                     <div className="bg-sand/60 border border-line/60 rounded-2xl p-3.5 space-y-2 text-xs">
                       <div className="flex items-center justify-between">
                         <span className="font-bold text-espresso">{b.session.class_type_ad}</span>
-                        <span className="font-serif font-extrabold text-mocha text-sm">{b.session.fiyat_tl} ₺</span>
+                        <span className="text-[11px] font-bold text-mocha">WhatsApp İletişim</span>
                       </div>
                       <div className="flex items-center gap-2 text-secondary font-medium">
                         <Clock className="w-3.5 h-3.5 text-mocha" />
