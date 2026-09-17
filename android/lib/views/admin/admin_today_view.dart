@@ -106,6 +106,48 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
     super.dispose();
   }
 
+  String _formatSessionDateTime(dynamic iso) {
+    if (iso == null) return '';
+    try {
+      final DateTime dt = DateTime.parse(iso.toString()).toLocal();
+      const List<String> months = <String>['Oca', 'Şub', 'Mar', 'Nis', 'May', 'Haz', 'Tem', 'Ağu', 'Eyl', 'Eki', 'Kas', 'Ara'];
+      final String m = months[(dt.month - 1) % 12];
+      final String hour = dt.hour.toString().padLeft(2, '0');
+      final String min = dt.minute.toString().padLeft(2, '0');
+      return '${dt.day} $m $hour:$min';
+    } catch (_) {
+      return iso.toString();
+    }
+  }
+
+  String _formatSessionTime(dynamic iso) {
+    if (iso == null) return '';
+    try {
+      final DateTime dt = DateTime.parse(iso.toString()).toLocal();
+      final String hour = dt.hour.toString().padLeft(2, '0');
+      final String min = dt.minute.toString().padLeft(2, '0');
+      return '$hour:$min';
+    } catch (_) {
+      return iso.toString();
+    }
+  }
+
+  String _formatSessionFull(dynamic iso) {
+    if (iso == null) return '';
+    try {
+      final DateTime dt = DateTime.parse(iso.toString()).toLocal();
+      const List<String> days = <String>['Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi', 'Pazar'];
+      const List<String> months = <String>['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
+      final String dName = days[(dt.weekday - 1) % 7];
+      final String mName = months[(dt.month - 1) % 12];
+      final String hour = dt.hour.toString().padLeft(2, '0');
+      final String min = dt.minute.toString().padLeft(2, '0');
+      return '${dt.day} $mName $dName · $hour:$min';
+    } catch (_) {
+      return iso.toString();
+    }
+  }
+
   void _loadAllData() {
     _loadTodaySessions();
     _loadScheduleData();
@@ -783,9 +825,7 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
                               final String phone = (att['telefon'] ?? '').toString();
                               final bool isSingle = att['tek_katilim'] == true;
                               final int rsvpId = att['rsvp_id'] ?? 0;
-                              final String createdAt = att['created_at'] != null
-                                  ? att['created_at'].toString().substring(0, 16).replaceAll('T', ' ')
-                                  : '';
+                              final String createdAt = _formatSessionDateTime(att['created_at']);
 
                               return Row(
                                 crossAxisAlignment: CrossAxisAlignment.center,
@@ -1268,7 +1308,7 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
     final int sessionId = s['id'] as int;
     int classTypeId = (s['class_type'] != null ? s['class_type']['id'] : _classList.firstOrNull?['id'] ?? 1) as int;
     int instructorId = (s['instructor'] != null ? s['instructor']['id'] : _instructorList.firstOrNull?['id'] ?? 1) as int;
-    DateTime sessionDate = DateTime.tryParse(s['baslangic']?.toString() ?? '') ?? DateTime.now();
+    DateTime sessionDate = (DateTime.tryParse(s['baslangic']?.toString() ?? '') ?? DateTime.now()).toLocal();
     TimeOfDay sessionTime = TimeOfDay(hour: sessionDate.hour, minute: sessionDate.minute);
     final capCtrl = TextEditingController(text: '${s['kontenjan'] ?? 5}');
     final priceCtrl = TextEditingController(text: '0');
@@ -1820,7 +1860,7 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
       await ApiClient.post('/admin/sessions', <String, dynamic>{
         'class_type_id': _newClassTypeId,
         'instructor_id': _newInstructorId,
-        'baslangic': dt.toIso8601String(),
+        'baslangic': dt.toUtc().toIso8601String(),
         'kontenjan': int.tryParse(_newCapacityCtrl.text) ?? 5,
         'fiyat_tl': 0.0,
         'tek_ders_acik': _newTekDersAcik,
@@ -2483,7 +2523,7 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
                             isExpanded: true,
                             items: _allSessions.map<DropdownMenuItem<int>>((dynamic s) {
                               final String cName = s['class_type'] != null ? s['class_type']['ad'] : 'Ders';
-                              final String dt = s['baslangic'] != null ? s['baslangic'].toString().substring(5, 16).replaceAll('T', ' ') : '';
+                              final String dt = _formatSessionDateTime(s['baslangic']);
                               final String inst = s['instructor'] != null ? s['instructor']['ad'] : '';
                               final int spotsLeft = (s['kontenjan'] ?? 0) - (s['dolu_sayi'] ?? 0);
                               return DropdownMenuItem<int>(
@@ -2834,7 +2874,7 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
                             ),
                             ..._allSessions.map<DropdownMenuItem<int?>>((dynamic s) {
                               final String cName = s['class_type'] != null ? s['class_type']['ad'] : 'Ders';
-                              final String dt = s['baslangic'] != null ? s['baslangic'].toString().substring(5, 16).replaceAll('T', ' ') : '';
+                              final String dt = _formatSessionDateTime(s['baslangic']);
                               final String inst = s['instructor'] != null ? s['instructor']['ad'] : '';
                               return DropdownMenuItem<int?>(
                                 value: s['id'] as int?,
@@ -3932,7 +3972,7 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
                       ),
                       items: _todaySessions.map<DropdownMenuItem<int>>((dynamic s) {
                         final String classTypeAd = s['class_type'] != null ? s['class_type']['ad'] : 'Ders';
-                        final String timeStr = s['baslangic'] != null ? s['baslangic'].toString().substring(11, 16) : '';
+                        final String timeStr = _formatSessionTime(s['baslangic']);
                         return DropdownMenuItem<int>(
                           value: s['id'] as int,
                           child: Text('$classTypeAd ($timeStr)', style: SoboTheme.fontSans(fontSize: 13, fontWeight: FontWeight.bold)),
@@ -4000,7 +4040,7 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
                   final dynamic session = _todaySessions[index];
                   final List<dynamic> attendees = session['katilimcilar'] is List ? session['katilimcilar'] : <dynamic>[];
                   final String classTypeAd = session['class_type'] != null ? session['class_type']['ad'] : 'Ders';
-                  final String timeStr = session['baslangic'] != null ? session['baslangic'].toString().substring(11, 16) : '';
+                  final String timeStr = _formatSessionTime(session['baslangic']);
 
                   return Container(
                     padding: const EdgeInsets.all(16),
@@ -4348,6 +4388,7 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
                   final String classTypeAd = s['class_type'] != null ? s['class_type']['ad'] : 'Ders';
                   final String instructorAd = s['instructor'] != null ? s['instructor']['ad'] : 'Eğitmen';
                   final bool isTekDersAcik = s['tek_ders_acik'] == true;
+                  final String sessionDt = _formatSessionFull(s['baslangic']);
 
                   return Container(
                     padding: const EdgeInsets.all(14),
@@ -4363,7 +4404,7 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
                               children: [
                                 Text(classTypeAd, style: SoboTheme.fontSerif(fontSize: 16, fontWeight: FontWeight.bold, color: SoboTheme.ink)),
                                 const SizedBox(height: 2),
-                                Text('Eğitmen: $instructorAd', style: SoboTheme.fontSans(fontSize: 12, color: SoboTheme.secondary)),
+                                Text('$sessionDt • Eğitmen: $instructorAd', style: SoboTheme.fontSans(fontSize: 12, color: SoboTheme.secondary)),
                               ],
                             ),
                             Row(
@@ -4447,7 +4488,7 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
                       decoration: InputDecoration(labelText: 'Ders Oturumu', filled: true, fillColor: SoboTheme.ivory, border: OutlineInputBorder(borderRadius: BorderRadius.circular(12))),
                       items: _allSessions.map<DropdownMenuItem<int>>((dynamic s) {
                         final String ct = s['class_type'] != null ? s['class_type']['ad'] : 'Ders';
-                        final String dt = s['baslangic'] != null ? s['baslangic'].toString().substring(0, 16).replaceAll('T', ' ') : '';
+                        final String dt = _formatSessionDateTime(s['baslangic']);
                         return DropdownMenuItem<int>(value: s['id'] as int, child: Text('$ct ($dt)'));
                       }).toList(),
                       onChanged: (val) => setState(() => _guestSessionId = val),
@@ -5805,7 +5846,7 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
                 separatorBuilder: (_, __) => const SizedBox(height: 12),
                 itemBuilder: (context, index) {
                   final w = _workshops[index];
-                  final String dateStr = w['tarih_saat'] != null ? w['tarih_saat'].toString().substring(0, 16).replaceAll('T', ' • ') : '';
+                  final String dateStr = _formatSessionDateTime(w['tarih_saat']);
 
                   return Container(
                     padding: const EdgeInsets.all(16),

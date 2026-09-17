@@ -476,6 +476,14 @@ async def list_admin_sessions(
     return list(result.scalars().all())
 
 
+def _normalize_datetime(dt: datetime | None) -> datetime | None:
+    if dt is None:
+        return None
+    if dt.tzinfo is None:
+        return dt.replace(tzinfo=STUDYO_TZ).astimezone(timezone.utc)
+    return dt.astimezone(timezone.utc)
+
+
 @router.post("/sessions", response_model=ClassSessionResponse)
 async def create_session(
     body: SessionCreateRequest,
@@ -515,7 +523,7 @@ async def create_session(
         await db.flush()
 
     session = ClassSession(
-        baslangic=body.baslangic,
+        baslangic=_normalize_datetime(body.baslangic),
         class_type_id=target_class_type_id,
         instructor_id=target_instructor_id,
         room_id=room.id,
@@ -547,7 +555,7 @@ async def update_session_endpoint(
         raise HTTPException(status_code=404, detail="Ders oturumu bulunamadı.")
     
     if body.baslangic is not None:
-        session.baslangic = body.baslangic
+        session.baslangic = _normalize_datetime(body.baslangic)
     if body.class_type_id is not None:
         session.class_type_id = body.class_type_id
     if body.instructor_id is not None:
@@ -1269,7 +1277,7 @@ async def create_admin_event(
     ev = StudioEvent(
         baslik=body.baslik,
         turu=body.turu,
-        tarih_saat=body.tarih_saat,
+        tarih_saat=_normalize_datetime(body.tarih_saat),
         aciklama=body.aciklama,
         kontenjan=body.kontenjan,
         ucret=body.ucret,
@@ -1285,12 +1293,13 @@ async def create_admin_event(
     try:
         res_m = await db.execute(select(Member).where(Member.aktif == True))
         members = res_m.scalars().all()
+        formatted_ts = ev.tarih_saat.astimezone(STUDYO_TZ).strftime("%d.%m.%Y %H:%M") if ev.tarih_saat else ""
         for m in members:
             await bildirim_gonder(
                 db,
                 member_id=m.id,
                 baslik=f"✨ Yeni Workshop: {ev.baslik}",
-                mesaj=f"{ev.turu} | {ev.tarih_saat} - {ev.ucret or 'Detaylar İçin İnceleyin'}. Sobo Society uygulamasından hemen yerinizi ayırtabilirsiniz!",
+                mesaj=f"{ev.turu} | {formatted_ts} - {ev.ucret or 'Detaylar İçin İnceleyin'}. Sobo Society uygulamasından hemen yerinizi ayırtabilirsiniz!",
                 tip="WORKSHOP",
             )
         await db.commit()
@@ -1365,7 +1374,7 @@ async def update_admin_event(
     
     ev.baslik = body.baslik
     ev.turu = body.turu
-    ev.tarih_saat = body.tarih_saat
+    ev.tarih_saat = _normalize_datetime(body.tarih_saat)
     ev.aciklama = body.aciklama
     ev.kontenjan = body.kontenjan
     ev.ucret = body.ucret
