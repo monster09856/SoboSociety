@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { User, KeyRound, Loader2, AlertCircle, Sparkles, UserPlus, LogIn, Phone } from 'lucide-react'
+import { User, KeyRound, Loader2, AlertCircle, Sparkles, UserPlus, LogIn, Phone, Clock } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card'
 import { api, ApiError } from '@/lib/api'
@@ -33,10 +33,12 @@ export function OtpForm({ onSuccess, redirectTo }: OtpFormProps) {
 
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [pendingApproval, setPendingApproval] = useState(false)
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault()
     setError(null)
+    setPendingApproval(false)
 
     if (!regAd.trim() || !regKullaniciAdi.trim() || !regSifre.trim()) {
       setError('Lütfen Ad Soyad, Kullanıcı Adı ve Şifre alanlarını doldurun.')
@@ -57,6 +59,14 @@ export function OtpForm({ onSuccess, redirectTo }: OtpFormProps) {
         sifre: regSifre.trim(),
         telefon: regTelefon.trim() || undefined,
       })
+
+      if (res.aktif === false || !res.access_token) {
+        setPendingApproval(true)
+        setTab('login')
+        setLoginKullaniciAdi(regKullaniciAdi.trim())
+        setLoginSifre('')
+        return
+      }
 
       setToken(res.access_token)
 
@@ -166,6 +176,19 @@ export function OtpForm({ onSuccess, redirectTo }: OtpFormProps) {
       </CardHeader>
 
       <CardContent className="space-y-4">
+        {pendingApproval && (
+          <div className="flex items-start space-x-3 rounded-2xl border border-amber-500/40 bg-amber-500/10 p-4 text-xs font-medium shadow-xs">
+            <Clock className="h-5 w-5 shrink-0 text-amber-700 mt-0.5" />
+            <div className="space-y-1">
+              <p className="font-bold text-sm text-amber-950">Başvurunuz Alındı ✨</p>
+              <p className="text-amber-900 leading-relaxed">
+                Sobo Pilates butik stüdyomuza üyeliğiniz yönetici tarafından incelenmektedir.
+                Başvurunuz stüdyo yönetimi tarafından onaylandıktan sonra kullanıcı adı ve şifrenizle giriş yapabilirsiniz.
+              </p>
+            </div>
+          </div>
+        )}
+
         {error && (
           <div className="flex items-start space-x-2.5 rounded-2xl border border-clay/40 bg-clay/15 p-3.5 text-xs text-clay font-medium shadow-xs">
             <AlertCircle className="h-4 w-4 shrink-0 mt-0.5 text-clay" />

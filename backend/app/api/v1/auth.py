@@ -191,13 +191,24 @@ async def verify_otp_endpoint(
     res = await db.execute(stmt)
     member = res.scalar_one_or_none()
 
+    is_admin = norm_tel in ayarlar.admin_telefons
+
     if member is None:
-        member = Member(telefon=norm_tel, ad=body.ad if body.ad and body.ad.strip() else "Yeni Üye")
+        member = Member(
+            telefon=norm_tel,
+            ad=body.ad if body.ad and body.ad.strip() else "Yeni Üye",
+            aktif=is_admin,
+        )
         db.add(member)
         await db.commit()
         await db.refresh(member)
 
-    is_admin = norm_tel in ayarlar.admin_telefons
+    if not member.aktif and not is_admin:
+        raise HTTPException(
+            status_code=403,
+            detail="Üyelik başvurunuz stüdyo yönetimi tarafından incelenmektedir. Hesabınız onaylandığında giriş yapabileceksiniz. ✨",
+        )
+
     access_token = create_access_token(subject=str(member.id), is_admin=is_admin)
     return TokenResponse(access_token=access_token, token_type="bearer")
 

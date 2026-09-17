@@ -191,6 +191,8 @@ export interface OTPVerifyRequest {
 export interface TokenResponse {
   access_token: string
   token_type: string
+  aktif?: boolean
+  mesaj?: string
 }
 
 export interface MemberMeResponse {
