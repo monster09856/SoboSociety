@@ -41,6 +41,7 @@ class Member(ZamanDamgali, Base):
     boy: Mapped[str | None] = mapped_column(String(40), default=None)
     kilo: Mapped[str | None] = mapped_column(String(40), default=None)
     saglik_notu: Mapped[str | None] = mapped_column(Text, default=None)
+    sabit_ders_saatleri: Mapped[str | None] = mapped_column(String(200), default=None)
 
     aktif: Mapped[bool] = mapped_column(Boolean, default=True)
 

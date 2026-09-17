@@ -14,6 +14,7 @@ class SoboTheme {
   static const Color espresso = Color(0xFF7A5243);
   static const Color espressoDark = Color(0xFF533F33);
   static const Color sage = Color(0xFF7D8B72);
+  static const Color forest = Color(0xFF4A6B53);
   static const Color clay = Color(0xFFB5714E);
   static const Color terracotta = clay;
 

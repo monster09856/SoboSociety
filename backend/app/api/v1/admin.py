@@ -826,6 +826,7 @@ async def _build_member_detail_response(db: AsyncSession, m: Member) -> MemberAd
         boy=m.boy,
         kilo=m.kilo,
         saglik_notu=m.saglik_notu,
+        sabit_ders_saatleri=m.sabit_ders_saatleri,
         aktif_member_package_id=aktif_mp_id,
         aktif_paket_adi=aktif_pkg_ad,
         paket_bitis_tarihi=pkg_bitis_str,
@@ -899,7 +900,7 @@ async def update_admin_member(
     measurement_fields = [
         "bel", "kalca", "sag_ic_bacak", "sag_bacak",
         "sol_ic_bacak", "sol_bacak", "sag_kol", "sol_kol",
-        "boy", "kilo", "saglik_notu"
+        "boy", "kilo", "saglik_notu", "sabit_ders_saatleri"
     ]
     for f in measurement_fields:
         val = getattr(body, f, None)
@@ -921,6 +922,51 @@ async def update_admin_member(
     await db.commit()
     await db.refresh(m)
 
+    return await _build_member_detail_response(db, m)
+
+
+@router.post("/members/{member_id}/deduct-lesson", response_model=MemberAdminDetailResponse)
+async def deduct_admin_member_lesson(
+    member_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_admin: Member = Depends(get_current_admin),
+):
+    """Eğitmen stüdyoya gelen üyenin dersini tek dokunuşla düşer ve üyeye bildirim gönderir."""
+    m = await db.get(Member, member_id)
+    if not m:
+        raise HTTPException(status_code=404, detail="Üye bulunamadı.")
+
+    current_bakiye = await bakiye(db, member_id)
+    if current_bakiye <= 0:
+        raise HTTPException(status_code=400, detail=f"{m.ad} üyesinin tanımlı ders bakiyesi bulunmuyor (Bakiye: 0).")
+
+    # Krediyi aktif paketten düş
+    from app.services.kredi import aktif_paket_sec
+    paket = await aktif_paket_sec(db, member_id=member_id, bugun=datetime.now().date())
+
+    await hareket_ekle(
+        db,
+        member_id=member_id,
+        tip=LedgerTipi.ADMIN_ADJUST,
+        miktar=-1,
+        sebep="Stüdyo ders katılımı (Eğitmen onayı ile yoklama)",
+        member_package_id=paket.id if paket is not None else None,
+    )
+
+    try:
+        kalan = current_bakiye - 1
+        await bildirim_gonder(
+            db,
+            member_id=member_id,
+            baslik="✨ Ders Katılımınız İşlendi",
+            mesaj=f"Sobo Studio bugünkü seans katılımınız işlendi. Kalan ders hakkınız: {kalan}",
+            tip="YOKLAMA",
+        )
+    except Exception as e:
+        print(f"[DEDUCT LESSON NOTIF ERROR] {e}")
+
+    await db.commit()
+    await db.refresh(m)
     return await _build_member_detail_response(db, m)
 
 
@@ -1482,6 +1528,31 @@ async def approve_admin_booking(
         tip="REZERVE_ONAY",
     )
     return {"booking_id": booking.id, "durum": booking.durum, "mesaj": "Rezervasyon talebi onaylandı ve derse kesin kayıt yapıldı."}
+
+
+@router.post("/bookings/{booking_id}/attend")
+async def mark_admin_booking_attended(
+    booking_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_admin: Member = Depends(get_current_admin),
+):
+    """Admin üyenin derse katıldığını (yoklama geldi) işaretler."""
+    booking = await db.get(Booking, booking_id)
+    if not booking:
+        raise HTTPException(status_code=404, detail="Rezervasyon bulunamadı.")
+
+    booking.durum = BookingDurumu.ATTENDED
+    await db.commit()
+
+    await bildirim_gonder(
+        db,
+        member_id=booking.member_id,
+        baslik="✨ Derse Katılımınız Onaylandı!",
+        mesaj="Bugünkü derse katılımınız işlendi. Harika bir ders dileriz!",
+        tip="ATTENDANCE",
+    )
+    return {"booking_id": booking.id, "durum": booking.durum, "mesaj": "Üye derse geldi olarak işaretlendi."}
+
 
 
 @router.post("/bookings/{booking_id}/reject")

@@ -71,7 +71,7 @@ class _WorkshopsViewState extends State<WorkshopsView> {
       aciklama: 'Temiz havada yürüyüş, nefes egzersizleri ve ardından tüm Sobo topluluğu ile kahve sohbeti.',
       kontenjan: 20,
       doluSayi: 12,
-      ucret: 'Ücretsiz / Topluluk Etkinliği',
+      ucret: 'Topluluk Etkinliği',
       aktif: true,
     ),
     StudioEventItem(
@@ -79,10 +79,10 @@ class _WorkshopsViewState extends State<WorkshopsView> {
       baslik: 'Ses Çanağı & Derin Meditasyon (Sound Bath)',
       turu: 'Sound Bath',
       tarihSaat: DateTime.now().add(const Duration(days: 5)).toIso8601String(),
-      aciklama: 'Tibet ses çanaklarının şifalı frekansları eşliğinde derin zihinsel ve bedensel dinlenme seansı.',
+      aciklama: 'Tibet ses çanaklarının frekansları eşliğinde derin zihinsel ve bedensel dinlenme seansı.',
       kontenjan: 12,
       doluSayi: 8,
-      ucret: '750 ₺',
+      ucret: 'Özel Atölye',
       aktif: true,
     ),
     StudioEventItem(
@@ -93,7 +93,7 @@ class _WorkshopsViewState extends State<WorkshopsView> {
       aciklama: 'Masa başı çalışanlar için özel omurga sağlığı, duruş bozukluklarını düzeltici teknikler ve mobilite çalışması.',
       kontenjan: 10,
       doluSayi: 6,
-      ucret: '600 ₺',
+      ucret: 'Masterclass',
       aktif: true,
     ),
   ];
@@ -105,6 +105,74 @@ class _WorkshopsViewState extends State<WorkshopsView> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(res['mesaj'] ?? 'Etkinlik kaydınız başarıyla alındı! ✨'),
+            backgroundColor: SoboTheme.sage,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          ),
+        );
+        _loadEvents();
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(e.toString().replaceAll('Exception: ', '')),
+            backgroundColor: SoboTheme.clay,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _handleCancelRSVP(StudioEventItem event) async {
+    final bool? confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: SoboTheme.ivory,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        title: Row(
+          children: [
+            const Icon(Icons.info_outline_rounded, color: SoboTheme.clay, size: 24),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                'Workshop Kayıt İptali',
+                style: SoboTheme.fontSerif(fontSize: 18, fontWeight: FontWeight.bold, color: SoboTheme.ink),
+              ),
+            ),
+          ],
+        ),
+        content: Text(
+          "'${event.baslik}' etkinliğindeki kaydınızı iptal etmek istediğinizden emin misiniz?",
+          style: SoboTheme.fontSans(fontSize: 13, color: SoboTheme.secondary, height: 1.4),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: Text('Vazgeç', style: SoboTheme.fontSans(color: SoboTheme.secondary)),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: SoboTheme.clay,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            child: Text('Kaydı İptal Et', style: SoboTheme.fontSans(fontWeight: FontWeight.bold, color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
+    try {
+      final res = await ApiClient.delete('/events/${event.id}/rsvp');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(res['mesaj'] ?? 'Workshop kaydınız başarıyla iptal edildi.'),
             backgroundColor: SoboTheme.sage,
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
@@ -544,7 +612,7 @@ class _WorkshopsViewState extends State<WorkshopsView> {
     final titleCtrl = TextEditingController();
     final descCtrl = TextEditingController();
     final capacityCtrl = TextEditingController(text: '12');
-    final priceCtrl = TextEditingController(text: '750 ₺');
+    final priceCtrl = TextEditingController(text: '');
     String selectedType = 'Workshop';
     DateTime selectedDate = DateTime.now().add(const Duration(days: 3));
     TimeOfDay selectedTime = const TimeOfDay(hour: 14, minute: 0);
@@ -687,7 +755,7 @@ class _WorkshopsViewState extends State<WorkshopsView> {
                           controller: priceCtrl,
                           decoration: InputDecoration(
                             labelText: 'Ücret',
-                            hintText: '750 ₺ veya Ücretsiz',
+                            hintText: 'Ücretsiz veya Bilgi Alınız',
                             filled: true,
                             fillColor: SoboTheme.ivory,
                             labelStyle: SoboTheme.fontSans(fontSize: 12),
@@ -1003,12 +1071,20 @@ class _WorkshopsViewState extends State<WorkshopsView> {
                                 ),
                               ),
                               const Spacer(),
-                              Text(
-                                ev.ucret,
-                                style: SoboTheme.fontSans(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.bold,
-                                  color: SoboTheme.mocha,
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                decoration: BoxDecoration(
+                                  color: SoboTheme.sandLight,
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(color: SoboTheme.line),
+                                ),
+                                child: Text(
+                                  'Sobo Topluluğu',
+                                  style: SoboTheme.fontSans(
+                                    fontSize: 10.5,
+                                    fontWeight: FontWeight.bold,
+                                    color: SoboTheme.espresso,
+                                  ),
                                 ),
                               ),
                             ],
@@ -1049,24 +1125,24 @@ class _WorkshopsViewState extends State<WorkshopsView> {
                               const SizedBox(width: 10),
                               Expanded(
                                 child: ElevatedButton.icon(
-                                  onPressed: (ev.isRegistered || isFull)
-                                      ? null
-                                      : () => _handleRSVP(ev),
+                                  onPressed: ev.isRegistered
+                                      ? () => _handleCancelRSVP(ev)
+                                      : (isFull ? null : () => _handleRSVP(ev)),
                                   icon: Icon(
-                                    ev.isRegistered ? Icons.check_circle_rounded : Icons.edit_calendar_rounded,
+                                    ev.isRegistered ? Icons.cancel_outlined : Icons.edit_calendar_rounded,
                                     size: 16,
                                     color: Colors.white,
                                   ),
                                   label: Text(
-                                    ev.isRegistered ? 'KAYITLISINIZ ✨' : (isFull ? 'DOLU' : 'KAYDOL'),
+                                    ev.isRegistered ? 'KAYITLISINIZ (İPTAL ET)' : (isFull ? 'DOLU' : 'KAYDOL'),
                                     style: SoboTheme.fontSans(
-                                      fontSize: 11,
+                                      fontSize: 10.5,
                                       fontWeight: FontWeight.bold,
                                       color: Colors.white,
                                     ),
                                   ),
                                   style: ElevatedButton.styleFrom(
-                                    backgroundColor: ev.isRegistered ? SoboTheme.sage : SoboTheme.espresso,
+                                    backgroundColor: ev.isRegistered ? SoboTheme.clay : SoboTheme.espresso,
                                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                                     padding: const EdgeInsets.symmetric(vertical: 12),
                                   ),

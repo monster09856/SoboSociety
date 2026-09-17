@@ -48,12 +48,6 @@ async def iptal_et(
     son_iptal_ani = oturum.baslangic - timedelta(hours=tip.iptal_penceresi_saat)
     pencerede = now <= son_iptal_ani
 
-    # Üye için 12 saat kuralı: 12 saatten az süre kaldıysa üyenin iptal etmesi engellenir.
-    if not pencerede and not is_admin:
-        raise GecIptalEngellendi(
-            "Ders saatinize 12 saatten az süre kaldığı için rezervasyon iptal edilemez. İptal hakkı dersten en geç 12 saat öncesine kadardır."
-        )
-
     kapatma = await db.execute(
         update(Booking)
         .where(Booking.id == booking_id, Booking.durum == BookingDurumu.BOOKED)
@@ -79,20 +73,25 @@ async def iptal_et(
     )
     kaynak_paket_id = sonuc.scalar_one_or_none()
 
-    if pencerede or is_admin:
+    # Yeni oluşturulan rezervasyonlar için hoşgörü penceresi (test veya yanlışlıkla basma durumunda 60 dk içinde tam iade)
+    yeni_kayit = (now - kayit.created_at).total_seconds() <= 3600 if kayit.created_at else False
+
+    if pencerede or is_admin or yeni_kayit:
         await hareket_ekle(
             db, member_id=kayit.member_id, tip=LedgerTipi.CANCEL_REFUND, miktar=1,
             sebep=f"{tip.ad} — iptal (bakiye iadesi)",
             member_package_id=kaynak_paket_id, booking_id=kayit.id,
         )
+        iade = True
     else:
         kalan_saat = (oturum.baslangic - now).total_seconds() / 3600
         await hareket_ekle(
             db, member_id=kayit.member_id, tip=LedgerTipi.LATE_CANCEL, miktar=0,
-            sebep=f"{tip.ad} — ders saatine {kalan_saat:.1f} saat kala iptal",
+            sebep=f"{tip.ad} — ders saatine {kalan_saat:.1f} saat kala iptal (geç iptal)",
             member_package_id=kaynak_paket_id, booking_id=kayit.id,
         )
+        iade = False
 
     await db.flush()
     await db.refresh(kayit)
-    return IptalSonucu(booking=kayit, iade_edildi=pencerede or is_admin, bosalan_yer=bosalan_yer)
+    return IptalSonucu(booking=kayit, iade_edildi=iade, bosalan_yer=bosalan_yer)

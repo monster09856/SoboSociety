@@ -172,6 +172,80 @@ class _BookingViewState extends State<BookingView> {
     }
   }
 
+  Future<void> _handleCancelRSVPEvent(StudioEventItem event) async {
+    final bool? confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: SoboTheme.ivory,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        title: Row(
+          children: [
+            const Icon(Icons.info_outline_rounded, color: SoboTheme.clay, size: 24),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                'Workshop Kayıt İptali',
+                style: SoboTheme.fontSerif(fontSize: 18, fontWeight: FontWeight.bold, color: SoboTheme.ink),
+              ),
+            ),
+          ],
+        ),
+        content: Text(
+          "'${event.baslik}' etkinliğindeki kaydınızı iptal etmek istediğinizden emin misiniz?",
+          style: SoboTheme.fontSans(fontSize: 13, color: SoboTheme.secondary, height: 1.4),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: Text('Vazgeç', style: SoboTheme.fontSans(color: SoboTheme.secondary)),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: SoboTheme.clay,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            child: Text('Kaydı İptal Et', style: SoboTheme.fontSans(fontWeight: FontWeight.bold, color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
+    try {
+      final res = await ApiClient.delete('/events/${event.id}/rsvp');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.check_circle_rounded, color: Colors.white),
+                const SizedBox(width: 10),
+                Expanded(child: Text(res['mesaj'] ?? 'Workshop kaydınız başarıyla iptal edildi.')),
+              ],
+            ),
+            backgroundColor: SoboTheme.sage,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          ),
+        );
+        _loadData();
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(e.toString().replaceAll('Exception: ', '')),
+            backgroundColor: SoboTheme.clay,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          ),
+        );
+      }
+    }
+  }
+
   Widget _buildStreakAndStatsCard() {
     final int streakWeeks = _userStats?.currentStreakWeeks ?? 1;
     final int monthAttended = _userStats?.completedThisMonth ?? 1;
@@ -338,10 +412,6 @@ class _BookingViewState extends State<BookingView> {
             itemBuilder: (context, index) {
               final ev = displayEvents[index];
               final bool isFull = ev.kontenjan > 0 && ev.doluSayi >= ev.kontenjan;
-              final String priceTag = (ev.tekKatilimAcik && (ev.tekKatilimUcretTl ?? 0) > 0)
-                  ? 'Tek Katılım ₺${(ev.tekKatilimUcretTl ?? 0).toInt()}'
-                  : 'Üyelere Özel';
-
               return Container(
                 width: 280,
                 padding: const EdgeInsets.all(16),
@@ -412,24 +482,24 @@ class _BookingViewState extends State<BookingView> {
                       children: [
                         Expanded(
                           child: Text(
-                            priceTag,
+                            'Sobo Topluluğu',
                             style: SoboTheme.fontSans(fontSize: 11, fontWeight: FontWeight.bold, color: SoboTheme.mocha),
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
                         ElevatedButton(
                           onPressed: ev.isRegistered
-                              ? null
+                              ? () => _handleCancelRSVPEvent(ev)
                               : (isFull
                                   ? null
                                   : () => _handleRSVPEvent(ev, true)),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: ev.isRegistered ? SoboTheme.sage : SoboTheme.espresso,
+                            backgroundColor: ev.isRegistered ? SoboTheme.clay : SoboTheme.espresso,
                             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                           ),
                           child: Text(
-                            ev.isRegistered ? 'Kayıtlısınız ✨' : (isFull ? 'Dolu' : 'Kaydol'),
+                            ev.isRegistered ? 'Kayıtlısınız (İptal)' : (isFull ? 'Dolu' : 'Kaydol'),
                             style: SoboTheme.fontSans(fontSize: 10.5, fontWeight: FontWeight.bold, color: Colors.white),
                           ),
                         ),
@@ -565,14 +635,10 @@ class _BookingViewState extends State<BookingView> {
                 children: _packages.isNotEmpty
                     ? _packages.map((pkg) {
                         final isBireysel = pkg.ad.toLowerCase().contains('bireysel') || pkg.ad.toLowerCase().contains('özel');
-                        final priceStr = pkg.fiyatTl.toInt().toString().replaceAllMapped(
-                          RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
-                          (Match m) => '${m[1]}.',
-                        );
                         return _buildPackageCard(
                           title: pkg.ad,
                           badge: '${pkg.gecerlilikGun} Gün Geçerli',
-                          price: '$priceStr TL',
+                          rightBadge: '${pkg.dersAdedi} Ders',
                           details: '${pkg.dersAdedi} Adet Class Seansı • ${isBireysel ? 'Kişiye Özel Birebir Eğitmen' : 'Butik Sınıf (Maks 5 Kişi)'} • 12 Saat Öncesine Kadar İade',
                         );
                       }).toList()
@@ -580,31 +646,31 @@ class _BookingViewState extends State<BookingView> {
                         _buildPackageCard(
                           title: 'Barre Class 4 Ders',
                           badge: '30 Gün Geçerli',
-                          price: '3.200 TL',
+                          rightBadge: '4 Ders',
                           details: '4 Adet Barre Class Dersi • Butik Sınıf (Maks 5 Kişi) • 12 Saat Öncesine Kadar İade',
                         ),
                         _buildPackageCard(
                           title: 'Barre Class 8 Ders',
                           badge: 'En Popüler • 45 Gün',
-                          price: '5.800 TL',
+                          rightBadge: '8 Ders',
                           details: '8 Adet Barre Class Dersi • Butik Sınıf (Maks 5 Kişi) • Mobil İle Kolay Takip',
                         ),
                         _buildPackageCard(
                           title: 'Barre Class 12 Ders',
                           badge: 'Avantajlı • 60 Gün',
-                          price: '8.400 TL',
+                          rightBadge: '12 Ders',
                           details: '12 Adet Barre Class Dersi • Öncelikli Bekleme Sırası • 60 Gün Kullanım Süresi',
                         ),
                         _buildPackageCard(
                           title: 'Barre Class Bireysel',
                           badge: 'Birebir 8 Seans • 45 Gün',
-                          price: '6.400 TL',
+                          rightBadge: '8 Seans',
                           details: '8 Bireysel Class Seansı • Kişiye Özel Eğitmen • 45 Gün Geçerli',
                         ),
                         _buildPackageCard(
                           title: 'Reformer Class Bireysel',
                           badge: 'Birebir Reformer 8 Seans',
-                          price: '7.200 TL',
+                          rightBadge: '8 Seans',
                           details: '8 Bireysel Reformer Seansı • Özel Reformer Cihazı • Postür Analizi',
                         ),
                       ],
@@ -651,7 +717,7 @@ class _BookingViewState extends State<BookingView> {
   Widget _buildPackageCard({
     required String title,
     required String badge,
-    required String price,
+    required String rightBadge,
     required String details,
   }) {
     return Container(
@@ -681,7 +747,7 @@ class _BookingViewState extends State<BookingView> {
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
-                  price,
+                  rightBadge,
                   style: SoboTheme.fontSans(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white),
                 ),
               ),
@@ -696,7 +762,7 @@ class _BookingViewState extends State<BookingView> {
             ),
             child: Text(
               badge,
-              style: SoboTheme.fontSans(fontSize: 11, fontWeight: FontWeight.bold, color: SoboTheme.sage),
+              style: SoboTheme.fontSans(fontSize: 10.5, fontWeight: FontWeight.bold, color: SoboTheme.sage),
             ),
           ),
           const SizedBox(height: 8),
@@ -706,10 +772,10 @@ class _BookingViewState extends State<BookingView> {
           ),
           const SizedBox(height: 12),
           ElevatedButton.icon(
-            onPressed: () => _launchWhatsApp("Merhaba! Sobo Society'den '$title - $price' paketini satın almak ve kaydolmak istiyorum. Ödeme detaylarını öğrenebilir miyim?"),
+            onPressed: () => _launchWhatsApp("Merhaba! Sobo Society'den '$title' paketi hakkında detaylı bilgi ve kayıt detaylarını öğrenmek istiyorum. Yardımcı olabilir misiniz?"),
             icon: const Icon(Icons.chat_bubble_rounded, size: 16, color: Colors.white),
             label: Text(
-              'SATIN AL (WHATSAPP İLE İLETİŞİME GEÇ)',
+              'WHATSAPP İLE BİLGİ AL / SATIN AL',
               style: SoboTheme.fontSans(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.white),
             ),
             style: ElevatedButton.styleFrom(
@@ -1367,19 +1433,6 @@ class _BookingViewState extends State<BookingView> {
                                       child: Text(
                                         session.classType?.ad ?? 'Stüdyo Dersi',
                                         style: SoboTheme.fontSans(fontSize: 13, fontWeight: FontWeight.bold, color: SoboTheme.espresso),
-                                      ),
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                                      decoration: BoxDecoration(
-                                        color: SoboTheme.ivory,
-                                        borderRadius: BorderRadius.circular(14),
-                                        border: Border.all(color: SoboTheme.line),
-                                      ),
-                                      child: Text(
-                                        '₺${(session.fiyatTl ?? 900.0).toInt()}',
-                                        style: SoboTheme.fontSans(fontSize: 12, fontWeight: FontWeight.bold, color: SoboTheme.espresso),
                                       ),
                                     ),
                                   ],

@@ -116,6 +116,7 @@ class MemberUpdateRequest(BaseModel):
     boy: str | None = None
     kilo: str | None = None
     saglik_notu: str | None = None
+    sabit_ders_saatleri: str | None = None
 
 
 class MemberPackageDetail(BaseModel):
@@ -152,6 +153,7 @@ class MemberAdminDetailResponse(BaseModel):
     boy: str | None = None
     kilo: str | None = None
     saglik_notu: str | None = None
+    sabit_ders_saatleri: str | None = None
 
     # Aktif Paket Bilgileri & Paket Geçmişi & Aktif Ders Rezervasyonları
     aktif_member_package_id: int | None = None

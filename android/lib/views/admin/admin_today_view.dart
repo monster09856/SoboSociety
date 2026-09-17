@@ -2006,7 +2006,152 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
     }
   }
 
+  Future<void> _handleMarkAttended(int bookingId, String name) async {
+    try {
+      await ApiClient.post('/admin/bookings/$bookingId/attend', <String, dynamic>{});
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('$name derse katıldı olarak işaretlendi! ✨'),
+            backgroundColor: SoboTheme.forest,
+          ),
+        );
+        _loadTodaySessions();
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Hata: ${e.toString().replaceAll('Exception: ', '')}'),
+            backgroundColor: SoboTheme.clay,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _handleCancelAttendee(int bookingId, String name) async {
+    final bool? confirm = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext dialogCtx) {
+        return AlertDialog(
+          backgroundColor: SoboTheme.ivory,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Text('Dersten Çıkarılsın mı?', style: SoboTheme.fontSerif(fontSize: 18, fontWeight: FontWeight.bold, color: SoboTheme.espresso)),
+          content: Text('$name bu dersten çıkarılacak ve rezervasyonu iptal edilecektir.', style: SoboTheme.fontSans(fontSize: 13)),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogCtx, false),
+              child: Text('Vazgeç', style: SoboTheme.fontSans(color: SoboTheme.secondary, fontWeight: FontWeight.bold)),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.pop(dialogCtx, true),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: SoboTheme.clay,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+              child: Text('DERSTEN ÇIKAR', style: SoboTheme.fontSans(fontWeight: FontWeight.bold)),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirm != true) return;
+
+    try {
+      await ApiClient.post('/admin/bookings/$bookingId/reject', <String, dynamic>{});
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('$name dersten başarıyla çıkarıldı.'),
+            backgroundColor: SoboTheme.sage,
+          ),
+        );
+        _loadTodaySessions();
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Hata: ${e.toString().replaceAll('Exception: ', '')}'),
+            backgroundColor: SoboTheme.clay,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _handleDeductLesson(dynamic m) async {
+    final int currentBakiye = (m['bakiye'] is num) ? (m['bakiye'] as num).toInt() : 0;
+    if (currentBakiye <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Bu üyenin kalan ders hakkı bulunmuyor (0 Ders).'),
+          backgroundColor: SoboTheme.clay,
+        ),
+      );
+      return;
+    }
+
+    final bool? confirm = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext dialogCtx) {
+        return AlertDialog(
+          backgroundColor: SoboTheme.ivory,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Text('1 Ders Düşülsün mü?', style: SoboTheme.fontSerif(fontSize: 18, fontWeight: FontWeight.bold, color: SoboTheme.espresso)),
+          content: Text(
+            '${m['ad']} isimli üyenin derse geldiği işlenecek ve paketinden 1 ders hakkı düşülecektir.\n\nMevcut Bakiye: $currentBakiye Ders\nYeni Bakiye: ${currentBakiye - 1} Ders',
+            style: SoboTheme.fontSans(fontSize: 13, color: SoboTheme.ink, height: 1.4),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogCtx, false),
+              child: Text('Vazgeç', style: SoboTheme.fontSans(color: SoboTheme.secondary, fontWeight: FontWeight.bold)),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.pop(dialogCtx, true),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: SoboTheme.forest,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+              child: Text('GELDİ / DERS DÜŞ', style: SoboTheme.fontSans(fontWeight: FontWeight.bold)),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirm != true) return;
+
+    try {
+      final dynamic res = await ApiClient.post('/admin/members/${m['id']}/deduct-lesson', <String, dynamic>{});
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(res != null && res['mesaj'] != null ? res['mesaj'] as String : '${m['ad']} için 1 ders başarıyla düşüldü.'),
+            backgroundColor: SoboTheme.forest,
+          ),
+        );
+        _loadMembers(_searchMemberCtrl.text);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Hata: ${e.toString().replaceAll('Exception: ', '')}'),
+            backgroundColor: SoboTheme.clay,
+          ),
+        );
+      }
+    }
+  }
+
   Future<void> _handleAddPackage() async {
+
     if (_pkgAdCtrl.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Lütfen paket adını giriniz.'), backgroundColor: SoboTheme.clay),
@@ -2119,6 +2264,7 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
     final TextEditingController nameCtrl = TextEditingController(text: m['ad'] ?? '');
     final TextEditingController phoneCtrl = TextEditingController(text: m['telefon'] ?? '');
     final TextEditingController bakiyeCtrl = TextEditingController(text: (m['bakiye'] ?? 0).toString());
+    final TextEditingController sabitDersCtrl = TextEditingController(text: m['sabit_ders_saatleri'] ?? '');
     final TextEditingController belCtrl = TextEditingController(text: m['bel'] ?? '');
     final TextEditingController kalcaCtrl = TextEditingController(text: m['kalca'] ?? '');
     final TextEditingController sagIcBacakCtrl = TextEditingController(text: m['sag_ic_bacak'] ?? '');
@@ -2175,6 +2321,16 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
                       controller: bakiyeCtrl,
                       keyboardType: TextInputType.number,
                       decoration: const InputDecoration(labelText: 'Kalan Ders Adedi', filled: true, fillColor: Colors.white),
+                    ),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: sabitDersCtrl,
+                      decoration: const InputDecoration(
+                        labelText: 'Haftalık Sabit Gün & Saatleri',
+                        hintText: 'Örn: Salı, Perşembe 11:30',
+                        filled: true,
+                        fillColor: Colors.white,
+                      ),
                     ),
                     const SizedBox(height: 12),
                     Text('VÜCUT ÖLÇÜLERİ & SAĞLIK NOTU', style: SoboTheme.fontSans(fontSize: 11, fontWeight: FontWeight.bold, color: SoboTheme.espresso)),
@@ -2244,6 +2400,7 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
                             'boy': boyCtrl.text.trim(),
                             'kilo': kiloCtrl.text.trim(),
                             'saglik_notu': saglikNotuCtrl.text.trim(),
+                            'sabit_ders_saatleri': sabitDersCtrl.text.trim(),
                           });
                           if (mounted) {
                             Navigator.pop(context);
@@ -2310,6 +2467,7 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
     final TextEditingController customNameCtrl = TextEditingController(text: '${m['ad'] ?? "Özel"} Paket');
     final TextEditingController customDersCtrl = TextEditingController(text: '10');
     final TextEditingController customValCtrl = TextEditingController(text: '6');
+    final TextEditingController sabitDersPkgCtrl = TextEditingController(text: m['sabit_ders_saatleri'] ?? '');
     String customUnit = 'hafta'; // 'hafta' or 'gun'
     bool isSubmitting = false;
 
@@ -2520,6 +2678,18 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
                       ),
                     ],
 
+                    const SizedBox(height: 14),
+                    Text('HAFTALIK SABİT DERS GÜN & SAATLERİ (OPSİYONEL)', style: SoboTheme.fontSans(fontSize: 10, fontWeight: FontWeight.bold, color: SoboTheme.secondary)),
+                    const SizedBox(height: 6),
+                    TextField(
+                      controller: sabitDersPkgCtrl,
+                      decoration: const InputDecoration(
+                        labelText: 'Örn: Salı, Perşembe 11:30',
+                        filled: true,
+                        fillColor: Colors.white,
+                      ),
+                    ),
+
                     const SizedBox(height: 20),
                     ElevatedButton(
                       onPressed: isSubmitting
@@ -2543,6 +2713,14 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
                                 }
 
                                 await ApiClient.post('/admin/packages/assign', payload);
+
+                                if (sabitDersPkgCtrl.text.trim().isNotEmpty) {
+                                  try {
+                                    await ApiClient.put('/admin/members/${m['id']}', <String, dynamic>{
+                                      'sabit_ders_saatleri': sabitDersPkgCtrl.text.trim(),
+                                    });
+                                  } catch (_) {}
+                                }
 
                                 if (ctx.mounted) {
                                   Navigator.pop(ctx);
@@ -3294,10 +3472,9 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
                       items: _todaySessions.map<DropdownMenuItem<int>>((dynamic s) {
                         final String classTypeAd = s['class_type'] != null ? s['class_type']['ad'] : 'Ders';
                         final String timeStr = s['baslangic'] != null ? s['baslangic'].toString().substring(11, 16) : '';
-                        final int price = (s['fiyat_tl'] != null) ? (s['fiyat_tl'] as num).toInt() : 900;
                         return DropdownMenuItem<int>(
                           value: s['id'] as int,
-                          child: Text('$classTypeAd ($timeStr) • ₺$price', style: SoboTheme.fontSans(fontSize: 13, fontWeight: FontWeight.bold)),
+                          child: Text('$classTypeAd ($timeStr)', style: SoboTheme.fontSans(fontSize: 13, fontWeight: FontWeight.bold)),
                         );
                       }).toList(),
                       onChanged: (int? val) => setState(() => _selectedQuickSessionId = val),
@@ -3362,7 +3539,7 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
                   final dynamic session = _todaySessions[index];
                   final List<dynamic> attendees = session['katilimcilar'] is List ? session['katilimcilar'] : <dynamic>[];
                   final String classTypeAd = session['class_type'] != null ? session['class_type']['ad'] : 'Ders';
-                  final int price = (session['fiyat_tl'] != null) ? (session['fiyat_tl'] as num).toInt() : 900;
+                  final String timeStr = session['baslangic'] != null ? session['baslangic'].toString().substring(11, 16) : '';
 
                   return Container(
                     padding: const EdgeInsets.all(16),
@@ -3373,16 +3550,9 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Row(
-                              children: [
-                                Text(classTypeAd, style: SoboTheme.fontSerif(fontSize: 18, fontWeight: FontWeight.bold, color: SoboTheme.ink)),
-                                const SizedBox(width: 8),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                                  decoration: BoxDecoration(color: SoboTheme.sand, borderRadius: BorderRadius.circular(10)),
-                                  child: Text('₺$price', style: SoboTheme.fontSans(fontSize: 11, fontWeight: FontWeight.bold, color: SoboTheme.espresso)),
-                                ),
-                              ],
+                            Text(
+                              timeStr.isNotEmpty ? '$classTypeAd ($timeStr)' : classTypeAd,
+                              style: SoboTheme.fontSerif(fontSize: 18, fontWeight: FontWeight.bold, color: SoboTheme.ink),
                             ),
                             Text('${session['dolu_sayi']} / ${session['kontenjan']} Üye', style: SoboTheme.fontSans(fontSize: 12, fontWeight: FontWeight.bold, color: SoboTheme.espresso)),
                           ],
@@ -3394,42 +3564,123 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
                           Column(
                             children: attendees.map<Widget>((dynamic att) {
                               final bool isPending = att['durum'] == 'pending_payment';
-                              return Padding(
-                                padding: const EdgeInsets.symmetric(vertical: 6),
+                              final bool isAttended = att['durum'] == 'attended';
+                              final int bookingId = (att['booking_id'] as num).toInt();
+                              final String attendeeName = att['ad'] ?? 'Üye';
+
+                              return Container(
+                                margin: const EdgeInsets.symmetric(vertical: 4),
+                                padding: const EdgeInsets.all(10),
+                                decoration: BoxDecoration(
+                                  color: isAttended ? SoboTheme.sage.withOpacity(0.08) : SoboTheme.ivory.withOpacity(0.5),
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: Border.all(
+                                    color: isAttended ? SoboTheme.sage.withOpacity(0.4) : SoboTheme.line.withOpacity(0.5),
+                                  ),
+                                ),
                                 child: Row(
                                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                   children: [
-                                    Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Row(
-                                          children: [
-                                            Text(att['ad'] ?? 'Üye', style: SoboTheme.fontSans(fontSize: 13, fontWeight: FontWeight.bold)),
-                                            if (isPending) ...[
-                                              const SizedBox(width: 6),
-                                              Container(
-                                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                                decoration: BoxDecoration(color: Colors.amber.shade100, borderRadius: BorderRadius.circular(6), border: Border.all(color: Colors.amber.shade400)),
-                                                child: Text('⏳ Ödeme Bekliyor', style: SoboTheme.fontSans(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.amber.shade900)),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Row(
+                                            children: [
+                                              Flexible(
+                                                child: Text(
+                                                  attendeeName,
+                                                  style: SoboTheme.fontSans(fontSize: 13, fontWeight: FontWeight.bold),
+                                                  overflow: TextOverflow.ellipsis,
+                                                ),
                                               ),
+                                              if (isPending) ...[
+                                                const SizedBox(width: 6),
+                                                Container(
+                                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                                  decoration: BoxDecoration(color: Colors.amber.shade100, borderRadius: BorderRadius.circular(6), border: Border.all(color: Colors.amber.shade400)),
+                                                  child: Text('⏳ Ödeme Bekliyor', style: SoboTheme.fontSans(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.amber.shade900)),
+                                                ),
+                                              ] else if (isAttended) ...[
+                                                const SizedBox(width: 6),
+                                                Container(
+                                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                                  decoration: BoxDecoration(color: SoboTheme.sage.withOpacity(0.2), borderRadius: BorderRadius.circular(6), border: Border.all(color: SoboTheme.sage)),
+                                                  child: Text('✅ Geldi', style: SoboTheme.fontSans(fontSize: 10, fontWeight: FontWeight.bold, color: SoboTheme.forest)),
+                                                ),
+                                              ],
                                             ],
-                                          ],
-                                        ),
-                                        Text(att['telefon'] ?? '', style: SoboTheme.fontSans(fontSize: 11, color: SoboTheme.secondary)),
-                                      ],
-                                    ),
-                                    if (isPending)
-                                      ElevatedButton(
-                                        onPressed: () => _handleApproveGuestBooking(att['booking_id']),
-                                        style: ElevatedButton.styleFrom(
-                                          backgroundColor: SoboTheme.sage,
-                                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                                          minimumSize: Size.zero,
-                                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                                        ),
-                                        child: Text('ONAYLA', style: SoboTheme.fontSans(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.white)),
+                                          ),
+                                          const SizedBox(height: 2),
+                                          Text(att['telefon'] ?? '', style: SoboTheme.fontSans(fontSize: 11, color: SoboTheme.secondary)),
+                                        ],
                                       ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    if (isPending) ...[
+                                      Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          ElevatedButton(
+                                            onPressed: () => _handleApproveGuestBooking(bookingId),
+                                            style: ElevatedButton.styleFrom(
+                                              backgroundColor: SoboTheme.sage,
+                                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                              minimumSize: Size.zero,
+                                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                            ),
+                                            child: Text('ONAYLA', style: SoboTheme.fontSans(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.white)),
+                                          ),
+                                          const SizedBox(width: 4),
+                                          OutlinedButton(
+                                            onPressed: () => _handleRejectGuestBooking(bookingId),
+                                            style: OutlinedButton.styleFrom(
+                                              foregroundColor: SoboTheme.clay,
+                                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                                              minimumSize: Size.zero,
+                                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                            ),
+                                            child: Text('REDDET', style: SoboTheme.fontSans(fontSize: 10, fontWeight: FontWeight.bold)),
+                                          ),
+                                        ],
+                                      ),
+                                    ] else if (!isAttended) ...[
+                                      Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          ElevatedButton.icon(
+                                            onPressed: () => _handleMarkAttended(bookingId, attendeeName),
+                                            icon: const Icon(Icons.check_rounded, size: 13, color: Colors.white),
+                                            label: Text('Geldi', style: SoboTheme.fontSans(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.white)),
+                                            style: ElevatedButton.styleFrom(
+                                              backgroundColor: SoboTheme.forest,
+                                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                              minimumSize: Size.zero,
+                                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                            ),
+                                          ),
+                                          const SizedBox(width: 4),
+                                          IconButton(
+                                            icon: const Icon(Icons.close_rounded, size: 16, color: SoboTheme.clay),
+                                            tooltip: 'Dersten Çıkar',
+                                            padding: EdgeInsets.zero,
+                                            constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+                                            onPressed: () => _handleCancelAttendee(bookingId, attendeeName),
+                                          ),
+                                        ],
+                                      ),
+                                    ] else ...[
+                                      IconButton(
+                                        icon: const Icon(Icons.close_rounded, size: 16, color: SoboTheme.secondary),
+                                        tooltip: 'Dersten Çıkar',
+                                        padding: EdgeInsets.zero,
+                                        constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+                                        onPressed: () => _handleCancelAttendee(bookingId, attendeeName),
+                                      ),
+                                    ],
                                   ],
                                 ),
                               );
@@ -3649,7 +3900,6 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
                   final s = _allSessions[index];
                   final String classTypeAd = s['class_type'] != null ? s['class_type']['ad'] : 'Ders';
                   final String instructorAd = s['instructor'] != null ? s['instructor']['ad'] : 'Eğitmen';
-                  final int price = (s['fiyat_tl'] != null) ? (s['fiyat_tl'] as num).toInt() : 900;
                   final bool isTekDersAcik = s['tek_ders_acik'] == true;
 
                   return Container(
@@ -3666,7 +3916,7 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
                               children: [
                                 Text(classTypeAd, style: SoboTheme.fontSerif(fontSize: 16, fontWeight: FontWeight.bold, color: SoboTheme.ink)),
                                 const SizedBox(height: 2),
-                                Text('Eğitmen: $instructorAd • ₺$price', style: SoboTheme.fontSans(fontSize: 12, color: SoboTheme.secondary)),
+                                Text('Eğitmen: $instructorAd', style: SoboTheme.fontSans(fontSize: 12, color: SoboTheme.secondary)),
                               ],
                             ),
                             Row(
@@ -4512,6 +4762,47 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
                           ),
                         ],
 
+                        // Sabit Ders Saatleri (Varsa)
+                        if (m['sabit_ders_saatleri'] != null && m['sabit_ders_saatleri'].toString().trim().isNotEmpty) ...[
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                            margin: const EdgeInsets.only(bottom: 8),
+                            decoration: BoxDecoration(
+                              color: SoboTheme.sage.withOpacity(0.15),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: SoboTheme.sage.withOpacity(0.5)),
+                            ),
+                            child: Row(
+                              children: [
+                                const Icon(Icons.alarm_on_rounded, size: 14, color: SoboTheme.forest),
+                                const SizedBox(width: 6),
+                                Expanded(
+                                  child: Text(
+                                    'Sabit Saatler: ${m['sabit_ders_saatleri']}',
+                                    style: SoboTheme.fontSans(fontSize: 11, fontWeight: FontWeight.bold, color: SoboTheme.forest),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+
+                        // Hızlı Yoklama / Ders Düş Butonu
+                        ElevatedButton.icon(
+                          onPressed: () => _handleDeductLesson(m),
+                          icon: const Icon(Icons.flash_on_rounded, size: 16, color: Colors.white),
+                          label: const Text('1 DERS DÜŞ (GELDİ / YOKLAMA)', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 0.5)),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: SoboTheme.forest,
+                            foregroundColor: Colors.white,
+                            minimumSize: const Size.fromHeight(38),
+                            padding: const EdgeInsets.symmetric(vertical: 8),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+
                         // 4 Actions (Web Panel 1:1)
                         Row(
                           children: [
@@ -4873,7 +5164,6 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
               separatorBuilder: (_, __) => const SizedBox(height: 10),
               itemBuilder: (context, index) {
                 final pkg = _packages[index];
-                final int price = (pkg['fiyat_tl'] != null) ? (pkg['fiyat_tl'] as num).toInt() : 0;
 
                 return Container(
                   padding: const EdgeInsets.all(14),
@@ -4887,13 +5177,20 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
                           children: [
                             Text(pkg['ad'] ?? 'Paket', style: SoboTheme.fontSerif(fontSize: 16, fontWeight: FontWeight.bold, color: SoboTheme.ink)),
                             const SizedBox(height: 2),
-                            Text('${pkg['ders_adedi']} Ders • ${pkg['gecerlilik_gun']} Gün', style: SoboTheme.fontSans(fontSize: 11, color: SoboTheme.secondary)),
+                            Text('${pkg['gecerlilik_gun']} Gün Geçerlilik Süresi', style: SoboTheme.fontSans(fontSize: 11, color: SoboTheme.secondary)),
                           ],
                         ),
                       ),
                       Row(
                         children: [
-                          Text('₺$price', style: SoboTheme.fontSans(fontSize: 16, fontWeight: FontWeight.bold, color: SoboTheme.espresso)),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: SoboTheme.sand,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text('${pkg['ders_adedi']} Ders', style: SoboTheme.fontSans(fontSize: 13, fontWeight: FontWeight.bold, color: SoboTheme.espresso)),
+                          ),
                           IconButton(
                             icon: const Icon(Icons.edit_outlined, color: SoboTheme.espresso, size: 20),
                             tooltip: 'Paketi Düzenle',

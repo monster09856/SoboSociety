@@ -46,6 +46,13 @@ class _MyBookingsViewState extends State<MyBookingsView> with SingleTickerProvid
   }
 
   Future<void> _handleCancelBooking(BookingResponse booking) async {
+    DateTime? dt;
+    try {
+      dt = DateTime.parse(booking.baslangic).toLocal();
+    } catch (_) {}
+    final double hoursLeft = dt != null ? dt.difference(DateTime.now()).inMinutes / 60.0 : 24.0;
+    final bool isWithin12Hours = hoursLeft < 12.0;
+
     final bool? confirm = await showDialog<bool>(
       context: context,
       useRootNavigator: true,
@@ -65,7 +72,9 @@ class _MyBookingsViewState extends State<MyBookingsView> with SingleTickerProvid
           ],
         ),
         content: Text(
-          "'${booking.classTypeName}' (${_formatDate(booking.baslangic)}) ders rezervasyonunuzu iptal etmek istediğinizden emin misiniz?",
+          isWithin12Hours
+              ? "'${booking.classTypeName}' (${_formatDate(booking.baslangic)}) dersinize 12 saatten az süre kalmıştır. Rezervasyonunuzu iptal etmek ve yerinizi boşaltmak istediğinizden emin misiniz?"
+              : "'${booking.classTypeName}' (${_formatDate(booking.baslangic)}) ders rezervasyonunuzu iptal etmek istediğinizden emin misiniz? 1 ders hakkınız hesabınıza iade edilecektir.",
           style: SoboTheme.fontSans(fontSize: 13, color: SoboTheme.secondary, height: 1.4),
         ),
         actions: [
@@ -341,15 +350,15 @@ class _MyBookingsViewState extends State<MyBookingsView> with SingleTickerProvid
                                     Container(
                                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                                       decoration: BoxDecoration(
-                                        color: canCancel ? SoboTheme.sage.withOpacity(0.15) : SoboTheme.clay.withOpacity(0.15),
+                                        color: canCancel ? SoboTheme.sage.withOpacity(0.15) : SoboTheme.sand,
                                         borderRadius: BorderRadius.circular(10),
                                       ),
                                       child: Text(
-                                        canCancel ? 'Derse ${hoursLeft.toStringAsFixed(0)} Saat Var' : 'İptal Süresi Doldu',
+                                        canCancel ? 'Derse ${hoursLeft.toStringAsFixed(0)} Saat Var' : 'Yaklaşan Ders',
                                         style: SoboTheme.fontSans(
                                           fontSize: 10.5,
                                           fontWeight: FontWeight.bold,
-                                          color: canCancel ? SoboTheme.sage : SoboTheme.clay,
+                                          color: canCancel ? SoboTheme.sage : SoboTheme.espresso,
                                         ),
                                       ),
                                     ),
@@ -377,18 +386,18 @@ class _MyBookingsViewState extends State<MyBookingsView> with SingleTickerProvid
                                 SizedBox(
                                   width: double.infinity,
                                   child: OutlinedButton.icon(
-                                    onPressed: canCancel ? () => _handleCancelBooking(b) : null,
+                                    onPressed: () => _handleCancelBooking(b),
                                     icon: const Icon(Icons.cancel_outlined, size: 16, color: SoboTheme.clay),
                                     label: Text(
-                                      canCancel ? 'DERSİ İPTAL ET' : '12 SAAT KURALI NEDENİYLE İPTAL EDİLEMEZ',
+                                      'DERSİ İPTAL ET',
                                       style: SoboTheme.fontSans(
                                         fontSize: 11,
                                         fontWeight: FontWeight.bold,
-                                        color: canCancel ? SoboTheme.clay : SoboTheme.muted,
+                                        color: SoboTheme.clay,
                                       ),
                                     ),
                                     style: OutlinedButton.styleFrom(
-                                      side: BorderSide(color: canCancel ? SoboTheme.clay.withOpacity(0.4) : SoboTheme.line),
+                                      side: BorderSide(color: SoboTheme.clay.withOpacity(0.5)),
                                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                                       padding: const EdgeInsets.symmetric(vertical: 11),
                                     ),

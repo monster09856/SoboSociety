@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
-import '../../models/member_models.dart';
+import '../../models/package_dto.dart';
 import '../../services/api_client.dart';
-import '../../services/storage_service.dart';
 import '../../theme/sobo_theme.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -15,7 +14,6 @@ class PackagesView extends StatefulWidget {
 class _PackagesViewState extends State<PackagesView> {
   List<PackageDTO> _packages = <PackageDTO>[];
   bool _isLoading = true;
-  bool _isLoggedIn = false;
 
   @override
   void initState() {
@@ -25,8 +23,6 @@ class _PackagesViewState extends State<PackagesView> {
 
   Future<void> _loadPackages() async {
     setState(() => _isLoading = true);
-    final String? token = await StorageService.getToken();
-    _isLoggedIn = token != null && token.isNotEmpty;
 
     try {
       final dynamic res = await ApiClient.get('/packages');
@@ -136,9 +132,7 @@ class _PackagesViewState extends State<PackagesView> {
                         ),
                         const SizedBox(height: 6),
                         Text(
-                          _isLoggedIn
-                              ? 'Hedefinize en uygun ders paketini seçin. Satın Al butonuna basarak WhatsApp üzerinden kayıt yaptırabilirsiniz.'
-                              : '🔒 Paket fiyatlarımız Sobo Society üyelerine özel sunulmaktadır. WhatsApp butonuna tıklayarak fiyat bilgisi alabilir ve anında üye olabilirsiniz.',
+                          'Hedefinize en uygun ders paketini seçin. Detaylı bilgi almak ve WhatsApp üzerinden kaydınızı kolayca oluşturmak için iletişime geçebilirsiniz.',
                           style: SoboTheme.fontSans(
                             fontSize: 12,
                             color: SoboTheme.secondary,
@@ -164,14 +158,9 @@ class _PackagesViewState extends State<PackagesView> {
                   // Packages List
                   if (_packages.isNotEmpty)
                     ..._packages.map((pkg) {
-                      final bool hasPrice = pkg.fiyatTl > 0;
                       final bool is12Ders = pkg.dersAdedi == 12 || pkg.ad.contains('12');
                       final bool isBireysel = pkg.ad.toLowerCase().contains('bireysel') || pkg.ad.toLowerCase().contains('özel');
-                      final String priceStr = hasPrice
-                          ? (_isLoggedIn
-                              ? '₺${pkg.fiyatTl.toInt().toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.')} TL'
-                              : 'Üyelere Özel')
-                          : 'İletişime Geçin';
+                      final String dersBadge = pkg.dersAdedi > 0 ? '${pkg.dersAdedi} Ders' : 'Ders Paketi';
 
                       final String formattedVal = pkg.gecerlilikGun % 7 == 0
                           ? '${pkg.gecerlilikGun ~/ 7} Hafta Kullanım'
@@ -181,8 +170,7 @@ class _PackagesViewState extends State<PackagesView> {
                         title: pkg.ad,
                         isPopular: is12Ders,
                         badge: is12Ders ? 'POPÜLER SEÇİM ⭐ • $formattedVal' : formattedVal,
-                        price: priceStr,
-                        hasPrice: hasPrice,
+                        rightBadge: dersBadge,
                         details: '${pkg.dersAdedi} Adet Class Seansı • ${isBireysel ? 'Kişiye Özel Birebir Eğitmen' : 'Butik Sınıf (Maks 5 Kişi)'} • 12 Saat Öncesine Kadar İade',
                       );
                     })
@@ -191,28 +179,28 @@ class _PackagesViewState extends State<PackagesView> {
                       title: 'Barre Class 4 Ders',
                       isPopular: false,
                       badge: '4 Hafta (30 Gün) Kullanım',
-                      price: _isLoggedIn ? '₺3.200 TL' : 'Üyelere Özel',
+                      rightBadge: '4 Ders',
                       details: '4 Adet Barre Class Dersi • Butik Sınıf (Maks 5 Kişi) • 12 Saat Önceden İade',
                     ),
                     _buildPackageCard(
                       title: 'Sobo Class 8 Ders',
                       isPopular: false,
                       badge: '6 Hafta (45 Gün) Kullanım',
-                      price: _isLoggedIn ? '₺5.800 TL' : 'Üyelere Özel',
+                      rightBadge: '8 Ders',
                       details: '8 Adet Barre Class Dersi • Butik Sınıf (Maks 5 Kişi) • Mobil İle Kolay Takip',
                     ),
                     _buildPackageCard(
                       title: 'Sobo Class 12 Ders',
                       isPopular: true,
                       badge: 'POPÜLER SEÇİM ⭐ • 8 Hafta Kullanım',
-                      price: _isLoggedIn ? '₺8.400 TL' : 'Üyelere Özel',
+                      rightBadge: '12 Ders',
                       details: '12 Adet Barre Class Dersi • Butik Sınıf (Maks 5 Kişi) • Öncelikli Bekleme Sırası',
                     ),
                     _buildPackageCard(
                       title: 'Reformer Pilates - Bireysel Standart',
                       isPopular: false,
                       badge: '8 Hafta (60 Gün) Kullanım',
-                      price: _isLoggedIn ? '₺9.500 TL' : 'Üyelere Özel',
+                      rightBadge: '12 Ders',
                       details: '12 Bireysel Reformer Seansı • Özel Reformer Cihazı • Postür Analizi',
                     ),
                   ],
@@ -226,9 +214,8 @@ class _PackagesViewState extends State<PackagesView> {
     required String title,
     required bool isPopular,
     required String badge,
-    required String price,
+    required String rightBadge,
     required String details,
-    bool hasPrice = true,
   }) {
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
@@ -267,19 +254,15 @@ class _PackagesViewState extends State<PackagesView> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
-                  color: !hasPrice
-                      ? SoboTheme.mocha.withOpacity(0.12)
-                      : (isPopular ? SoboTheme.espresso : SoboTheme.sand),
+                  color: isPopular ? SoboTheme.espresso : SoboTheme.sand,
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
-                  price,
+                  rightBadge,
                   style: SoboTheme.fontSans(
-                    fontSize: 12.5,
+                    fontSize: 12,
                     fontWeight: FontWeight.bold,
-                    color: !hasPrice
-                        ? SoboTheme.mocha
-                        : (isPopular ? Colors.white : SoboTheme.espresso),
+                    color: isPopular ? Colors.white : SoboTheme.espresso,
                   ),
                 ),
               ),
@@ -313,15 +296,11 @@ class _PackagesViewState extends State<PackagesView> {
           const SizedBox(height: 16),
           ElevatedButton.icon(
             onPressed: () => _launchWhatsApp(
-              hasPrice
-                  ? (_isLoggedIn
-                      ? "Merhaba! Sobo Society'den '$title ($price)' paketini satın almak istiyorum. Yardımcı olabilir misiniz?"
-                      : "Merhaba! Sobo Society'nin '$title' paketi ve güncel fiyatlar hakkında bilgi almak istiyorum.")
-                  : "Merhaba! Sobo Society'den '$title' paketi hakkında detaylı bilgi ve kayıt koşullarını öğrenmek istiyorum. Yardımcı olabilir misiniz?",
+              "Merhaba! Sobo Society'nin '$title' paketi hakkında detaylı bilgi almak ve kayıt yaptırmak istiyorum. Yardımcı olabilir misiniz?",
             ),
             icon: const Icon(Icons.chat_bubble_rounded, size: 16, color: Colors.white),
             label: Text(
-              hasPrice && _isLoggedIn ? 'WHATSAPP İLE SATIN AL' : 'WHATSAPP İLE BİLGİ AL',
+              'WHATSAPP İLE BİLGİ AL / SATIN AL',
               style: SoboTheme.fontSans(
                 fontSize: 11.5,
                 fontWeight: FontWeight.bold,
