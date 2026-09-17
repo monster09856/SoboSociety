@@ -878,34 +878,68 @@ class _BookingViewState extends State<BookingView> {
               'Reformer Pilates seansı, tüm vücut esnekliğini artırmak, core kaslarını güçlendirmek ve omurga hizalanmasını sağlamak için özel ekipmanlarla gerçekleştirilir.',
               style: SoboTheme.fontSans(fontSize: 13, color: SoboTheme.secondary, height: 1.45),
             ),
-            const SizedBox(height: 24),
-            ElevatedButton.icon(
-              onPressed: isBooked
-                  ? () {
-                      Navigator.of(context).pop();
-                      _handleCancelBooking(existingBooking.id);
-                    }
-                  : (isFull
-                      ? () => Navigator.of(context).pop()
-                      : () {
-                          Navigator.of(context).pop();
-                          _handleBook(session.id);
-                        }),
-              icon: Icon(
-                isBooked ? Icons.check_circle_rounded : (isFull ? Icons.event_busy_rounded : Icons.check_circle_rounded),
-                color: Colors.white,
-                size: 20,
+            if (isBooked) ...[
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: SoboTheme.sage.withOpacity(0.12),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: SoboTheme.sage.withOpacity(0.4)),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.check_circle_rounded, color: SoboTheme.sage, size: 20),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        'Bu seansa aktif rezervasyonunuz bulunmaktadır.',
+                        style: SoboTheme.fontSans(fontSize: 12, fontWeight: FontWeight.bold, color: SoboTheme.forest),
+                      ),
+                    ),
+                  ],
+                ),
               ),
-              label: Text(
-                isBooked ? 'REZERVE EDİLDİ (İPTAL ET)' : (isFull ? 'KONTENJAN DOLU' : 'HEMEN REZERVE ET'),
-                style: SoboTheme.fontSans(fontWeight: FontWeight.bold, letterSpacing: 1, color: Colors.white),
+              const SizedBox(height: 12),
+              ElevatedButton.icon(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                  _handleCancelBooking(existingBooking.id);
+                },
+                icon: const Icon(Icons.cancel_outlined, color: Colors.white, size: 20),
+                label: Text(
+                  'REZERVASYONU İPTAL ET (DERSİ İADE AL)',
+                  style: SoboTheme.fontSans(fontWeight: FontWeight.bold, letterSpacing: 0.8, color: Colors.white, fontSize: 12),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: SoboTheme.clay,
+                  minimumSize: const Size.fromHeight(50),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  elevation: 0,
+                ),
               ),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: isBooked ? SoboTheme.sage : (isFull ? SoboTheme.secondary : SoboTheme.espresso),
-                minimumSize: const Size.fromHeight(50),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            ] else
+              ElevatedButton.icon(
+                onPressed: isFull
+                    ? () => Navigator.of(context).pop()
+                    : () {
+                        Navigator.of(context).pop();
+                        _handleBook(session.id);
+                      },
+                icon: Icon(
+                  isFull ? Icons.event_busy_rounded : Icons.check_circle_rounded,
+                  color: Colors.white,
+                  size: 20,
+                ),
+                label: Text(
+                  isFull ? 'KONTENJAN DOLU' : 'HEMEN REZERVE ET',
+                  style: SoboTheme.fontSans(fontWeight: FontWeight.bold, letterSpacing: 1, color: Colors.white),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: isFull ? SoboTheme.secondary : SoboTheme.espresso,
+                  minimumSize: const Size.fromHeight(50),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                ),
               ),
-            ),
             const SizedBox(height: 12),
           ],
         ),
@@ -954,19 +988,59 @@ class _BookingViewState extends State<BookingView> {
   }
 
   Future<void> _handleCancelBooking(int bookingId) async {
+    final bool? confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: SoboTheme.ivory,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        title: Row(
+          children: [
+            const Icon(Icons.info_outline_rounded, color: SoboTheme.clay, size: 24),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                'Rezervasyonu İptal Et',
+                style: SoboTheme.fontSerif(fontSize: 18, fontWeight: FontWeight.bold, color: SoboTheme.ink),
+              ),
+            ),
+          ],
+        ),
+        content: Text(
+          'Ders rezervasyonunuzu iptal etmek istediğinizden emin misiniz? 1 ders hakkınız hesabınıza iade edilecektir.',
+          style: SoboTheme.fontSans(fontSize: 13, color: SoboTheme.secondary, height: 1.4),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: Text('Vazgeç', style: SoboTheme.fontSans(color: SoboTheme.secondary)),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: SoboTheme.clay,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            child: Text('Dersi İptal Et', style: SoboTheme.fontSans(fontWeight: FontWeight.bold, color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
     try {
-      await ApiClient.post('/bookings/$bookingId/cancel', <String, dynamic>{});
+      final res = await ApiClient.post('/bookings/$bookingId/cancel', <String, dynamic>{});
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Row(
-              children: const [
-                Icon(Icons.check_circle_rounded, color: Colors.white),
-                SizedBox(width: 10),
-                Expanded(child: Text('Rezervasyonunuz iptal edildi ve 1 ders hakkınız iade edildi.')),
+              children: [
+                const Icon(Icons.check_circle_rounded, color: Colors.white),
+                const SizedBox(width: 10),
+                Expanded(child: Text(res['mesaj'] ?? 'Rezervasyonunuz iptal edildi ve 1 ders hakkınız iade edildi.')),
               ],
             ),
-            backgroundColor: SoboTheme.clay,
+            backgroundColor: SoboTheme.sage,
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
           ),
@@ -1296,6 +1370,90 @@ class _BookingViewState extends State<BookingView> {
               ),
               const SizedBox(height: 16),
 
+              // Active Bookings Quick Cancel Card (Ana Ekranda Doğrudan İptal Butonu)
+              if (_summary != null && _summary!.aktifRezervasyonlar.isNotEmpty) ...[
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: SoboTheme.clay.withOpacity(0.4), width: 1.5),
+                    boxShadow: [
+                      BoxShadow(color: SoboTheme.clay.withOpacity(0.06), blurRadius: 10, offset: const Offset(0, 3)),
+                    ],
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(6),
+                                decoration: BoxDecoration(color: SoboTheme.clay.withOpacity(0.15), shape: BoxShape.circle),
+                                child: const Icon(Icons.event_available_rounded, color: SoboTheme.clay, size: 18),
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                'YAKLAŞAN REZERVASYONUNUZ',
+                                style: SoboTheme.fontSans(fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 0.8, color: SoboTheme.clay),
+                              ),
+                            ],
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(color: SoboTheme.sand, borderRadius: BorderRadius.circular(8)),
+                            child: Text(
+                              '${_summary!.aktifRezervasyonlar.length} Seans',
+                              style: SoboTheme.fontSans(fontSize: 10.5, fontWeight: FontWeight.bold, color: SoboTheme.espresso),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+                      ..._summary!.aktifRezervasyonlar.map((b) => Container(
+                        margin: const EdgeInsets.only(top: 8),
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: SoboTheme.sandLight,
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(color: SoboTheme.line),
+                        ),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(b.classTypeName, style: SoboTheme.fontSans(fontSize: 13, fontWeight: FontWeight.bold, color: SoboTheme.ink)),
+                                  const SizedBox(height: 2),
+                                  Text(_formatSessionTime(b.baslangic), style: SoboTheme.fontSans(fontSize: 11, color: SoboTheme.secondary, fontWeight: FontWeight.w600)),
+                                ],
+                              ),
+                            ),
+                            ElevatedButton.icon(
+                              onPressed: () => _handleCancelBooking(b.id),
+                              icon: const Icon(Icons.cancel_outlined, size: 14, color: Colors.white),
+                              label: const Text('İPTAL ET', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: SoboTheme.clay,
+                                foregroundColor: Colors.white,
+                                elevation: 0,
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                              ),
+                            ),
+                          ],
+                        ),
+                      )),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+              ],
+
               // Streak & Badges Progress Card
               _buildStreakAndStatsCard(),
               const SizedBox(height: 18),
@@ -1497,29 +1655,62 @@ class _BookingViewState extends State<BookingView> {
                             ),
                             const SizedBox(height: 16),
 
-                            ElevatedButton.icon(
-                              onPressed: isBooked
-                                  ? () => _handleCancelBooking(existingBooking.id)
-                                  : (session.isFull ? null : () => _handleBook(session.id)),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: isBooked ? SoboTheme.sage : (session.isFull ? SoboTheme.secondary : SoboTheme.espresso),
-                                foregroundColor: Colors.white,
-                                elevation: 2,
-                                minimumSize: const Size.fromHeight(50),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                            if (isBooked) ...[
+                              Container(
+                                padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+                                decoration: BoxDecoration(
+                                  color: SoboTheme.sage.withOpacity(0.12),
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(color: SoboTheme.sage.withOpacity(0.4)),
+                                ),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    const Icon(Icons.check_circle_rounded, color: SoboTheme.sage, size: 16),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      'BU DERS İÇİN YERİNİZ AYRILDI ✨',
+                                      style: SoboTheme.fontSans(fontSize: 11.5, fontWeight: FontWeight.bold, color: SoboTheme.forest),
+                                    ),
+                                  ],
+                                ),
                               ),
-                              icon: Icon(
-                                isBooked ? Icons.check_circle_rounded : (session.isFull ? Icons.event_busy_rounded : Icons.check_circle_outline_rounded),
-                                color: Colors.white,
-                                size: 18,
+                              const SizedBox(height: 8),
+                              ElevatedButton.icon(
+                                onPressed: () => _handleCancelBooking(existingBooking.id),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: SoboTheme.clay,
+                                  foregroundColor: Colors.white,
+                                  elevation: 0,
+                                  minimumSize: const Size.fromHeight(46),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                                ),
+                                icon: const Icon(Icons.cancel_outlined, color: Colors.white, size: 18),
+                                label: Text(
+                                  'REZERVASYONU İPTAL ET',
+                                  style: SoboTheme.fontSans(fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 0.8),
+                                ),
                               ),
-                              label: Text(
-                                isBooked
-                                    ? 'REZERVE EDİLDİ (İPTAL ET)'
-                                    : (session.isFull ? 'KONTENJAN DOLU' : 'HEMEN REZERVE ET'),
-                                style: SoboTheme.fontSans(fontWeight: FontWeight.bold, letterSpacing: 1.2),
+                            ] else
+                              ElevatedButton.icon(
+                                onPressed: session.isFull ? null : () => _handleBook(session.id),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: session.isFull ? SoboTheme.secondary : SoboTheme.espresso,
+                                  foregroundColor: Colors.white,
+                                  elevation: 2,
+                                  minimumSize: const Size.fromHeight(50),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                                ),
+                                icon: Icon(
+                                  session.isFull ? Icons.event_busy_rounded : Icons.check_circle_outline_rounded,
+                                  color: Colors.white,
+                                  size: 18,
+                                ),
+                                label: Text(
+                                  session.isFull ? 'KONTENJAN DOLU' : 'HEMEN REZERVE ET',
+                                  style: SoboTheme.fontSans(fontWeight: FontWeight.bold, letterSpacing: 1.2),
+                                ),
                               ),
-                            ),
                           ],
                         ),
                       ),

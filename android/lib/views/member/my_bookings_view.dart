@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../models/member_models.dart';
 import '../../services/api_client.dart';
 import '../../theme/sobo_theme.dart';
@@ -121,6 +122,23 @@ class _MyBookingsViewState extends State<MyBookingsView> with SingleTickerProvid
         );
       }
     }
+  }
+
+  Future<void> _launchWhatsApp(String text) async {
+    final String encoded = Uri.encodeComponent(text);
+    final Uri waUri = Uri.parse("whatsapp://send?phone=905316033080&text=$encoded");
+    final Uri webUri = Uri.parse("https://wa.me/905316033080?text=$encoded");
+
+    try {
+      if (await canLaunchUrl(waUri)) {
+        await launchUrl(waUri);
+        return;
+      }
+    } catch (_) {}
+
+    try {
+      await launchUrl(webUri, mode: LaunchMode.externalApplication);
+    } catch (_) {}
   }
 
   String _formatDate(String isoStr) {
@@ -324,6 +342,26 @@ class _MyBookingsViewState extends State<MyBookingsView> with SingleTickerProvid
                                         height: 1.3,
                                       ),
                                     ),
+                                    const SizedBox(height: 12),
+                                    OutlinedButton.icon(
+                                      onPressed: () => _launchWhatsApp(
+                                        'Merhaba Eda Hanım! Haftalık ${_summary!.sabitDersSaatleri} sabit ders seansıma bu hafta katılamayacağım, iptal bilgisi vermek istedim.',
+                                      ),
+                                      icon: const Icon(Icons.chat_bubble_outline_rounded, size: 15, color: SoboTheme.clay),
+                                      label: Text(
+                                        'BU HAFTAKİ SABİT DERSİ İPTAL BİLDİR (WHATSAPP)',
+                                        style: SoboTheme.fontSans(
+                                          fontSize: 10.5,
+                                          fontWeight: FontWeight.bold,
+                                          color: SoboTheme.clay,
+                                        ),
+                                      ),
+                                      style: OutlinedButton.styleFrom(
+                                        side: BorderSide(color: SoboTheme.clay.withOpacity(0.6)),
+                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                                      ),
+                                    ),
                                   ],
                                 ),
                               ),
@@ -450,21 +488,24 @@ class _MyBookingsViewState extends State<MyBookingsView> with SingleTickerProvid
                                 const SizedBox(height: 14),
                                 SizedBox(
                                   width: double.infinity,
-                                  child: OutlinedButton.icon(
+                                  child: ElevatedButton.icon(
                                     onPressed: () => _handleCancelBooking(b),
-                                    icon: const Icon(Icons.cancel_outlined, size: 16, color: SoboTheme.clay),
+                                    icon: const Icon(Icons.cancel_outlined, size: 18, color: Colors.white),
                                     label: Text(
-                                      'DERSİ İPTAL ET',
+                                      'REZERVASYONU İPTAL ET (1 DERS İADE)',
                                       style: SoboTheme.fontSans(
-                                        fontSize: 11,
+                                        fontSize: 12,
                                         fontWeight: FontWeight.bold,
-                                        color: SoboTheme.clay,
+                                        letterSpacing: 0.8,
+                                        color: Colors.white,
                                       ),
                                     ),
-                                    style: OutlinedButton.styleFrom(
-                                      side: BorderSide(color: SoboTheme.clay.withOpacity(0.5)),
-                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                                      padding: const EdgeInsets.symmetric(vertical: 11),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: SoboTheme.clay,
+                                      foregroundColor: Colors.white,
+                                      elevation: 0,
+                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                                      padding: const EdgeInsets.symmetric(vertical: 13),
                                     ),
                                   ),
                                 ),
