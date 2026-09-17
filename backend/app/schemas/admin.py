@@ -225,8 +225,8 @@ class PackageResponse(BaseModel):
     ad: str
     ders_adedi: int
     gecerlilik_gun: int
-    fiyat_tl: float
-    fiyat_kurus: int
+    fiyat_tl: float | None = None
+    fiyat_kurus: int | None = None
     aktif: bool
 
     model_config = ConfigDict(from_attributes=True)

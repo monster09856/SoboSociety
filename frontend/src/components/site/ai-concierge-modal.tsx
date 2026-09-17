@@ -18,7 +18,7 @@ export function AIConciergeModal() {
     {
       sender: 'ai',
       text: 'Merhaba! Ben Sobo AI Asistanınız. 🧘‍♀️ Sobo Society derslerimiz (Barre, Reformer, Functional), canlı program veya paketlerimiz hakkında size nasıl yardımcı olabilirim?',
-      suggestions: ['Barre nedir?', 'Yarınki dersler', 'Stüdyo nerede?', 'Paket fiyatları'],
+      suggestions: ['Barre nedir?', 'Yarınki dersler', 'Stüdyo nerede?', 'Paket detayları'],
     },
   ])
 

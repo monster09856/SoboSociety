@@ -9,7 +9,7 @@ class ClassTypeResponse(BaseModel):
     sure_dk: int
     renk: str
     iptal_penceresi_saat: int
-    fiyat_tl: float | None = 900.0
+    fiyat_tl: float | None = None
     tek_ders_acik: bool = False
 
     model_config = ConfigDict(from_attributes=True)
@@ -30,7 +30,7 @@ class ClassSessionResponse(BaseModel):
     kontenjan: int
     dolu_sayi: int
     durum: str
-    fiyat_tl: float | None = 900.0
+    fiyat_tl: float | None = None
     tek_ders_acik: bool = False
     class_type: ClassTypeResponse | None = None
     instructor: InstructorResponse | None = None

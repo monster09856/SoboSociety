@@ -14,7 +14,6 @@ interface PackageItem {
   title: string
   subtitle: string
   validity: string
-  fiyat_tl?: number
   isPopular?: boolean
   popularTag?: string
   features: string[]
@@ -33,10 +32,12 @@ export function Packages() {
   }, [])
 
   useEffect(() => {
-    async function loadPackages() {
+    const loadPackages = async () => {
       try {
-        const pkgs = await api.packages.list()
-        setDbPackages(pkgs || [])
+        const data = await api.packages.list()
+        if (data && data.length > 0) {
+          setDbPackages(data.filter((p) => p.aktif))
+        }
         setIsLoaded(true)
       } catch (err) {
         console.error('Paketler çekilemedi:', err)
@@ -55,7 +56,6 @@ export function Packages() {
       title: 'Barre Class Bireysel',
       subtitle: '8 Derslik Bireysel Paket',
       validity: 'Kullanım Süresi: 6 Hafta',
-      fiyat_tl: 6400,
       features: [
         '8 Bireysel Class Seansı',
         'Kişiye Özel Birebir Eğitmen',
@@ -68,7 +68,6 @@ export function Packages() {
       title: 'Barre Class Bireysel Premium',
       subtitle: '12 Derslik Bireysel Paket',
       validity: 'Kullanım Süresi: 8 Hafta',
-      fiyat_tl: 9200,
       popularTag: '12 Saat Önceden İade Hakkı ⏱️',
       features: [
         '12 Bireysel Class Seansı',
@@ -82,7 +81,6 @@ export function Packages() {
       title: 'Reformer Class Bireysel',
       subtitle: '8 Derslik Bireysel Reformer',
       validity: 'Kullanım Süresi: 6 Hafta',
-      fiyat_tl: 7200,
       features: [
         '8 Bireysel Reformer Seansı',
         'Kişiye Özel Reformer Cihazı',
@@ -95,7 +93,6 @@ export function Packages() {
       title: 'Reformer Class Bireysel Elite',
       subtitle: '12 Derslik Bireysel Reformer',
       validity: 'Kullanım Süresi: 8 Hafta',
-      fiyat_tl: 10400,
       features: [
         '12 Bireysel Reformer Seansı',
         'Kişiye Özel Reformer Cihazı',
@@ -112,7 +109,6 @@ export function Packages() {
       title: 'Barre Class Tek Ders',
       subtitle: 'Tek Derslik Katılım',
       validity: 'Tek Kullanımlık',
-      fiyat_tl: 900,
       features: [
         '1 Adet Barre Class Dersi',
         'Butik Sınıf (Maks. 5 Üye)',
@@ -124,7 +120,6 @@ export function Packages() {
       title: 'Barre Class 4 Ders',
       subtitle: '4 Derslik Grup Paketi',
       validity: 'Kullanım Süresi: 4 Hafta',
-      fiyat_tl: 3200,
       features: [
         '4 Adet Barre Class Dersi',
         'Butik Sınıf (Maks. 5 Üye)',
@@ -137,7 +132,6 @@ export function Packages() {
       title: 'Barre Class 8 Ders',
       subtitle: '8 Derslik Grup Paketi',
       validity: 'Kullanım Süresi: 6 Hafta',
-      fiyat_tl: 5800,
       features: [
         '8 Adet Barre Class Dersi',
         'Butik Sınıf (Maks. 5 Üye)',
@@ -150,7 +144,6 @@ export function Packages() {
       title: 'Barre Class 12 Ders',
       subtitle: '12 Derslik Grup Paketi',
       validity: 'Kullanım Süresi: 8 Hafta',
-      fiyat_tl: 8400,
       popularTag: 'Popüler Seçim ⭐',
       features: [
         '12 Adet Barre Class Dersi',
@@ -185,7 +178,6 @@ export function Packages() {
       title: p.ad,
       subtitle: `${p.ders_adedi} Derslik Stüdyo Paketi`,
       validity: `Kullanım Süresi: ${formattedVal}`,
-      fiyat_tl: p.fiyat_tl,
       isPopular: isPopular,
       popularTag: isPopular ? 'Popüler Paket ⭐' : undefined,
       features: [
@@ -321,27 +313,15 @@ export function Packages() {
                       <div className="py-3 px-4 bg-sand/80 rounded-2xl border border-line flex items-center justify-between text-espresso shadow-xs">
                         <div>
                           <span className="text-[10px] font-bold uppercase tracking-wider text-secondary block">
-                            Paket Ücreti
+                            Kullanım Süresi
                           </span>
                           <span className="text-[11px] text-mocha font-medium block">{pkg.validity}</span>
                         </div>
                         <div className="text-right">
-                          {pkg.fiyat_tl && pkg.fiyat_tl > 0 ? (
-                            isLoggedIn ? (
-                              <span className="text-2xl font-extrabold text-espresso tracking-tight">
-                                ₺{pkg.fiyat_tl.toLocaleString('tr-TR')}
-                              </span>
-                            ) : (
-                              <span className="text-xs font-bold text-espresso bg-ivory px-3 py-1.5 rounded-xl border border-line flex items-center gap-1.5 shadow-xs">
-                                <Lock className="w-3.5 h-3.5 text-mocha" />
-                                <span>Üyelere Özel</span>
-                              </span>
-                            )
-                          ) : (
-                            <span className="text-xs font-bold text-mocha bg-mocha/10 px-3 py-1.5 rounded-xl border border-mocha/30 flex items-center gap-1.5">
-                              <span>Fiyat İçin İletişime Geçin</span>
-                            </span>
-                          )}
+                          <span className="text-xs font-bold text-espresso bg-ivory px-3 py-1.5 rounded-xl border border-line flex items-center gap-1.5 shadow-xs">
+                            <Sparkles className="w-3.5 h-3.5 text-sage" />
+                            <span>Özel Stüdyo</span>
+                          </span>
                         </div>
                       </div>
                     </div>
@@ -357,44 +337,19 @@ export function Packages() {
                   </div>
 
                   <div className="pt-4">
-                    {pkg.fiyat_tl && pkg.fiyat_tl > 0 ? (
-                      isLoggedIn ? (
-                        <a
-                          href={`https://wa.me/905316033080?text=${encodeURIComponent(
-                            `Merhaba! Sobo Society'den ${pkg.title} (₺${pkg.fiyat_tl.toLocaleString('tr-TR')}) paketi hakkında bilgi almak ve satın almak istiyorum. Yardımcı olabilir misiniz?`
-                          )}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="w-full block"
-                        >
-                          <Button variant={pkg.buttonVariant} className="w-full justify-center py-3 text-sm font-medium gap-2">
-                            <MessageCircle className="w-4 h-4" />
-                            <span>Fiyat Bilgisi & Satın Al (WhatsApp)</span>
-                          </Button>
-                        </a>
-                      ) : (
-                        <Link href="/giris" className="w-full block">
-                          <Button variant={pkg.buttonVariant} className="w-full justify-center py-3 text-sm font-medium gap-2">
-                            <Lock className="w-4 h-4" />
-                            <span>Giriş Yap & Fiyatı Gör</span>
-                          </Button>
-                        </Link>
-                      )
-                    ) : (
-                      <a
-                        href={`https://wa.me/905316033080?text=${encodeURIComponent(
-                          `Merhaba! Sobo Society'den '${pkg.title}' paketi hakkında bilgi almak ve kayıt olmak istiyorum. Yardımcı olabilir misiniz?`
-                        )}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="w-full block"
-                      >
-                        <Button variant={pkg.buttonVariant} className="w-full justify-center py-3 text-sm font-medium gap-2">
-                          <MessageCircle className="w-4 h-4" />
-                          <span>WhatsApp İle Bilgi Al</span>
-                        </Button>
-                      </a>
-                    )}
+                    <a
+                      href={`https://wa.me/905316033080?text=${encodeURIComponent(
+                        `Merhaba! Sobo Society'nin '${pkg.title}' (${pkg.subtitle}) paketi hakkında bilgi almak ve kayıt olmak istiyorum. Yardımcı olabilir misiniz?`
+                      )}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="w-full block"
+                    >
+                      <Button variant={pkg.buttonVariant} className="w-full justify-center py-3 text-sm font-medium gap-2">
+                        <MessageCircle className="w-4 h-4" />
+                        <span>WhatsApp İle Bilgi Al / Kayıt Ol</span>
+                      </Button>
+                    </a>
                   </div>
                 </CardContent>
               </Card>

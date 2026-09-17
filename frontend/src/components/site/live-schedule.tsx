@@ -18,7 +18,6 @@ interface ScheduleSession {
   duration: string
   capacity: number
   enrolled: number
-  fiyat_tl: number
   status: 'available' | 'few_left' | 'full'
   statusText: string
   tek_ders_acik?: boolean
@@ -26,29 +25,29 @@ interface ScheduleSession {
 
 const mockScheduleData: Record<string, ScheduleSession[]> = {
   Pazartesi: [
-    { id: 101, title: 'Sobo Barre Morning', category: 'Barre', instructor: 'Ece Karaca', time: '08:30 - 09:20', duration: '50 dk', capacity: 5, enrolled: 4, fiyat_tl: 900, status: 'available', statusText: '1 Yer Kaldı', tek_ders_acik: true },
-    { id: 102, title: 'Core & Posture Pilates', category: 'Pilates', instructor: 'Defne Yılmaz', time: '10:00 - 10:50', duration: '50 dk', capacity: 5, enrolled: 4, fiyat_tl: 900, status: 'few_left', statusText: 'Son 1 Yer', tek_ders_acik: true },
-    { id: 103, title: 'Functional Sculpt', category: 'Functional', instructor: 'Can Tezcan', time: '18:30 - 19:20', duration: '50 dk', capacity: 5, enrolled: 5, fiyat_tl: 900, status: 'full', statusText: 'Dolu (Sıra Bekleme)', tek_ders_acik: true },
+    { id: 101, title: 'Sobo Barre Morning', category: 'Barre', instructor: 'Ece Karaca', time: '08:30 - 09:20', duration: '50 dk', capacity: 5, enrolled: 4, status: 'available', statusText: '1 Yer Kaldı', tek_ders_acik: true },
+    { id: 102, title: 'Core & Posture Pilates', category: 'Pilates', instructor: 'Defne Yılmaz', time: '10:00 - 10:50', duration: '50 dk', capacity: 5, enrolled: 4, status: 'few_left', statusText: 'Son 1 Yer', tek_ders_acik: true },
+    { id: 103, title: 'Functional Sculpt', category: 'Functional', instructor: 'Can Tezcan', time: '18:30 - 19:20', duration: '50 dk', capacity: 5, enrolled: 5, status: 'full', statusText: 'Dolu (Sıra Bekleme)', tek_ders_acik: true },
   ],
   Salı: [
-    { id: 104, title: 'Sobo Flow & Stretch', category: 'Pilates', instructor: 'Defne Yılmaz', time: '09:00 - 09:50', duration: '50 dk', capacity: 5, enrolled: 2, fiyat_tl: 900, status: 'available', statusText: '3 Yer Kaldı', tek_ders_acik: true },
-    { id: 105, title: 'Barre Burn & Tone', category: 'Barre', instructor: 'Ece Karaca', time: '12:15 - 13:05', duration: '50 dk', capacity: 5, enrolled: 3, fiyat_tl: 900, status: 'few_left', statusText: 'Son 2 Yer', tek_ders_acik: true },
+    { id: 104, title: 'Sobo Flow & Stretch', category: 'Pilates', instructor: 'Defne Yılmaz', time: '09:00 - 09:50', duration: '50 dk', capacity: 5, enrolled: 2, status: 'available', statusText: '3 Yer Kaldı', tek_ders_acik: true },
+    { id: 105, title: 'Barre Burn & Tone', category: 'Barre', instructor: 'Ece Karaca', time: '12:15 - 13:05', duration: '50 dk', capacity: 5, enrolled: 3, status: 'few_left', statusText: 'Son 2 Yer', tek_ders_acik: true },
   ],
   Çarşamba: [
-    { id: 106, title: 'Sunrise Barre', category: 'Barre', instructor: 'Ece Karaca', time: '08:00 - 08:50', duration: '50 dk', capacity: 5, enrolled: 1, fiyat_tl: 900, status: 'available', statusText: '4 Yer Kaldı', tek_ders_acik: true },
-    { id: 107, title: 'Reformer & Mat Alignment', category: 'Pilates', instructor: 'Defne Yılmaz', time: '11:00 - 11:50', duration: '50 dk', capacity: 5, enrolled: 5, fiyat_tl: 900, status: 'full', statusText: 'Dolu (Sıra Bekleme)', tek_ders_acik: true },
+    { id: 106, title: 'Sunrise Barre', category: 'Barre', instructor: 'Ece Karaca', time: '08:00 - 08:50', duration: '50 dk', capacity: 5, enrolled: 1, status: 'available', statusText: '4 Yer Kaldı', tek_ders_acik: true },
+    { id: 107, title: 'Reformer & Mat Alignment', category: 'Pilates', instructor: 'Defne Yılmaz', time: '11:00 - 11:50', duration: '50 dk', capacity: 5, enrolled: 5, status: 'full', statusText: 'Dolu (Sıra Bekleme)', tek_ders_acik: true },
   ],
   Perşembe: [
-    { id: 108, title: 'Postural Pilates', category: 'Pilates', instructor: 'Defne Yılmaz', time: '09:30 - 10:20', duration: '50 dk', capacity: 5, enrolled: 3, fiyat_tl: 900, status: 'available', statusText: '2 Yer Kaldı', tek_ders_acik: true },
+    { id: 108, title: 'Postural Pilates', category: 'Pilates', instructor: 'Defne Yılmaz', time: '09:30 - 10:20', duration: '50 dk', capacity: 5, enrolled: 3, status: 'available', statusText: '2 Yer Kaldı', tek_ders_acik: true },
   ],
   Cuma: [
-    { id: 109, title: 'Friday Energy Functional', category: 'Functional', instructor: 'Can Tezcan', time: '08:30 - 09:20', duration: '50 dk', capacity: 5, enrolled: 2, fiyat_tl: 900, status: 'available', statusText: '3 Yer Kaldı', tek_ders_acik: true },
+    { id: 109, title: 'Friday Energy Functional', category: 'Functional', instructor: 'Can Tezcan', time: '08:30 - 09:20', duration: '50 dk', capacity: 5, enrolled: 2, status: 'available', statusText: '3 Yer Kaldı', tek_ders_acik: true },
   ],
   Cumartesi: [
-    { id: 110, title: 'Weekend Warrior Barre', category: 'Barre', instructor: 'Ece Karaca', time: '10:00 - 10:50', duration: '50 dk', capacity: 5, enrolled: 4, fiyat_tl: 900, status: 'few_left', statusText: 'Son 1 Yer', tek_ders_acik: true },
+    { id: 110, title: 'Weekend Warrior Barre', category: 'Barre', instructor: 'Ece Karaca', time: '10:00 - 10:50', duration: '50 dk', capacity: 5, enrolled: 4, status: 'few_left', statusText: 'Son 1 Yer', tek_ders_acik: true },
   ],
   Pazar: [
-    { id: 111, title: 'Sunday Recovery & Flow', category: 'Pilates', instructor: 'Defne Yılmaz', time: '11:00 - 11:50', duration: '50 dk', capacity: 5, enrolled: 1, fiyat_tl: 900, status: 'available', statusText: '4 Yer Kaldı', tek_ders_acik: true },
+    { id: 111, title: 'Sunday Recovery & Flow', category: 'Pilates', instructor: 'Defne Yılmaz', time: '11:00 - 11:50', duration: '50 dk', capacity: 5, enrolled: 1, status: 'available', statusText: '4 Yer Kaldı', tek_ders_acik: true },
   ],
 }
 
@@ -116,7 +115,6 @@ export function LiveSchedule() {
               duration: `${s.class_type?.sure_dk || 50} dk`,
               capacity,
               enrolled,
-              fiyat_tl: s.fiyat_tl ?? 900,
               status,
               statusText,
               tek_ders_acik: s.tek_ders_acik ?? false,
@@ -295,16 +293,12 @@ export function LiveSchedule() {
                         <User className="w-4 h-4 text-mocha" />
                         <span>Eğitmen: <strong className="text-ink font-medium">{session.instructor}</strong></span>
                       </div>
-                      <div className="flex items-center justify-between text-xs text-espresso font-bold pt-1">
-                        <span>Tek Ders Ücreti:</span>
-                        {isLoggedIn ? (
-                          <span className="text-sm font-serif font-extrabold text-mocha">{session.fiyat_tl} ₺</span>
-                        ) : (
-                          <span className="text-xs font-semibold text-mocha bg-sand px-2.5 py-0.5 rounded-full border border-line flex items-center gap-1">
-                            <Lock className="w-3 h-3 text-mocha" />
-                            <span>Üyelere Özel</span>
-                          </span>
-                        )}
+                      <div className="flex items-center justify-between text-xs text-espresso font-semibold pt-1">
+                        <span>Katılım:</span>
+                        <span className="text-xs font-semibold text-espresso bg-sand px-2.5 py-0.5 rounded-full border border-line flex items-center gap-1">
+                          <Sparkles className="w-3 h-3 text-sage" />
+                          <span>Rezervasyonlu</span>
+                        </span>
                       </div>
                     </div>
                   </div>
@@ -368,7 +362,7 @@ export function LiveSchedule() {
                 Tek Ders Rezervasyon Talebi
               </h3>
               <p className="text-xs text-secondary mt-1">
-                Üye olmadan Ad ve Telefonunuzla ödeme bekleyen rezervasyon talebi oluşturabilirsiniz.
+                Üye olmadan Ad ve Telefonunuzla tek ders rezervasyon talebi oluşturabilirsiniz.
               </p>
             </div>
 
@@ -376,22 +370,18 @@ export function LiveSchedule() {
             <div className="bg-ivory border border-line p-3.5 rounded-2xl mb-5 space-y-1.5">
               <div className="flex items-center justify-between text-xs font-bold text-espresso">
                 <span>{selectedSession.title}</span>
-                {isLoggedIn ? (
-                  <span className="text-mocha">{selectedSession.fiyat_tl} ₺</span>
-                ) : (
-                  <span className="text-mocha font-medium flex items-center gap-1">
-                    <Lock className="w-3 h-3 text-mocha" /> Üyelere Özel
-                  </span>
-                )}
+                <span className="text-xs font-semibold text-espresso bg-sand px-2.5 py-0.5 rounded-full border border-line flex items-center gap-1">
+                  <Sparkles className="w-3 h-3 text-sage" /> Rezervasyonlu
+                </span>
               </div>
               <div className="flex items-center gap-3 text-xs text-secondary">
                 <span>Saat: {selectedSession.time}</span>
                 <span>•</span>
                 <span>Eğitmen: {selectedSession.instructor}</span>
               </div>
-              <div className="text-[11px] text-amber-800 font-medium pt-1 flex items-center gap-1">
+              <div className="text-[11px] text-mocha font-medium pt-1 flex items-center gap-1">
                 <Clock className="w-3.5 h-3.5 shrink-0" />
-                <span>Talebiniz <b>'Ödeme Bekliyor'</b> olarak kaydolur ve WhatsApp'tan onaylanır.</span>
+                <span>Talebiniz kaydedilecek ve stüdyomuz WhatsApp üzerinden sizinle iletişime geçecektir.</span>
               </div>
             </div>
 

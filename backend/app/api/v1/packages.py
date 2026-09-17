@@ -26,8 +26,8 @@ async def list_public_packages(
             ad=p.ad,
             ders_adedi=p.ders_adedi,
             gecerlilik_gun=p.gecerlilik_gun,
-            fiyat_tl=p.fiyat_kurus / 100.0,
-            fiyat_kurus=p.fiyat_kurus,
+            fiyat_tl=None,
+            fiyat_kurus=None,
             aktif=p.aktif,
         )
         for p in pkgs

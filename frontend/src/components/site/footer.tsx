@@ -42,7 +42,7 @@ export function Footer() {
               </li>
               <li>
                 <a href="#paketler" className="hover:text-espresso transition-colors">
-                  Üyelik & Paket Fiyatları
+                  Üyelik & Paketler
                 </a>
               </li>
               <li>

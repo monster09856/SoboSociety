@@ -157,7 +157,7 @@ export function Workshops() {
                           <span>{ev.tarih_saat}</span>
                         </div>
                         <span className="font-semibold text-mocha flex items-center gap-1 bg-ivory px-2.5 py-1 rounded-full border border-line">
-                          <span>{ev.ucret && !ev.ucret.includes('₺') && !ev.ucret.toLowerCase().includes('tl') ? ev.ucret : 'Üyelere Özel'}</span>
+                          <span>{ev.ucret && !ev.ucret.includes('₺') && !ev.ucret.toLowerCase().includes('tl') && !/\d/.test(ev.ucret) ? ev.ucret : 'Özel Atölye'}</span>
                         </span>
                       </div>
                     </div>
