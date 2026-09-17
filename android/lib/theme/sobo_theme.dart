@@ -42,6 +42,7 @@ class SoboTheme {
     Color color = ink,
     double? height,
     double? letterSpacing,
+    FontStyle? fontStyle,
   }) {
     return GoogleFonts.jost(
       fontSize: fontSize,
@@ -49,6 +50,7 @@ class SoboTheme {
       color: color,
       height: height,
       letterSpacing: letterSpacing,
+      fontStyle: fontStyle,
     );
   }
 
