@@ -403,7 +403,7 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
                                 titleCtrl.text = 'Ses Çanağı & Derin Meditasyon (Sound Bath)';
                                 selectedType = 'Sound Bath';
                                 capacityCtrl.text = '12';
-                                priceCtrl.text = '750 ₺';
+                                priceCtrl.text = 'Üyelere Özel / Seans';
                                 descCtrl.text = 'Tibet ses çanaklarının şifalı frekansları eşliğinde derin zihinsel ve bedensel dinlenme seansı.';
                               });
                             },
@@ -418,7 +418,7 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
                                 titleCtrl.text = 'Postür, Omurga & Mobilite Masterclass';
                                 selectedType = 'Masterclass';
                                 capacityCtrl.text = '10';
-                                priceCtrl.text = '600 ₺';
+                                priceCtrl.text = 'Üyelere Özel / Seans';
                                 descCtrl.text = 'Masa başı çalışanlar için özel omurga sağlığı, duruş bozukluklarını düzeltici teknikler ve mobilite çalışması.';
                               });
                             },
@@ -535,7 +535,7 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
                           controller: priceCtrl,
                           decoration: InputDecoration(
                             labelText: 'Ücret',
-                            hintText: 'Ücretsiz veya 750 ₺',
+                            hintText: 'Ücretsiz veya Bilgi Alınız',
                             filled: true,
                             fillColor: SoboTheme.ivory,
                             labelStyle: SoboTheme.fontSans(fontSize: 12),

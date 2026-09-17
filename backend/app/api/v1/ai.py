@@ -87,36 +87,40 @@ async def ai_concierge_chat(
                     if p.gecerlilik_gun % 7 == 0:
                         sure_str = f"{p.gecerlilik_gun // 7} Hafta"
                     else:
-                        sure_str = f"{p.gecerlilik_gun} Gün"
-                    fiyat_formatted = f"₺{int(fiyat_tl):,}".replace(",", ".")
-                    pkg_lines.append(f"• **{p.ad}**: {p.ders_adedi} Ders ({sure_str}) — {fiyat_formatted} TL")
+                pkg_lines = []
+                for p in pkgs:
+                    sure_str = f"{p.gecerlilik_gun // 7} Hafta" if p.gecerlilik_gun % 7 == 0 else f"{p.gecerlilik_gun} Gün"
+                    pkg_lines.append(f"• **{p.ad}**: {p.ders_adedi} Ders ({sure_str} Kullanım)")
                 
                 pkgs_text = "\n".join(pkg_lines)
                 yanit = (
-                    f"Sayın {current_member.ad}, Sobo Society güncel ders paketlerimiz ve fiyatlarımız: 💳\n\n"
+                    f"Sayın {current_member.ad}, Sobo Society güncel ders paketlerimiz: 💳\n\n"
                     f"{pkgs_text}\n\n"
-                    f"Tüm paketlerimizde **12 Saat Önceden İade Hakkı** mevcuttur. "
-                    f"Detaylı bilgi almak ve hemen kaydolmak için WhatsApp hattımızdan bizimle iletişime geçebilirsiniz!"
+                    f"✨ Paket fiyatlandırmaları ve kişiye özel üyelik seçenekleri hakkında detaylı bilgi almak için WhatsApp hattımız üzerinden stüdyo yöneticimiz Eda Hanım ile doğrudan iletişime geçebilirsiniz."
                 )
             else:
                 yanit = (
                     f"Sayın {current_member.ad}, Sobo Society güncel ders paketlerimiz: 💳\n\n"
-                    "• **Barre Class 4 Ders**: ₺3.200 TL (30 Gün / 4 Hafta Kullanım)\n"
-                    "• **Barre Class 8 Ders (Popüler ⭐)**: ₺5.800 TL (45 Gün / 6 Hafta Kullanım)\n"
-                    "• **Barre Class 12 Ders**: ₺8.400 TL (60 Gün / 8 Hafta Kullanım)\n"
+                    "• **Barre Class 4 Ders**: 30 Gün / 4 Hafta Kullanım\n"
+                    "• **Barre Class 8 Ders (Popüler ⭐)**: 45 Gün / 6 Hafta Kullanım\n"
+                    "• **Barre Class 12 Ders**: 60 Gün / 8 Hafta Kullanım\n"
                     "• **Bireysel Class Paketleri**: Kişiye özel birebir eğitmen eşliğinde 8 ve 12 derslik seanslar.\n\n"
-                    "Detaylı bilgi ve hızlı satın alım için WhatsApp üzerinden bize ulaşabilirsiniz!"
+                    "✨ Fiyatlandırma ve satın alım detayları için WhatsApp üzerinden stüdyo yöneticimizle iletişime geçebilirsiniz."
                 )
-            oneriler = ["WhatsApp ile yazın", "Ders programı", "12 Saat İptal Kuralı"]
-            aksiyon = AIActionButton(etiket="WhatsApp Satın Al / İletişim", url="https://wa.me/905316033080", tip="external")
+            oneriler = ["WhatsApp ile Fiyat Al", "Ders programı", "12 Saat İptal Kuralı"]
+            aksiyon = AIActionButton(
+                etiket="WhatsApp İle Fiyat Bilgisi Al",
+                url="https://wa.me/905316033080?text=Merhaba!%20Sobo%20Society%20ders%20paketleri%20ve%20güncel%20fiyatlar%20hakkında%20bilgi%20almak%20istiyorum.",
+                tip="external"
+            )
         else:
             # Üye değilse / giriş yapmamışsa -> Fiyat gösterilmez, WhatsApp'a yönlendirilir!
             yanit = (
                 "Sobo Society'de 4'lü, 8'li ve 12'li Grup (Barre, Yoga, Functional) ve Kişiye Özel Bireysel Class paketlerimiz mevcuttur. 💳\n\n"
-                "🔒 Güncel üyelik ve paket fiyat bilgilerimiz Sobo Society üyelerine özeldir. "
-                "Fiyat bilgisi almak, üyelik detaylarını öğrenmek ve kaydolmak için WhatsApp hattımız üzerinden ekibimize tek tıkla mesaj atabilir veya üye girişi yapabilirsiniz!"
+                "Güncel paket fiyatları ve stüdyo üyelik bilgisi stüdyo yöneticimiz tarafından doğrudan WhatsApp üzerinden iletilmektedir.\n\n"
+                "Paket fiyatlarını öğrenmek ve stüdyomuzu ziyaret etmek için WhatsApp hattımızdan bize dilediğiniz zaman yazabilirsiniz!"
             )
-            oneriler = ["WhatsApp Fiyat Bilgisi", "Giriş Yap", "Ders Programı"]
+            oneriler = ["WhatsApp Fiyat Bilgisi", "Ders Programı", "Stüdyo Nerede?"]
             aksiyon = AIActionButton(
                 etiket="WhatsApp İle Fiyat Bilgisi Al",
                 url="https://wa.me/905316033080?text=Merhaba!%20Sobo%20Society%20ders%20paketleri%20ve%20güncel%20fiyatlar%20hakkında%20bilgi%20almak%20istiyorum.",

@@ -363,7 +363,7 @@ export default function AdminEventsPage() {
                   turu: 'WORKSHOP',
                   baslik: 'Bireysel Postür Düzeltme & Omurga Sağlığı Atölyesi',
                   kontenjan: 10,
-                  ucret: '500 TL',
+                  ucret: 'Üyelere Özel / Seans',
                   aciklama: 'Günlük hayattaki duruş bozukluklarını düzeltmeye ve bel-boyun ağrılarını hafifletmeye yönelik kapsamlı uygulamalı atölye.',
                 })
               }
@@ -380,7 +380,7 @@ export default function AdminEventsPage() {
                   turu: 'SOUNDBATH',
                   baslik: 'Sound Bath & Derin Gevşeme Meditasyonu',
                   kontenjan: 8,
-                  ucret: '600 TL',
+                  ucret: 'Üyelere Özel / Seans',
                   aciklama: 'Tibet ses çanaklarının şifalı titreşimleri eşliğinde zihinsel dinginlik ve derin beden gevşemesi sağlayan özel ses terapisi.',
                 })
               }
@@ -493,7 +493,7 @@ export default function AdminEventsPage() {
                   <div>
                     <label className="block text-xs font-bold text-secondary uppercase mb-1">Ücret / Katılım Şartı</label>
                     <Input
-                      placeholder="Örn: Ücretsiz / Üyelere Özel veya 500 TL"
+                      placeholder="Örn: Ücretsiz, Üyelere Özel veya Bilgi Alınız"
                       value={ucret}
                       onChange={(e) => setUcret(e.target.value)}
                       className="bg-ivory border-line text-xs font-medium rounded-xl h-11"

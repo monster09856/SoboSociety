@@ -71,7 +71,7 @@ export function Workshops() {
       aciklama: 'Tibet ses çanaklarının şifalı frekansları eşliğinde derin zihinsel ve bedensel dinlenme seansı.',
       kontenjan: 12,
       dolu_sayi: 8,
-      ucret: '750 ₺',
+      ucret: 'Özel Atölye / Üyelere Özel',
       aktif: true,
     },
     {
@@ -82,7 +82,7 @@ export function Workshops() {
       aciklama: 'Masa başı çalışanlar için özel omurga sağlığı, duruş bozukluklarını düzeltici teknikler ve mobilite çalışması.',
       kontenjan: 10,
       dolu_sayi: 6,
-      ucret: '600 ₺',
+      ucret: 'Masterclass / Üyelere Özel',
       aktif: true,
     },
   ]
@@ -156,14 +156,9 @@ export function Workshops() {
                           <Clock className="w-4 h-4 text-mocha shrink-0" />
                           <span>{ev.tarih_saat}</span>
                         </div>
-                        {isLoggedIn ? (
-                          <span className="font-bold text-ink">{ev.ucret}</span>
-                        ) : (
-                          <span className="font-semibold text-mocha flex items-center gap-1 bg-ivory px-2.5 py-1 rounded-full border border-line">
-                            <Lock className="w-3 h-3 text-mocha" />
-                            <span>Üyelere Özel</span>
-                          </span>
-                        )}
+                        <span className="font-semibold text-mocha flex items-center gap-1 bg-ivory px-2.5 py-1 rounded-full border border-line">
+                          <span>{ev.ucret && !ev.ucret.includes('₺') && !ev.ucret.toLowerCase().includes('tl') ? ev.ucret : 'Üyelere Özel'}</span>
+                        </span>
                       </div>
                     </div>
 
