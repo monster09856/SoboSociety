@@ -75,11 +75,9 @@ async def register_endpoint(
         await db.refresh(existing_tel)
         is_admin = norm_tel in ayarlar.admin_telefons or username == "admin"
         if not existing_tel.aktif and not is_admin:
-            return TokenResponse(
-                access_token="",
-                token_type="bearer",
-                aktif=False,
-                mesaj="Üyelik başvurunuz stüdyo yönetimi tarafından incelenmektedir. Onaylandıktan sonra giriş yapabilirsiniz. ✨",
+            raise HTTPException(
+                status_code=403,
+                detail="Üyelik başvurunuz stüdyo yönetimi tarafından incelenmektedir. Hesabınız onaylandığında giriş yapabileceksiniz. ✨",
             )
         token = create_access_token(subject=str(existing_tel.id), is_admin=is_admin)
         return TokenResponse(access_token=token, aktif=True, mesaj="Giriş başarılı")
@@ -107,11 +105,9 @@ async def register_endpoint(
     await db.refresh(new_member)
 
     if not aktif:
-        return TokenResponse(
-            access_token="",
-            token_type="bearer",
-            aktif=False,
-            mesaj="Üyelik başvurunuz stüdyo yönetimi tarafından incelenmektedir. Onaylandıktan sonra giriş yapabilirsiniz. ✨",
+        raise HTTPException(
+            status_code=403,
+            detail="Üyelik başvurunuz stüdyo yönetimi tarafından incelenmektedir. Hesabınız onaylandığında giriş yapabileceksiniz. ✨",
         )
 
     token = create_access_token(subject=str(new_member.id), is_admin=is_admin)

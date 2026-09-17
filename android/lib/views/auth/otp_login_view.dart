@@ -145,9 +145,20 @@ class _OTPLoginViewState extends State<OTPLoginView> with SingleTickerProviderSt
       }
 
       final String accessToken = res['access_token'] ?? '';
-      if (accessToken.isNotEmpty) {
-        await StorageService.saveToken(accessToken);
+      if (accessToken.isEmpty || res['aktif'] == false) {
+        if (mounted) {
+          setState(() {
+            _isLoading = false;
+            _mode = 0;
+            _loginUsernameController.text = username;
+            _loginPasswordController.clear();
+            _errorMessage = 'Üyelik başvurunuz stüdyo yönetimi tarafından incelenmektedir. Hesabınız onaylandığında giriş yapabileceksiniz. ✨';
+          });
+        }
+        return;
       }
+
+      await StorageService.saveToken(accessToken);
 
       bool isAdmin = false;
       try {
@@ -156,7 +167,15 @@ class _OTPLoginViewState extends State<OTPLoginView> with SingleTickerProviderSt
         isAdmin = me.isAdmin;
 
         await NotificationService().registerDeviceToken();
-      } catch (_) {}
+      } catch (_) {
+        if (mounted) {
+          setState(() {
+            _isLoading = false;
+            _errorMessage = 'Oturum açılamadı. Lütfen yönetici onayını bekleyiniz.';
+          });
+        }
+        return;
+      }
 
       if (mounted) {
         Navigator.of(context).pushReplacement(
