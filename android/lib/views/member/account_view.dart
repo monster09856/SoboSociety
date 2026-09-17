@@ -1026,6 +1026,39 @@ class _AccountViewState extends State<AccountView> {
                         ),
                       ],
                     ),
+                    if (_summary?.sabitDersSaatleri != null && _summary!.sabitDersSaatleri!.trim().isNotEmpty) ...[
+                      const SizedBox(height: 10),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                        decoration: BoxDecoration(
+                          color: SoboTheme.sage.withOpacity(0.12),
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(color: SoboTheme.sage.withOpacity(0.4)),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.alarm_on_rounded, size: 18, color: SoboTheme.forest),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'HAFTALIK SABİT DERS SAATLERİNİZ',
+                                    style: SoboTheme.fontSans(fontSize: 9.5, fontWeight: FontWeight.bold, color: SoboTheme.forest, letterSpacing: 0.5),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    _summary!.sabitDersSaatleri!,
+                                    style: SoboTheme.fontSans(fontSize: 13, fontWeight: FontWeight.bold, color: SoboTheme.espresso),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ] else ...[
                     Text(
                       'Tanımlı aktif ders paketiniz bulunmamaktadır. Stüdyomuzla iletişime geçerek ya da Paketler menüsünden yeni paket alabilirsiniz.',

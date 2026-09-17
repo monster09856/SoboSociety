@@ -76,6 +76,7 @@ class MemberPackageUpdateRequest(BaseModel):
     ek_gun: int | None = Field(default=None, description="Mevcut bitişe eklenecek gün sayısı")
     kalan_ders: int | None = Field(default=None, description="Yeni kalan ders adedi")
     paket_adi: str | None = Field(default=None, description="Özel paket adı")
+    sabit_ders_saatleri: str | None = Field(default=None, description="Haftalık sabit ders saatleri")
 
 
 class SessionGenerateRequest(BaseModel):

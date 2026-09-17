@@ -438,6 +438,7 @@ export interface PackageAssignRequest {
   ozel_paket_adi?: string
   ozel_ders_adedi?: number
   ozel_gecerlilik_gun?: number
+  sabit_ders_saatleri?: string | null
 }
 
 export interface MemberPackageResponse {
@@ -592,6 +593,7 @@ export const adminApi = {
         boy?: string | null
         kilo?: string | null
         saglik_notu?: string | null
+        sabit_ders_saatleri?: string | null
         aktif_member_package_id?: number | null
         aktif_paket_adi?: string | null
         paket_bitis_tarihi?: string | null
@@ -618,6 +620,7 @@ export const adminApi = {
       boy?: string
       kilo?: string
       saglik_notu?: string
+      sabit_ders_saatleri?: string
     }
   ) =>
     apiFetch<{
@@ -637,7 +640,23 @@ export const adminApi = {
       sol_kol?: string | null
       boy?: string | null
       kilo?: string | null
+      sabit_ders_saatleri?: string | null
     }>(`/admin/members/${memberId}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+  updateMemberPackage: (
+    memberId: number,
+    memberPackageId: number,
+    data: {
+      bitis?: string
+      ek_gun?: number
+      kalan_ders?: number
+      paket_adi?: string
+      sabit_ders_saatleri?: string
+    }
+  ) =>
+    apiFetch<any>(`/admin/members/${memberId}/packages/${memberPackageId}`, {
       method: 'PUT',
       body: JSON.stringify(data),
     }),

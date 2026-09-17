@@ -412,6 +412,9 @@ async def update_member_package_endpoint(
                 member_package_id=member_package_id,
             )
 
+    if body.sabit_ders_saatleri is not None:
+        m.sabit_ders_saatleri = body.sabit_ders_saatleri.strip() or None
+
     await db.commit()
     return await _build_member_detail_response(db, m)
 

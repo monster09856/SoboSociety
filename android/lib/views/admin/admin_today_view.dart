@@ -2972,6 +2972,11 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
         : (m['aktif_paket_adi'] as String? ?? "Ders Paketi");
 
     final TextEditingController remainingLessonsCtrl = TextEditingController(text: (m['bakiye'] ?? 0).toString());
+    final TextEditingController sabitDersCtrl = TextEditingController(
+      text: (pkg != null && pkg['sabit_ders_saatleri'] != null && pkg['sabit_ders_saatleri'].toString().trim().isNotEmpty)
+          ? pkg['sabit_ders_saatleri'].toString()
+          : (m['sabit_ders_saatleri']?.toString() ?? ''),
+    );
     int? additionalDays;
     DateTime? customEndDate;
     bool isSaving = false;
@@ -3052,6 +3057,20 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
                     ),
                     const SizedBox(height: 14),
 
+                    Text('HAFTALIK SABİT DERS GÜN & SAATLERİ', style: SoboTheme.fontSans(fontSize: 11, fontWeight: FontWeight.bold, color: SoboTheme.espresso)),
+                    const SizedBox(height: 6),
+                    TextField(
+                      controller: sabitDersCtrl,
+                      decoration: const InputDecoration(
+                        labelText: 'Sabit Ders Saatleri',
+                        hintText: 'Örn: Salı 11:30, Perşembe 11:30',
+                        filled: true,
+                        fillColor: Colors.white,
+                        prefixIcon: Icon(Icons.alarm_on_rounded, color: SoboTheme.forest),
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+
                     Text('SÜRE UZATMA / BİTİŞ TARİHİ', style: SoboTheme.fontSans(fontSize: 11, fontWeight: FontWeight.bold, color: SoboTheme.espresso)),
                     const SizedBox(height: 8),
                     Wrap(
@@ -3118,8 +3137,16 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
                                 } else if (customEndDate != null) {
                                   payload['bitis'] = '${customEndDate!.year}-${customEndDate!.month.toString().padLeft(2, '0')}-${customEndDate!.day.toString().padLeft(2, '0')}';
                                 }
+                                payload['sabit_ders_saatleri'] = sabitDersCtrl.text.trim();
 
                                 await ApiClient.put('/admin/members/${m['id']}/packages/$memberPackageId', payload);
+
+                                // Üyenin genel profilindeki sabit ders saatlerini de güncelle
+                                try {
+                                  await ApiClient.put('/admin/members/${m['id']}', <String, dynamic>{
+                                    'sabit_ders_saatleri': sabitDersCtrl.text.trim(),
+                                  });
+                                } catch (_) {}
 
                                 if (ctx.mounted) {
                                   Navigator.pop(ctx);
@@ -3127,7 +3154,7 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
                                 if (mounted) {
                                   ScaffoldMessenger.of(this.context).showSnackBar(
                                     SnackBar(
-                                      content: Text('${m['ad']} üyesinin paket bilgileri güncellendi! ✨'),
+                                      content: Text('${m['ad']} üyesinin paket bilgileri ve sabit saatleri güncellendi! ✨'),
                                       backgroundColor: SoboTheme.sage,
                                     ),
                                   );
@@ -3155,6 +3182,110 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
                     ),
                   ],
                 ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  void _showQuickEditSabitSaatModal(dynamic m) {
+    final TextEditingController ctrl = TextEditingController(text: m['sabit_ders_saatleri']?.toString() ?? '');
+    bool isSaving = false;
+
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: SoboTheme.ivory,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (modalCtx, setModalState) {
+            return Padding(
+              padding: EdgeInsets.only(
+                top: 20,
+                left: 16,
+                right: 16,
+                bottom: MediaQuery.of(modalCtx).viewInsets.bottom + 20,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('Haftalık Sabit Ders Saatleri', style: SoboTheme.fontSerif(fontSize: 18, fontWeight: FontWeight.bold, color: SoboTheme.espresso)),
+                            Text('${m['ad']}', style: SoboTheme.fontSans(fontSize: 12, color: SoboTheme.secondary)),
+                          ],
+                        ),
+                      ),
+                      IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.pop(modalCtx)),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    'Üyenin her hafta düzenli geleceği gün ve saatleri girin. Üye bu saatleri kendi uygulamasında özel banner olarak görecektir.',
+                    style: SoboTheme.fontSans(fontSize: 12, color: SoboTheme.secondary, height: 1.3),
+                  ),
+                  const SizedBox(height: 14),
+                  TextField(
+                    controller: ctrl,
+                    autofocus: true,
+                    decoration: const InputDecoration(
+                      labelText: 'Sabit Ders Gün & Saatleri',
+                      hintText: 'Örn: Salı 11:30, Perşembe 11:30',
+                      filled: true,
+                      fillColor: Colors.white,
+                      prefixIcon: Icon(Icons.alarm_on_rounded, color: SoboTheme.forest),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  ElevatedButton(
+                    onPressed: isSaving
+                        ? null
+                        : () async {
+                            setModalState(() => isSaving = true);
+                            try {
+                              await ApiClient.put('/admin/members/${m['id']}', <String, dynamic>{
+                                'sabit_ders_saatleri': ctrl.text.trim(),
+                              });
+                              if (ctx.mounted) Navigator.pop(ctx);
+                              if (mounted) {
+                                ScaffoldMessenger.of(this.context).showSnackBar(
+                                  SnackBar(
+                                    content: Text('${m['ad']} için sabit ders saatleri kaydedildi! ✨'),
+                                    backgroundColor: SoboTheme.sage,
+                                  ),
+                                );
+                                _loadMembers(_searchMemberCtrl.text);
+                              }
+                            } catch (e) {
+                              setModalState(() => isSaving = false);
+                              if (mounted) {
+                                ScaffoldMessenger.of(this.context).showSnackBar(
+                                  SnackBar(
+                                    content: Text('Hata: ${e.toString().replaceAll('Exception: ', '')}'),
+                                    backgroundColor: SoboTheme.clay,
+                                  ),
+                                );
+                              }
+                            }
+                          },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: SoboTheme.espresso,
+                      foregroundColor: Colors.white,
+                      minimumSize: const Size.fromHeight(48),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                    child: Text(isSaving ? 'KAYDEDİLİYOR...' : 'KAYDET', style: SoboTheme.fontSans(fontWeight: FontWeight.bold)),
+                  ),
+                ],
               ),
             );
           },
@@ -4957,28 +5088,61 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
                           ),
                         ],
 
-                        // Sabit Ders Saatleri (Varsa)
+                        // Sabit Ders Saatleri (Varsa veya Yoksa Düzenleme/Ekleme Butonu)
                         if (m['sabit_ders_saatleri'] != null && m['sabit_ders_saatleri'].toString().trim().isNotEmpty) ...[
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                            margin: const EdgeInsets.only(bottom: 8),
-                            decoration: BoxDecoration(
-                              color: SoboTheme.sage.withOpacity(0.15),
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border.all(color: SoboTheme.sage.withOpacity(0.5)),
-                            ),
-                            child: Row(
-                              children: [
-                                const Icon(Icons.alarm_on_rounded, size: 14, color: SoboTheme.forest),
-                                const SizedBox(width: 6),
-                                Expanded(
-                                  child: Text(
-                                    'Sabit Saatler: ${m['sabit_ders_saatleri']}',
-                                    style: SoboTheme.fontSans(fontSize: 11, fontWeight: FontWeight.bold, color: SoboTheme.forest),
-                                    overflow: TextOverflow.ellipsis,
+                          InkWell(
+                            onTap: () => _showQuickEditSabitSaatModal(m),
+                            borderRadius: BorderRadius.circular(8),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                              margin: const EdgeInsets.only(bottom: 8),
+                              decoration: BoxDecoration(
+                                color: SoboTheme.sage.withOpacity(0.15),
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(color: SoboTheme.sage.withOpacity(0.5)),
+                              ),
+                              child: Row(
+                                children: [
+                                  const Icon(Icons.alarm_on_rounded, size: 15, color: SoboTheme.forest),
+                                  const SizedBox(width: 6),
+                                  Expanded(
+                                    child: Text(
+                                      'Sabit Saatler: ${m['sabit_ders_saatleri']}',
+                                      style: SoboTheme.fontSans(fontSize: 11, fontWeight: FontWeight.bold, color: SoboTheme.forest),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
                                   ),
-                                ),
-                              ],
+                                  const SizedBox(width: 4),
+                                  const Icon(Icons.edit_rounded, size: 13, color: SoboTheme.forest),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ] else ...[
+                          InkWell(
+                            onTap: () => _showQuickEditSabitSaatModal(m),
+                            borderRadius: BorderRadius.circular(8),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                              margin: const EdgeInsets.only(bottom: 8),
+                              decoration: BoxDecoration(
+                                color: SoboTheme.sandLight,
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(color: SoboTheme.line),
+                              ),
+                              child: Row(
+                                children: [
+                                  Icon(Icons.add_alarm_rounded, size: 14, color: SoboTheme.secondary),
+                                  const SizedBox(width: 6),
+                                  Expanded(
+                                    child: Text(
+                                      '+ Sabit Ders Saati Tanımla (Örn: Salı 11:30)',
+                                      style: SoboTheme.fontSans(fontSize: 10.5, fontWeight: FontWeight.w600, color: SoboTheme.secondary),
+                                    ),
+                                  ),
+                                  Icon(Icons.add, size: 13, color: SoboTheme.secondary),
+                                ],
+                              ),
                             ),
                           ),
                         ],

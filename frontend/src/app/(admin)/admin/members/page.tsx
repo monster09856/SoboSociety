@@ -27,6 +27,7 @@ interface MemberDetail {
   boy?: string | null
   kilo?: string | null
   saglik_notu?: string | null
+  sabit_ders_saatleri?: string | null
   aktif_member_package_id?: number | null
   aktif_paket_adi?: string | null
   paket_bitis_tarihi?: string | null
@@ -66,7 +67,17 @@ export default function AdminMembersPage() {
   const [editBoy, setEditBoy] = useState('')
   const [editKilo, setEditKilo] = useState('')
   const [editSaglikNotu, setEditSaglikNotu] = useState('')
+  const [editSabitDersSaatleri, setEditSabitDersSaatleri] = useState('')
   const [updating, setUpdating] = useState(false)
+
+  // Package Edit Modal State
+  const [editingPkgMember, setEditingPkgMember] = useState<MemberDetail | null>(null)
+  const [editingPkg, setEditingPkg] = useState<any | null>(null)
+  const [pkgEditKalanDers, setPkgEditKalanDers] = useState<number>(0)
+  const [pkgEditSabitDers, setPkgEditSabitDers] = useState<string>('')
+  const [pkgEditEkGun, setPkgEditEkGun] = useState<number | null>(null)
+  const [pkgEditBitis, setPkgEditBitis] = useState<string>('')
+  const [updatingPkg, setUpdatingPkg] = useState(false)
 
   // Single Push Notification Modal State
   const [notifMember, setNotifMember] = useState<MemberDetail | null>(null)
@@ -82,6 +93,7 @@ export default function AdminMembersPage() {
   const [customCredits, setCustomCredits] = useState(10)
   const [customUnit, setCustomUnit] = useState<'hafta' | 'gun'>('hafta')
   const [customVal, setCustomVal] = useState(6)
+  const [pkgSabitDersSaatleri, setPkgSabitDersSaatleri] = useState('')
   const [assigningPkg, setAssigningPkg] = useState(false)
 
   const loadMembers = async (query?: string) => {
@@ -122,6 +134,16 @@ export default function AdminMembersPage() {
     setEditBoy(m.boy || '')
     setEditKilo(m.kilo || '')
     setEditSaglikNotu(m.saglik_notu || '')
+    setEditSabitDersSaatleri(m.sabit_ders_saatleri || '')
+  }
+
+  const openEditPackageModal = (m: MemberDetail, pkg: any) => {
+    setEditingPkgMember(m)
+    setEditingPkg(pkg)
+    setPkgEditKalanDers(pkg.toplam_ders || m.bakiye || 0)
+    setPkgEditSabitDers(m.sabit_ders_saatleri || '')
+    setPkgEditEkGun(null)
+    setPkgEditBitis(pkg.bitis_tarihi || '')
   }
 
   const handleUpdateMember = async (e: React.FormEvent) => {
@@ -146,14 +168,47 @@ export default function AdminMembersPage() {
         boy: editBoy,
         kilo: editKilo,
         saglik_notu: editSaglikNotu,
+        sabit_ders_saatleri: editSabitDersSaatleri,
       })
-      setSuccess(`${newName} üyesinin tüm bilgileri, vücut ölçüleri ve bakiyesi güncellendi.`)
+      setSuccess(`${newName} üyesinin tüm bilgileri, sabit ders saatleri ve bakiyesi güncellendi.`)
       setEditingMember(null)
       loadMembers(search)
     } catch (err: any) {
       setError(err?.message || 'Üye güncellenirken bir hata oluştu.')
     } finally {
       setUpdating(false)
+    }
+  }
+
+  const handleUpdatePackage = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!editingPkgMember || !editingPkg) return
+    setUpdatingPkg(true)
+    setError(null)
+    setSuccess(null)
+
+    try {
+      const payload: any = {}
+      if (pkgEditKalanDers !== undefined) payload.kalan_ders = Number(pkgEditKalanDers)
+      if (pkgEditEkGun) payload.ek_gun = Number(pkgEditEkGun)
+      else if (pkgEditBitis) payload.bitis = pkgEditBitis
+      if (pkgEditSabitDers !== undefined) payload.sabit_ders_saatleri = pkgEditSabitDers.trim()
+
+      await admin.updateMemberPackage(editingPkgMember.id, editingPkg.id, payload)
+      if (pkgEditSabitDers.trim()) {
+        try {
+          await admin.updateMember(editingPkgMember.id, { sabit_ders_saatleri: pkgEditSabitDers.trim() })
+        } catch (_) {}
+      }
+
+      setSuccess(`${editingPkgMember.ad} üyesinin paket bilgileri ve sabit ders saatleri güncellendi. ✨`)
+      setEditingPkgMember(null)
+      setEditingPkg(null)
+      loadMembers(search)
+    } catch (err: any) {
+      setError(err?.message || 'Paket güncellenirken hata oluştu.')
+    } finally {
+      setUpdatingPkg(false)
     }
   }
 
@@ -195,16 +250,24 @@ export default function AdminMembersPage() {
           ozel_paket_adi: customPkgName.trim() || 'Özel Üye Paketi',
           ozel_ders_adedi: Number(customCredits),
           ozel_gecerlilik_gun: actualDays,
+          sabit_ders_saatleri: pkgSabitDersSaatleri.trim() || undefined,
         })
         setSuccess(`${pkgMember.ad} üyesine özel ${customPkgName || 'Özel Paket'} (${customCredits} Ders / ${actualDays} Gün - ${customUnit === 'hafta' ? `${customVal} Hafta` : ''}) tanımlandı.`)
       } else {
         await admin.assignPackage({
           member_id: pkgMember.id,
           package_id: selectedPkgId,
+          sabit_ders_saatleri: pkgSabitDersSaatleri.trim() || undefined,
         })
         setSuccess(`${pkgMember.ad} üyesine ders paketi tanımlandı.`)
       }
+      if (pkgSabitDersSaatleri.trim()) {
+        try {
+          await admin.updateMember(pkgMember.id, { sabit_ders_saatleri: pkgSabitDersSaatleri.trim() })
+        } catch (_) {}
+      }
       setPkgMember(null)
+      setPkgSabitDersSaatleri('')
       loadMembers(search)
     } catch (err: any) {
       setError(err?.message || 'Paket tanımlanırken hata oluştu.')
@@ -457,15 +520,26 @@ export default function AdminMembersPage() {
                                   <span className="text-sage font-bold">({pkg.kalan_gun} Gün Kaldı)</span>
                                 </div>
                               </div>
-                              <button
-                                type="button"
-                                onClick={() => handleCancelPackage(m.id, pkg.id, pkg.ad, m.ad)}
-                                className="px-2 py-1 rounded-md text-[10px] font-extrabold text-clay hover:bg-clay/10 border border-clay/30 transition-all flex items-center gap-1 cursor-pointer shrink-0 shadow-2xs"
-                                title="Bu paketi iptal et"
-                              >
-                                <Trash2 className="w-3 h-3 text-clay" />
-                                <span>İptal</span>
-                              </button>
+                              <div className="flex items-center gap-1.5 shrink-0">
+                                <button
+                                  type="button"
+                                  onClick={() => openEditPackageModal(m, pkg)}
+                                  className="px-2 py-1 rounded-md text-[10px] font-extrabold text-espresso hover:bg-espresso/10 border border-espresso/30 transition-all flex items-center gap-1 cursor-pointer shadow-2xs"
+                                  title="Paketi uzat, kalan ders veya sabit saatleri düzenle"
+                                >
+                                  <Clock className="w-3 h-3 text-mocha" />
+                                  <span>Uzat/Düzenle</span>
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleCancelPackage(m.id, pkg.id, pkg.ad, m.ad)}
+                                  className="px-2 py-1 rounded-md text-[10px] font-extrabold text-clay hover:bg-clay/10 border border-clay/30 transition-all flex items-center gap-1 cursor-pointer shrink-0 shadow-2xs"
+                                  title="Bu paketi iptal et"
+                                >
+                                  <Trash2 className="w-3 h-3 text-clay" />
+                                  <span>İptal</span>
+                                </button>
+                              </div>
                             </div>
                           ))
                         ) : m.aktif_paket_adi ? (
@@ -480,15 +554,26 @@ export default function AdminMembersPage() {
                               </div>
                             </div>
                             {m.aktif_member_package_id && (
-                              <button
-                                type="button"
-                                onClick={() => handleCancelPackage(m.id, m.aktif_member_package_id!, m.aktif_paket_adi!, m.ad)}
-                                className="px-2.5 py-1 rounded-lg text-[10px] font-extrabold text-clay hover:bg-clay/10 border border-clay/30 transition-all flex items-center gap-1 cursor-pointer shrink-0 shadow-2xs"
-                                title="Bu aktif paketi iptal et"
-                              >
-                                <Trash2 className="w-3 h-3 text-clay" />
-                                <span>İptal</span>
-                              </button>
+                              <div className="flex items-center gap-1.5 shrink-0">
+                                <button
+                                  type="button"
+                                  onClick={() => openEditPackageModal(m, { id: m.aktif_member_package_id, ad: m.aktif_paket_adi, bitis_tarihi: m.paket_bitis_tarihi, toplam_ders: m.bakiye })}
+                                  className="px-2 py-1 rounded-md text-[10px] font-extrabold text-espresso hover:bg-espresso/10 border border-espresso/30 transition-all flex items-center gap-1 cursor-pointer shadow-2xs"
+                                  title="Paketi uzat, kalan ders veya sabit saatleri düzenle"
+                                >
+                                  <Clock className="w-3 h-3 text-mocha" />
+                                  <span>Uzat/Düzenle</span>
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleCancelPackage(m.id, m.aktif_member_package_id!, m.aktif_paket_adi!, m.ad)}
+                                  className="px-2.5 py-1 rounded-lg text-[10px] font-extrabold text-clay hover:bg-clay/10 border border-clay/30 transition-all flex items-center gap-1 cursor-pointer shrink-0 shadow-2xs"
+                                  title="Bu aktif paketi iptal et"
+                                >
+                                  <Trash2 className="w-3 h-3 text-clay" />
+                                  <span>İptal</span>
+                                </button>
+                              </div>
                             )}
                           </div>
                         ) : (
@@ -496,6 +581,32 @@ export default function AdminMembersPage() {
                         )}
                       </div>
                     </div>
+
+                    {/* Sabit Ders Saatleri Rozeti */}
+                    {m.sabit_ders_saatleri ? (
+                      <div className="p-2.5 rounded-xl bg-sage/15 border border-sage/40 flex items-center justify-between text-xs">
+                        <div className="flex items-center gap-1.5 text-sage font-extrabold truncate">
+                          <Clock className="w-3.5 h-3.5 shrink-0 text-sage" />
+                          <span className="truncate">Sabit Saatler: {m.sabit_ders_saatleri}</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => openEditModal(m)}
+                          className="text-[10px] font-bold text-sage underline hover:text-espresso shrink-0 cursor-pointer ml-1"
+                        >
+                          Düzenle
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => openEditModal(m)}
+                        className="p-2 rounded-xl bg-ivory border border-dashed border-line hover:border-espresso text-secondary hover:text-espresso text-[11px] font-medium flex items-center justify-center gap-1.5 transition-all cursor-pointer w-full text-center"
+                      >
+                        <Clock className="w-3.5 h-3.5 text-secondary" />
+                        <span>+ Sabit Ders Saati Tanımla (Salı 11:30 vb.)</span>
+                      </button>
+                    )}
 
                     <div className="flex items-center justify-between p-3 rounded-xl bg-ivory border border-line">
                       <span className="text-secondary font-semibold">Toplam Kalan Ders Hakkı:</span>
@@ -769,6 +880,21 @@ export default function AdminMembersPage() {
                     />
                   </div>
 
+                  <div>
+                    <label className="block text-xs font-bold text-secondary uppercase mb-1">
+                      Haftalık Sabit Ders Günleri & Saatleri
+                    </label>
+                    <Input
+                      placeholder="Örn: Salı 11:30, Perşembe 11:30"
+                      value={editSabitDersSaatleri}
+                      onChange={(e) => setEditSabitDersSaatleri(e.target.value)}
+                      className="bg-ivory border-line text-xs font-medium rounded-xl h-10"
+                    />
+                    <p className="text-[11px] text-secondary mt-1">
+                      Üyenin her hafta düzenli geleceği sabit gün ve saatler. Üye uygulamasında ve profilinde bunu görebilir.
+                    </p>
+                  </div>
+
                   <div className="flex justify-end gap-2 pt-2">
                     <button
                       type="button"
@@ -975,6 +1101,22 @@ export default function AdminMembersPage() {
                     </div>
                   )}
 
+                  <div>
+                    <label className="block text-xs font-bold text-secondary uppercase mb-1">
+                      Haftalık Sabit Ders Gün & Saatleri
+                    </label>
+                    <Input
+                      type="text"
+                      placeholder="Örn: Salı 11:30, Perşembe 11:30"
+                      value={pkgSabitDersSaatleri}
+                      onChange={(e) => setPkgSabitDersSaatleri(e.target.value)}
+                      className="bg-ivory border-line text-xs font-medium rounded-xl h-10"
+                    />
+                    <p className="text-[11px] text-secondary mt-1">
+                      Üyenin her hafta düzenli katılacağı sabit ders saatleri.
+                    </p>
+                  </div>
+
                   <div className="flex justify-end gap-2 pt-2">
                     <button
                       type="button"
@@ -990,6 +1132,112 @@ export default function AdminMembersPage() {
                     >
                       {assigningPkg && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
                       <span>PAKETİ TANIMLA</span>
+                    </button>
+                  </div>
+                </form>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
+        {/* Modal 4: Edit Member Package & Fixed Hours */}
+        {editingPkgMember && editingPkg && (
+          <div className="fixed inset-0 z-50 bg-ink/60 backdrop-blur-xs overflow-y-auto p-4 sm:p-6 flex items-center justify-center min-h-screen">
+            <Card className="max-w-md w-full my-auto bg-sand border border-line rounded-2xl shadow-xl animate-in fade-in zoom-in-95 duration-150 overflow-hidden">
+              <CardHeader className="border-b border-line pb-4 shrink-0">
+                <CardTitle className="font-serif text-lg font-bold text-ink flex items-center gap-2">
+                  <Clock className="w-4 h-4 text-espresso" />
+                  <span>Paket & Ders Düzenle</span>
+                </CardTitle>
+                <CardDescription className="text-xs text-secondary">
+                  <strong>{editingPkgMember.ad}</strong> • {editingPkg.ad || 'Ders Paketi'}
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="pt-6 space-y-4">
+                <form onSubmit={handleUpdatePackage} className="space-y-4">
+                  <div className="p-3 rounded-xl bg-ivory border border-line flex items-center justify-between text-xs">
+                    <span className="text-secondary font-semibold">Mevcut Bitiş:</span>
+                    <span className="font-bold text-espresso">{editingPkg.bitis_tarihi || editingPkgMember.paket_bitis_tarihi || 'Belirtilmemiş'}</span>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-secondary uppercase mb-1">Kalan Ders Sayısı</label>
+                    <Input
+                      type="number"
+                      min={0}
+                      max={500}
+                      value={pkgEditKalanDers}
+                      onChange={(e) => setPkgEditKalanDers(Number(e.target.value))}
+                      className="bg-ivory border-line text-sm font-bold text-espresso rounded-xl h-10"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-secondary uppercase mb-1">
+                      Haftalık Sabit Ders Günleri & Saatleri
+                    </label>
+                    <Input
+                      type="text"
+                      placeholder="Örn: Salı 11:30, Perşembe 11:30"
+                      value={pkgEditSabitDers}
+                      onChange={(e) => setPkgEditSabitDers(e.target.value)}
+                      className="bg-ivory border-line text-xs font-medium rounded-xl h-10"
+                    />
+                    <p className="text-[11px] text-secondary mt-1">
+                      Üyenin her hafta düzenli katılacağı sabit gün ve saatler.
+                    </p>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-secondary uppercase mb-1">Süre Uzatma / Bitiş Tarihi</label>
+                    <div className="flex flex-wrap gap-2 mb-2">
+                      {[7, 14, 30, 45, 60].map((days) => (
+                        <button
+                          key={days}
+                          type="button"
+                          onClick={() => {
+                            setPkgEditEkGun(pkgEditEkGun === days ? null : days)
+                          }}
+                          className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                            pkgEditEkGun === days
+                              ? 'bg-clay text-white shadow-xs'
+                              : 'bg-ivory text-espresso border border-line hover:border-espresso'
+                          }`}
+                        >
+                          +{days} Gün
+                        </button>
+                      ))}
+                    </div>
+                    <Input
+                      type="date"
+                      value={pkgEditBitis}
+                      onChange={(e) => {
+                        setPkgEditBitis(e.target.value)
+                        setPkgEditEkGun(null)
+                      }}
+                      className="bg-ivory border-line text-xs font-medium rounded-xl h-10"
+                    />
+                  </div>
+
+                  <div className="flex justify-end gap-2 pt-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEditingPkgMember(null)
+                        setEditingPkg(null)
+                      }}
+                      className="px-4 py-2.5 rounded-xl text-xs font-bold text-secondary hover:text-ink cursor-pointer"
+                    >
+                      İptal
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={updatingPkg}
+                      className="px-5 py-2.5 rounded-xl text-xs font-extrabold uppercase bg-espresso text-ivory hover:bg-espresso-dark transition-all cursor-pointer shadow-xs flex items-center gap-2"
+                    >
+                      {updatingPkg && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                      <span>DEĞİŞİKLİKLERİ KAYDET</span>
                     </button>
                   </div>
                 </form>
