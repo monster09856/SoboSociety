@@ -83,12 +83,6 @@ async def ai_concierge_chat(
             if db_pkgs:
                 pkg_lines = []
                 for p in db_pkgs:
-                    fiyat_tl = p.fiyat_kurus / 100.0 if hasattr(p, "fiyat_kurus") and p.fiyat_kurus else 0.0
-                    if p.gecerlilik_gun % 7 == 0:
-                        sure_str = f"{p.gecerlilik_gun // 7} Hafta"
-                    else:
-                pkg_lines = []
-                for p in pkgs:
                     sure_str = f"{p.gecerlilik_gun // 7} Hafta" if p.gecerlilik_gun % 7 == 0 else f"{p.gecerlilik_gun} Gün"
                     pkg_lines.append(f"• **{p.ad}**: {p.ders_adedi} Ders ({sure_str} Kullanım)")
                 
