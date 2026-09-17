@@ -86,7 +86,12 @@ class ApiClient {
     final http.Response response = await http.delete(Uri.parse(url), headers: headers);
 
     if (response.statusCode >= 200 && response.statusCode < 300) {
-      return jsonDecode(response.body);
+      if (response.body.isEmpty) return <String, dynamic>{};
+      try {
+        return jsonDecode(response.body);
+      } catch (_) {
+        return <String, dynamic>{};
+      }
     } else {
       throw Exception(_extractErrorMessage(response));
     }

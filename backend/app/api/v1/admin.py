@@ -2,7 +2,7 @@ from datetime import date, datetime, time, timezone, timedelta
 import logging
 
 from fastapi import APIRouter, Depends, Query
-from sqlalchemy import select, delete
+from sqlalchemy import select, delete, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_db, get_current_admin
@@ -607,7 +607,20 @@ async def delete_session_endpoint(
         delete(WaitlistEntry).where(WaitlistEntry.session_id == session_id)
     )
 
-    # 4. Oturumu sil
+    # 4. İlgili tüm rezervasyonların ledger referanslarını temizle ve rezervasyonları sil
+    res_all_b = await db.execute(
+        select(Booking.id).where(Booking.session_id == session_id)
+    )
+    all_b_ids = res_all_b.scalars().all()
+    if all_b_ids:
+        await db.execute(
+            update(CreditLedger)
+            .where(CreditLedger.booking_id.in_(all_b_ids))
+            .values(booking_id=None)
+        )
+        await db.execute(delete(Booking).where(Booking.session_id == session_id))
+
+    # 5. Oturumu sil
     await db.delete(session)
     await db.commit()
 
@@ -1311,6 +1324,7 @@ async def delete_admin_event(
     if not ev:
         raise HTTPException(status_code=404, detail="Etkinlik bulunamadı.")
     
+    await db.execute(delete(EventRSVP).where(EventRSVP.event_id == event_id))
     await db.delete(ev)
     await db.commit()
     return {"silindi": True, "event_id": event_id}
