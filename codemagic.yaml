@@ -80,7 +80,7 @@ workflows:
 
   ios-shorebird-patch:
     name: Sobo Society iOS Shorebird Instant OTA Patch
-    max_build_duration: 30
+    max_build_duration: 45
     instance_type: mac_mini_m2
     working_directory: android
     environment:
@@ -109,5 +109,5 @@ workflows:
           flutter packages get
           curl --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/shorebirdtech/install/main/install.sh | bash
           export PATH="$HOME/.shorebird/bin:$PATH"
-          yes | shorebird patch ios --release-version=1.0.4+15 --allow-asset-diffs --export-options-plist=ios/ExportOptions.plist
+          printf 'y\ny\ny\n' | shorebird patch ios --release-version=1.0.4+15 --allow-asset-diffs --export-options-plist=ios/ExportOptions.plist
 
