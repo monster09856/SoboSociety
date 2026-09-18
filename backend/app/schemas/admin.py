@@ -59,6 +59,7 @@ class PackageAssignRequest(BaseModel):
 
 class AdminBookSessionRequest(BaseModel):
     session_id: int = Field(..., description="Üyenin kaydedileceği ders oturumu ID'si")
+    haftalik_tekrar_sayisi: int = Field(default=1, ge=1, le=16, description="Haftalık tekrarlama sayısı (1=yalnızca bu seans, 4=4 hafta, 8=8 hafta vb.)")
 
 
 class MemberPackageResponse(BaseModel):

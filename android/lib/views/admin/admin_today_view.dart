@@ -2459,6 +2459,7 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
     }
 
     int? selectedSessionId = _allSessions.isNotEmpty ? (_allSessions.first['id'] as int?) : null;
+    int repeatWeeks = 1;
     bool isSubmitting = false;
 
     showModalBottomSheet<void>(
@@ -2509,7 +2510,7 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
                         padding: const EdgeInsets.symmetric(vertical: 16),
                         child: Text('Takvimde aktif ders oturumu bulunamadı. Lütfen önce Dersler sekmesinden seans ekleyin.', style: SoboTheme.fontSans(fontSize: 12, color: SoboTheme.secondary)),
                       )
-                    else
+                    else ...[
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 12),
                         decoration: BoxDecoration(
@@ -2539,6 +2540,69 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
                           ),
                         ),
                       ),
+                      const SizedBox(height: 14),
+                      Text('HAFTALIK TEKRARLAMA (SABİT PROGRAM)', style: SoboTheme.fontSans(fontSize: 10, fontWeight: FontWeight.bold, color: SoboTheme.secondary)),
+                      const SizedBox(height: 6),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: ChoiceChip(
+                              label: const Center(child: Text('1 Seans')),
+                              selected: repeatWeeks == 1,
+                              selectedColor: SoboTheme.espresso,
+                              labelStyle: TextStyle(
+                                color: repeatWeeks == 1 ? Colors.white : SoboTheme.espresso,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 11,
+                              ),
+                              onSelected: (val) {
+                                if (val) setModalState(() => repeatWeeks = 1);
+                              },
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: ChoiceChip(
+                              label: const Center(child: Text('4 Hafta')),
+                              selected: repeatWeeks == 4,
+                              selectedColor: SoboTheme.espresso,
+                              labelStyle: TextStyle(
+                                color: repeatWeeks == 4 ? Colors.white : SoboTheme.espresso,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 11,
+                              ),
+                              onSelected: (val) {
+                                if (val) setModalState(() => repeatWeeks = 4);
+                              },
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: ChoiceChip(
+                              label: const Center(child: Text('8 Hafta')),
+                              selected: repeatWeeks == 8,
+                              selectedColor: SoboTheme.espresso,
+                              labelStyle: TextStyle(
+                                color: repeatWeeks == 8 ? Colors.white : SoboTheme.espresso,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 11,
+                              ),
+                              onSelected: (val) {
+                                if (val) setModalState(() => repeatWeeks = 8);
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
+                      if (repeatWeeks > 1)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 6),
+                          child: Text(
+                            '✨ Üye sonraki $repeatWeeks hafta boyunca bu gün ve saatteki seanslara otomatik rezerve edilir. İptal ettiğinde yeri anında boşalır.',
+                            style: SoboTheme.fontSans(fontSize: 11, color: SoboTheme.forest, fontWeight: FontWeight.w600),
+                          ),
+                        ),
+                    ],
 
                     const SizedBox(height: 20),
                     ElevatedButton(
@@ -2549,6 +2613,7 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
                               try {
                                 final dynamic res = await ApiClient.post('/admin/members/${m['id']}/book-session', <String, dynamic>{
                                   'session_id': selectedSessionId,
+                                  'haftalik_tekrar_sayisi': repeatWeeks,
                                 });
 
                                 if (ctx.mounted) {

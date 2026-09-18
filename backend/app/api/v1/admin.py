@@ -314,20 +314,63 @@ async def admin_book_session_for_member(
             now=now,
             kaynak=BookingKaynagi.ADMIN,
         )
+        booked_count = 1
+
+        # Haftalık tekrarlama istenmişse sonraki haftalardaki eşleşen oturumlara da otomatik kaydet
+        if body.haftalik_tekrar_sayisi > 1:
+            for week_idx in range(1, body.haftalik_tekrar_sayisi):
+                target_time = session.baslangic + timedelta(days=7 * week_idx)
+                window_start = target_time - timedelta(minutes=30)
+                window_end = target_time + timedelta(minutes=30)
+                matching_stmt = (
+                    select(ClassSession)
+                    .where(
+                        ClassSession.class_type_id == session.class_type_id,
+                        ClassSession.baslangic >= window_start,
+                        ClassSession.baslangic <= window_end,
+                        ClassSession.durum != "cancelled",
+                    )
+                    .order_by(ClassSession.baslangic)
+                )
+                matching_res = await db.execute(matching_stmt)
+                next_session = matching_res.scalars().first()
+                if next_session:
+                    try:
+                        await rezerve_et(
+                            db,
+                            member_id=m.id,
+                            session_id=next_session.id,
+                            now=now,
+                            kaynak=BookingKaynagi.ADMIN,
+                        )
+                        booked_count += 1
+                    except Exception:
+                        # Kredi bittiğinde veya kontenjan dolduğunda dur
+                        break
+
         await db.commit()
         await db.refresh(booking)
 
         class_ad = session.class_type.ad if session.class_type else "Ders"
         ders_tarih = session.baslangic.strftime("%d.%m.%Y %H:%M")
+        bildirim_mesaj = (
+            f"Merhaba {m.ad}, {class_ad} seansına {booked_count} hafta boyunca kaydınız başarıyla tamamlandı. Detayları Derslerim ekranından görebilirsiniz ✨"
+            if booked_count > 1
+            else f"Merhaba {m.ad}, {class_ad} ({ders_tarih}) seansına kaydınız stüdyomuz tarafından başarıyla yapıldı. Derslerim ekranından detayları görebilirsiniz ✨"
+        )
         await bildirim_gonder(
             db,
             member_id=m.id,
-            baslik="🎯 Yeni Ders Kaydınız Yapıldı!",
-            mesaj=f"Merhaba {m.ad}, {class_ad} ({ders_tarih}) seansına kaydınız stüdyomuz tarafından başarıyla yapıldı. Derslerim ekranından detayları görebilirsiniz ✨",
+            baslik="🎯 Ders Kaydınız Yapıldı!",
+            mesaj=bildirim_mesaj,
             tip="REZERVE_ONAY",
         )
         await db.commit()
-        return {"booking_id": booking.id, "mesaj": f"{m.ad} üyesi {class_ad} ({ders_tarih}) seansına başarıyla kaydedildi."}
+        return {
+            "booking_id": booking.id,
+            "kayit_sayisi": booked_count,
+            "mesaj": f"{m.ad} üyesi {booked_count} seansa başarıyla kaydedildi.",
+        }
     except Exception as e:
         await db.rollback()
         raise HTTPException(status_code=400, detail=str(e))
