@@ -148,14 +148,15 @@ async def rezerve_et(
         tip="REZERVE_ONAY",
     )
 
-    # Adminlere (Eda Hanım'a) anlık bildirim & push
-    member_rec = await db.get(Member, member_id)
-    member_ad = member_rec.ad if member_rec else f"Üye #{member_id}"
-    ders_saat_str = oturum.baslangic.strftime("%d.%m %H:%M")
-    await adminlere_bildirim_gonder(
-        db,
-        baslik="📅 Yeni Ders Rezervasyonu!",
-        mesaj=f"{member_ad} üyesi {tip.ad} ({ders_saat_str}) dersine rezervasyon yaptı. (Doluluk: {oturum.dolu_sayi}/{oturum.kontenjan})",
-        tip="YENI_REZERVASYON",
-    )
+    # Adminlere (Eda Hanım'a) anlık bildirim & push (üye kendi rezerve ettiğinde)
+    if kaynak != BookingKaynagi.ADMIN:
+        member_rec = await db.get(Member, member_id)
+        member_ad = member_rec.ad if member_rec else f"Üye #{member_id}"
+        ders_saat_str = oturum.baslangic.strftime("%d.%m %H:%M")
+        await adminlere_bildirim_gonder(
+            db,
+            baslik="📅 Yeni Ders Rezervasyonu!",
+            mesaj=f"{member_ad} üyesi {tip.ad} ({ders_saat_str}) dersine rezervasyon yaptı. (Doluluk: {oturum.dolu_sayi}/{oturum.kontenjan})",
+            tip="YENI_REZERVASYON",
+        )
     return kayit

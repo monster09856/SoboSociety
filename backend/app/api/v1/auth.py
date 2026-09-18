@@ -105,6 +105,17 @@ async def register_endpoint(
     await db.refresh(new_member)
 
     if not aktif:
+        try:
+            from app.services.bildirim import adminlere_bildirim_gonder
+            await adminlere_bildirim_gonder(
+                db,
+                baslik="✨ Yeni Üyelik Başvurusu!",
+                mesaj=f"{new_member.ad} ({new_member.telefon or new_member.kullanici_adi}) stüdyoya kaydoldu, onayınızı bekliyor.",
+                tip="YENI_UYE",
+            )
+            await db.commit()
+        except Exception:
+            pass
         raise HTTPException(
             status_code=403,
             detail="Üyelik başvurunuz stüdyo yönetimi tarafından incelenmektedir. Hesabınız onaylandığında giriş yapabileceksiniz. ✨",
@@ -200,6 +211,17 @@ async def verify_otp_endpoint(
         await db.refresh(member)
 
     if not member.aktif and not is_admin:
+        try:
+            from app.services.bildirim import adminlere_bildirim_gonder
+            await adminlere_bildirim_gonder(
+                db,
+                baslik="✨ Yeni Üyelik Başvurusu!",
+                mesaj=f"{member.ad} ({member.telefon}) stüdyoya kaydoldu, onayınızı bekliyor.",
+                tip="YENI_UYE",
+            )
+            await db.commit()
+        except Exception:
+            pass
         raise HTTPException(
             status_code=403,
             detail="Üyelik başvurunuz stüdyo yönetimi tarafından incelenmektedir. Hesabınız onaylandığında giriş yapabileceksiniz. ✨",
