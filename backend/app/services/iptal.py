@@ -73,10 +73,9 @@ async def iptal_et(
     )
     kaynak_paket_id = sonuc.scalar_one_or_none()
 
-    # Yeni oluşturulan rezervasyonlar için hoşgörü penceresi (test veya yanlışlıkla basma durumunda 60 dk içinde tam iade)
-    yeni_kayit = (now - kayit.created_at).total_seconds() <= 3600 if kayit.created_at else False
-
-    if pencerede or is_admin or yeni_kayit:
+    # İptal kuralı: 12 saatten fazla varsa (pencerede) veya yönetici ise iade yapılır.
+    # 12 saatten az süre kala yapılan iptallerde ders hakkı kesinlikle iade edilmez (yanar).
+    if pencerede or is_admin:
         await hareket_ekle(
             db, member_id=kayit.member_id, tip=LedgerTipi.CANCEL_REFUND, miktar=1,
             sebep=f"{tip.ad} — iptal (bakiye iadesi)",
@@ -84,10 +83,10 @@ async def iptal_et(
         )
         iade = True
     else:
-        kalan_saat = (oturum.baslangic - now).total_seconds() / 3600
+        kalan_saat = max(0.0, (oturum.baslangic - now).total_seconds() / 3600)
         await hareket_ekle(
             db, member_id=kayit.member_id, tip=LedgerTipi.LATE_CANCEL, miktar=0,
-            sebep=f"{tip.ad} — ders saatine {kalan_saat:.1f} saat kala iptal (geç iptal)",
+            sebep=f"{tip.ad} — ders saatine {kalan_saat:.1f} saat kala iptal (geç iptal - hakkı yandı)",
             member_package_id=kaynak_paket_id, booking_id=kayit.id,
         )
         iade = False
@@ -100,7 +99,7 @@ async def iptal_et(
     member_rec = await db.get(Member, kayit.member_id)
     member_ad = member_rec.ad if member_rec else f"Üye #{kayit.member_id}"
     ders_saat_str = oturum.baslangic.strftime("%d.%m %H:%M")
-    durum_aciklama = "1 ders hakkı hesabınıza iade edildi." if iade else "Geç iptal (12 saatten az kala) sebebiyle ders hakkı iadesi yapılamadı."
+    durum_aciklama = "1 ders hakkı hesabınıza iade edildi." if iade else "Geç iptal (12 saatten az kala) sebebiyle stüdyo kuralı gereği ders hakkı iadesi yapılmadı (ders hakkınız yandı)."
 
     # Üyeye bildirim
     await bildirim_gonder(

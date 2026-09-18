@@ -74,9 +74,9 @@ class _MyBookingsViewState extends State<MyBookingsView> with SingleTickerProvid
         ),
         content: Text(
           isWithin12Hours
-              ? "'${booking.classTypeName}' (${_formatDate(booking.baslangic)}) dersinize 12 saatten az süre kalmıştır. Rezervasyonunuzu iptal etmek ve yerinizi boşaltmak istediğinizden emin misiniz?"
+              ? "'${booking.classTypeName}' (${_formatDate(booking.baslangic)}) dersinize 12 saatten az süre kalmıştır.\n\n⚠️ Stüdyo kuralları gereği 12 saatten az süre kaldığında yapılan iptallerde DERS HAKKI İADE EDİLMEZ (yanmış sayılır).\n\nRezervasyonunuzu iptal etmek ve yerinizi boşaltmak istediğinizden emin misiniz?"
               : "'${booking.classTypeName}' (${_formatDate(booking.baslangic)}) ders rezervasyonunuzu iptal etmek istediğinizden emin misiniz? 1 ders hakkınız hesabınıza iade edilecektir.",
-          style: SoboTheme.fontSans(fontSize: 13, color: SoboTheme.secondary, height: 1.4),
+          style: SoboTheme.fontSans(fontSize: 13, color: SoboTheme.ink, height: 1.4),
         ),
         actions: [
           TextButton(
@@ -89,7 +89,7 @@ class _MyBookingsViewState extends State<MyBookingsView> with SingleTickerProvid
               backgroundColor: SoboTheme.clay,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             ),
-            child: Text('Evet, İptal Et', style: SoboTheme.fontSans(fontWeight: FontWeight.bold, color: Colors.white)),
+            child: Text(isWithin12Hours ? 'Evet, Hakkımı Yak ve İptal Et' : 'Evet, İptal Et', style: SoboTheme.fontSans(fontWeight: FontWeight.bold, color: Colors.white)),
           ),
         ],
       ),
@@ -98,12 +98,19 @@ class _MyBookingsViewState extends State<MyBookingsView> with SingleTickerProvid
     if (confirm != true) return;
 
     try {
-      final res = await ApiClient.post('/bookings/${booking.id}/cancel', <String, dynamic>{});
+      final dynamic res = await ApiClient.post('/bookings/${booking.id}/cancel', <String, dynamic>{});
       if (mounted) {
+        final bool isRefunded = (res is Map && res['iade_edildi'] == true);
+        final String mesaj = (res is Map && res['mesaj'] != null)
+            ? res['mesaj'] as String
+            : (isWithin12Hours
+                ? 'Ders rezervasyonunuz iptal edildi. 12 saat kuralı gereği ders hakkınız iade edilmemiştir (yanmıştır).'
+                : 'Ders rezervasyonunuz başarıyla iptal edildi. 1 ders hakkınız hesabınıza iade edildi.');
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(res['mesaj'] ?? 'Ders rezervasyonunuz başarıyla iptal edildi.'),
-            backgroundColor: SoboTheme.sage,
+            content: Text(mesaj),
+            backgroundColor: isRefunded ? SoboTheme.sage : SoboTheme.clay,
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
           ),

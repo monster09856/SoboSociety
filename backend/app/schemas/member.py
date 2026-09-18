@@ -56,6 +56,8 @@ class BookingResponse(BaseModel):
     kaynak: str
     cancelled_at: datetime | None = None
     session: ClassSessionResponse | None = None
+    mesaj: str | None = None
+    iade_edildi: bool | None = None
 
     model_config = ConfigDict(from_attributes=True)
 

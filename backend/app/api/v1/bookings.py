@@ -70,7 +70,13 @@ async def cancel_booking(
         sonuc = await iptal_et(db, booking_id=booking_id, now=now)
         await db.commit()
         await db.refresh(sonuc.booking)
-        return sonuc.booking
+        resp = BookingResponse.model_validate(sonuc.booking)
+        resp.iade_edildi = sonuc.iade_edildi
+        if sonuc.iade_edildi:
+            resp.mesaj = "Ders rezervasyonunuz başarıyla iptal edildi. 1 ders hakkınız hesabınıza iade edildi."
+        else:
+            resp.mesaj = "Ders rezervasyonunuz iptal edildi. 12 saat kuralı gereği ders hakkınız iade edilmemiştir (yanmıştır)."
+        return resp
     except Exception:
         await db.rollback()
         raise
