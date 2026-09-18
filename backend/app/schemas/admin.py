@@ -168,11 +168,30 @@ class MemberAdminDetailResponse(BaseModel):
     aktif_paket_adi: str | None = None
     paket_bitis_tarihi: str | None = None
     kalan_gun_sayisi: int | None = None
+    is_bireysel: bool = False
     aktif_paketler: list[MemberPackageDetail] = Field(default_factory=list)
     tanimlanan_paketler: list[str] = Field(default_factory=list)
     aktif_rezervasyonlar: list[str] = Field(default_factory=list)
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class AutoBookFixedScheduleRequest(BaseModel):
+    hafta_sayisi: int = Field(default=4, ge=1, le=12, description="Kaç haftalık seans takvime işlenecek (varsayılan 4 hafta)")
+    class_type_id: int | None = Field(default=None, description="Opsiyonel özel ders tipi ID'si")
+    instructor_id: int | None = Field(default=None, description="Opsiyonel eğitmen ID'si")
+
+
+class AutoBookFixedScheduleResponse(BaseModel):
+    success: bool
+    member_id: int
+    member_name: str
+    is_bireysel: bool
+    booked_count: int
+    failed_count: int = 0
+    kalan_bakiye: int
+    dates: list[str]
+    message: str
 
 
 class MemberSinglePushRequest(BaseModel):

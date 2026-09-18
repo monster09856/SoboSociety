@@ -60,6 +60,35 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
   // 4. Members & Body Measurements State
   List<dynamic> _members = <dynamic>[];
   final TextEditingController _searchMemberCtrl = TextEditingController();
+  String _memberFilterTab = 'ALL'; // 'ALL', 'BIREYSEL', 'GRUP', 'PENDING'
+
+  bool _isBireyselMember(dynamic m) {
+    if (m == null) return false;
+    if (m['is_bireysel'] == true) return true;
+    final List<dynamic> pkgs = (m['aktif_paketler'] is List) ? (m['aktif_paketler'] as List) : <dynamic>[];
+    for (final dynamic p in pkgs) {
+      final String name = (p['ad'] ?? '').toString().toLowerCase();
+      if (name.contains('bireysel') || name.contains('özel') || name.contains('1-on-1') || name.contains('birebir')) {
+        return true;
+      }
+    }
+    final String activePkgName = (m['aktif_paket_adi'] ?? '').toString().toLowerCase();
+    if (activePkgName.contains('bireysel') || activePkgName.contains('özel') || activePkgName.contains('1-on-1') || activePkgName.contains('birebir')) {
+      return true;
+    }
+    final List<dynamic> tanimlanan = (m['tanimlanan_paketler'] is List) ? (m['tanimlanan_paketler'] as List) : <dynamic>[];
+    for (final dynamic p in tanimlanan) {
+      final String name = p.toString().toLowerCase();
+      if (name.contains('bireysel') || name.contains('özel') || name.contains('1-on-1') || name.contains('birebir')) {
+        return true;
+      }
+    }
+    final String sabit = (m['sabit_ders_saatleri'] ?? '').toString().toLowerCase();
+    if (sabit.contains('bireysel') || sabit.contains('özel') || sabit.contains('birebir')) {
+      return true;
+    }
+    return false;
+  }
 
   // 5. Package Management State
   List<dynamic> _packages = <dynamic>[];
@@ -3373,6 +3402,337 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
     );
   }
 
+  Widget _buildFilterChip(String key, String label, IconData icon) {
+    final bool isSelected = _memberFilterTab == key;
+    return InkWell(
+      onTap: () => setState(() => _memberFilterTab = key),
+      borderRadius: BorderRadius.circular(20),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        decoration: BoxDecoration(
+          color: isSelected ? SoboTheme.espresso : Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: isSelected ? SoboTheme.espresso : SoboTheme.line,
+            width: isSelected ? 1.5 : 1,
+          ),
+          boxShadow: isSelected
+              ? [BoxShadow(color: SoboTheme.espresso.withOpacity(0.2), blurRadius: 6, offset: const Offset(0, 2))]
+              : null,
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 14, color: isSelected ? Colors.white : SoboTheme.secondary),
+            const SizedBox(width: 6),
+            Text(
+              label,
+              style: SoboTheme.fontSans(
+                fontSize: 12,
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
+                color: isSelected ? Colors.white : SoboTheme.ink,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showAutoBookModal(dynamic m) {
+    int selectedWeeks = 4;
+    bool isProcessing = false;
+    final bool isBireysel = _isBireyselMember(m);
+    final String fixedSaatler = m['sabit_ders_saatleri']?.toString() ?? '';
+    final int bakiye = (m['bakiye'] is num) ? (m['bakiye'] as num).toInt() : 0;
+
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: SoboTheme.ivory,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (modalCtx, setModalState) {
+            return Padding(
+              padding: EdgeInsets.only(
+                top: 20,
+                left: 20,
+                right: 20,
+                bottom: MediaQuery.of(modalCtx).viewInsets.bottom + 24,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Icon(Icons.auto_awesome_rounded, size: 20, color: isBireysel ? const Color(0xFFB8860B) : SoboTheme.espresso),
+                                const SizedBox(width: 8),
+                                Flexible(
+                                  child: Text(
+                                    'Sabit Seansları Takvime İşle',
+                                    style: SoboTheme.fontSerif(fontSize: 18, fontWeight: FontWeight.bold, color: SoboTheme.espresso),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 2),
+                            Text('${m['ad']}', style: SoboTheme.fontSans(fontSize: 13, color: SoboTheme.secondary, fontWeight: FontWeight.w600)),
+                          ],
+                        ),
+                      ),
+                      IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.pop(modalCtx)),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Detail Card
+                  Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: SoboTheme.line),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: (isBireysel ? const Color(0xFFB8860B) : SoboTheme.espresso).withOpacity(0.12),
+                                shape: BoxShape.circle,
+                              ),
+                              child: Icon(
+                                isBireysel ? Icons.person_pin_circle_rounded : Icons.groups_rounded,
+                                size: 18,
+                                color: isBireysel ? const Color(0xFFB8860B) : SoboTheme.espresso,
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    isBireysel ? '💎 Bireysel Seans (Kontenjan: 1 - Özel Oda)' : '👥 Grup Dersi (Kontenjan: 5 - Main Studio)',
+                                    style: SoboTheme.fontSans(fontSize: 12.5, fontWeight: FontWeight.bold, color: SoboTheme.ink),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    'Sabit Saatler: $fixedSaatler',
+                                    style: SoboTheme.fontSans(fontSize: 12, fontWeight: FontWeight.w600, color: SoboTheme.forest),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                        const Divider(height: 20),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text('Mevcut Üye Bakiyesi:', style: SoboTheme.fontSans(fontSize: 12, color: SoboTheme.secondary)),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                              decoration: BoxDecoration(
+                                color: SoboTheme.sand,
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Text(
+                                '$bakiye Ders Kredisi',
+                                style: SoboTheme.fontSans(fontSize: 12, fontWeight: FontWeight.bold, color: SoboTheme.espresso),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  Text('İşlenecek Süre Seçin:', style: SoboTheme.fontSans(fontSize: 12, fontWeight: FontWeight.bold, color: SoboTheme.ink)),
+                  const SizedBox(height: 8),
+
+                  // Duration Selector Chips
+                  Row(
+                    children: [
+                      Expanded(
+                        child: InkWell(
+                          onTap: () => setModalState(() => selectedWeeks = 2),
+                          borderRadius: BorderRadius.circular(10),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(vertical: 10),
+                            decoration: BoxDecoration(
+                              color: selectedWeeks == 2 ? SoboTheme.espresso : Colors.white,
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(color: selectedWeeks == 2 ? SoboTheme.espresso : SoboTheme.line),
+                            ),
+                            child: Column(
+                              children: [
+                                Text('2 Hafta', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: selectedWeeks == 2 ? Colors.white : SoboTheme.ink)),
+                                Text('4 Seans', style: TextStyle(fontSize: 10, color: selectedWeeks == 2 ? Colors.white70 : SoboTheme.secondary)),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: InkWell(
+                          onTap: () => setModalState(() => selectedWeeks = 4),
+                          borderRadius: BorderRadius.circular(10),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(vertical: 10),
+                            decoration: BoxDecoration(
+                              color: selectedWeeks == 4 ? (isBireysel ? const Color(0xFF8B5E3C) : SoboTheme.espresso) : Colors.white,
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(color: selectedWeeks == 4 ? (isBireysel ? const Color(0xFF8B5E3C) : SoboTheme.espresso) : SoboTheme.line, width: selectedWeeks == 4 ? 2 : 1),
+                            ),
+                            child: Column(
+                              children: [
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Text('4 Hafta (1 Ay)', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: selectedWeeks == 4 ? Colors.white : SoboTheme.ink)),
+                                    const SizedBox(width: 3),
+                                    const Icon(Icons.star_rounded, size: 13, color: Colors.amber),
+                                  ],
+                                ),
+                                Text('8 Seans (Standart)', style: TextStyle(fontSize: 10, color: selectedWeeks == 4 ? Colors.white70 : SoboTheme.secondary)),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: InkWell(
+                          onTap: () => setModalState(() => selectedWeeks = 8),
+                          borderRadius: BorderRadius.circular(10),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(vertical: 10),
+                            decoration: BoxDecoration(
+                              color: selectedWeeks == 8 ? SoboTheme.espresso : Colors.white,
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(color: selectedWeeks == 8 ? SoboTheme.espresso : SoboTheme.line),
+                            ),
+                            child: Column(
+                              children: [
+                                Text('8 Hafta (2 Ay)', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: selectedWeeks == 8 ? Colors.white : SoboTheme.ink)),
+                                Text('16 Seans', style: TextStyle(fontSize: 10, color: selectedWeeks == 8 ? Colors.white70 : SoboTheme.secondary)),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: SoboTheme.sand.withOpacity(0.4),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Icon(Icons.info_outline_rounded, size: 15, color: SoboTheme.secondary),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'Seanslar stüdyo programına işlenir ve üyenin rezervasyonu otomatik yapılır. Üyeye anlık bildirim gider. Üye 12 saat kuralı dahilinde kendi uygulamasından iptal edebilir.',
+                            style: SoboTheme.fontSans(fontSize: 11, color: SoboTheme.secondary, height: 1.3),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 18),
+
+                  ElevatedButton(
+                    onPressed: isProcessing
+                        ? null
+                        : () async {
+                            setModalState(() => isProcessing = true);
+                            try {
+                              final dynamic res = await ApiClient.post(
+                                '/admin/members/${m['id']}/auto-book-fixed-schedule',
+                                <String, dynamic>{
+                                  'hafta_sayisi': selectedWeeks,
+                                },
+                              );
+                              if (ctx.mounted) Navigator.pop(ctx);
+                              if (mounted) {
+                                final String msg = (res is Map && res['message'] != null)
+                                    ? res['message'].toString()
+                                    : 'Sabit seanslar başarıyla takvime işlendi!';
+                                ScaffoldMessenger.of(this.context).showSnackBar(
+                                  SnackBar(
+                                    content: Text('✨ $msg'),
+                                    backgroundColor: SoboTheme.forest,
+                                    duration: const Duration(seconds: 4),
+                                  ),
+                                );
+                                await Future.wait([
+                                  _loadMembers(_searchMemberCtrl.text),
+                                  _loadTodaySessions(),
+                                  _loadScheduleData(),
+                                ]);
+                              }
+                            } catch (e) {
+                              setModalState(() => isProcessing = false);
+                              if (mounted) {
+                                ScaffoldMessenger.of(this.context).showSnackBar(
+                                  SnackBar(
+                                    content: Text('Hata: ${e.toString().replaceAll('Exception: ', '')}'),
+                                    backgroundColor: SoboTheme.clay,
+                                  ),
+                                );
+                              }
+                            }
+                          },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: isBireysel ? const Color(0xFF8B5E3C) : SoboTheme.espresso,
+                      foregroundColor: Colors.white,
+                      minimumSize: const Size.fromHeight(48),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      elevation: 2,
+                    ),
+                    child: isProcessing
+                        ? const Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              SizedBox(width: 18, height: 18, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)),
+                              SizedBox(width: 10),
+                              Text('İŞLENİYOR & REZERVE EDİLİYOR...', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                            ],
+                          )
+                        : Text('⚡ $selectedWeeks HAFTALIK SEANSLARI TAKVİME İŞLE', style: SoboTheme.fontSans(fontWeight: FontWeight.bold, fontSize: 13)),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
   Future<void> _handleCancelMemberPackage(dynamic m, {int? packageId, String? packageName}) async {
     final int memberPackageId = packageId ?? (m['aktif_member_package_id'] ?? 0);
     final String pName = packageName ?? (m['aktif_paket_adi'] ?? 'Ders Paketi');
@@ -4116,10 +4476,45 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Text(
-                              timeStr.isNotEmpty ? '$classTypeAd ($timeStr)' : classTypeAd,
-                              style: SoboTheme.fontSerif(fontSize: 18, fontWeight: FontWeight.bold, color: SoboTheme.ink),
+                            Expanded(
+                              child: Row(
+                                children: [
+                                  Flexible(
+                                    child: Text(
+                                      timeStr.isNotEmpty ? '$classTypeAd ($timeStr)' : classTypeAd,
+                                      style: SoboTheme.fontSerif(fontSize: 18, fontWeight: FontWeight.bold, color: SoboTheme.ink),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: (session['kontenjan'] == 1 || classTypeAd.contains('Bireysel'))
+                                          ? const Color(0xFFFBF4E8)
+                                          : SoboTheme.sandLight,
+                                      borderRadius: BorderRadius.circular(6),
+                                      border: Border.all(
+                                        color: (session['kontenjan'] == 1 || classTypeAd.contains('Bireysel'))
+                                            ? const Color(0xFFD4AF37).withOpacity(0.6)
+                                            : SoboTheme.line,
+                                      ),
+                                    ),
+                                    child: Text(
+                                      (session['kontenjan'] == 1 || classTypeAd.contains('Bireysel')) ? '💎 Bireysel' : '👥 Grup',
+                                      style: TextStyle(
+                                        fontSize: 9,
+                                        fontWeight: FontWeight.bold,
+                                        color: (session['kontenjan'] == 1 || classTypeAd.contains('Bireysel'))
+                                            ? const Color(0xFF8B6508)
+                                            : SoboTheme.secondary,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
+                            const SizedBox(width: 8),
                             Text('${session['dolu_sayi']} / ${session['kontenjan']} Üye', style: SoboTheme.fontSans(fontSize: 12, fontWeight: FontWeight.bold, color: SoboTheme.espresso)),
                           ],
                         ),
@@ -4464,13 +4859,34 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(classTypeAd, style: SoboTheme.fontSerif(fontSize: 16, fontWeight: FontWeight.bold, color: SoboTheme.ink)),
-                                const SizedBox(height: 2),
-                                Text('$sessionDt • Eğitmen: $instructorAd', style: SoboTheme.fontSans(fontSize: 12, color: SoboTheme.secondary)),
-                              ],
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Flexible(
+                                        child: Text(classTypeAd, style: SoboTheme.fontSerif(fontSize: 16, fontWeight: FontWeight.bold, color: SoboTheme.ink), overflow: TextOverflow.ellipsis),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                        decoration: BoxDecoration(
+                                          color: (s['kontenjan'] == 1 || classTypeAd.contains('Bireysel')) ? const Color(0xFFFBF4E8) : SoboTheme.sandLight,
+                                          borderRadius: BorderRadius.circular(6),
+                                          border: Border.all(color: (s['kontenjan'] == 1 || classTypeAd.contains('Bireysel')) ? const Color(0xFFD4AF37).withOpacity(0.5) : SoboTheme.line),
+                                        ),
+                                        child: Text(
+                                          (s['kontenjan'] == 1 || classTypeAd.contains('Bireysel')) ? '💎 Bireysel' : '👥 Grup',
+                                          style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: (s['kontenjan'] == 1 || classTypeAd.contains('Bireysel')) ? const Color(0xFF8B6508) : SoboTheme.secondary),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text('$sessionDt • Eğitmen: $instructorAd', style: SoboTheme.fontSans(fontSize: 12, color: SoboTheme.secondary)),
+                                ],
+                              ),
                             ),
                             Row(
                               mainAxisSize: MainAxisSize.min,
@@ -4693,6 +5109,19 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
   Widget _buildMembersTab() {
     final List<dynamic> pendingMembers = _members.where((m) => m['aktif'] == false).toList();
     final List<dynamic> activeMembers = _members.where((m) => m['aktif'] != false).toList();
+    final List<dynamic> bireyselMembers = activeMembers.where((m) => _isBireyselMember(m)).toList();
+    final List<dynamic> grupMembers = activeMembers.where((m) => !_isBireyselMember(m)).toList();
+
+    List<dynamic> displayedActiveMembers;
+    if (_memberFilterTab == 'BIREYSEL') {
+      displayedActiveMembers = bireyselMembers;
+    } else if (_memberFilterTab == 'GRUP') {
+      displayedActiveMembers = grupMembers;
+    } else if (_memberFilterTab == 'PENDING') {
+      displayedActiveMembers = <dynamic>[];
+    } else {
+      displayedActiveMembers = activeMembers;
+    }
 
     return RefreshIndicator(
       onRefresh: () async {
@@ -4724,10 +5153,29 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
               ),
               onSubmitted: (val) => _loadMembers(val),
             ),
+            const SizedBox(height: 12),
+
+            // Kategori Filtre Butonları (Tümü, Bireysel, Grup, Bekleyen)
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: [
+                  _buildFilterChip('ALL', 'Tümü (${activeMembers.length})', Icons.people_alt_rounded),
+                  const SizedBox(width: 8),
+                  _buildFilterChip('BIREYSEL', '💎 Bireysel Üyeler (${bireyselMembers.length})', Icons.person_pin_circle_rounded),
+                  const SizedBox(width: 8),
+                  _buildFilterChip('GRUP', '👥 Grup Üyeleri (${grupMembers.length})', Icons.groups_rounded),
+                  if (pendingMembers.isNotEmpty) ...[
+                    const SizedBox(width: 8),
+                    _buildFilterChip('PENDING', '⏳ Onay Bekleyen (${pendingMembers.length})', Icons.hourglass_top_rounded),
+                  ],
+                ],
+              ),
+            ),
             const SizedBox(height: 16),
 
             // ONAY BEKLEYEN ÜYELİK BAŞVURULARI
-            if (pendingMembers.isNotEmpty) ...[
+            if (pendingMembers.isNotEmpty && (_memberFilterTab == 'ALL' || _memberFilterTab == 'PENDING')) ...[
               Container(
                 margin: const EdgeInsets.only(bottom: 20),
                 padding: const EdgeInsets.all(16),
@@ -4864,27 +5312,44 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
               ),
             ],
 
-            Text('KAYITLI VE AKTİF ÜYELER (${activeMembers.length})', style: SoboTheme.fontSans(fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 1.2, color: SoboTheme.secondary)),
-            const SizedBox(height: 10),
+            if (_memberFilterTab != 'PENDING') ...[
+              Text(
+                _memberFilterTab == 'BIREYSEL'
+                    ? '💎 BİREYSEL / ÖZEL DERS ÜYELERİ (${displayedActiveMembers.length})'
+                    : _memberFilterTab == 'GRUP'
+                        ? '👥 GRUP DERSİ ÜYELERİ (${displayedActiveMembers.length})'
+                        : 'KAYITLI VE AKTİF ÜYELER (${displayedActiveMembers.length})',
+                style: SoboTheme.fontSans(fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 1.2, color: SoboTheme.secondary),
+              ),
+              const SizedBox(height: 10),
 
-            if (_isLoadingMembers)
-              const Center(child: Padding(padding: EdgeInsets.all(32), child: CircularProgressIndicator(color: SoboTheme.espresso)))
-            else if (activeMembers.isEmpty)
-              Container(
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14), border: Border.all(color: SoboTheme.line)),
-                child: Center(child: Text('Kayıtlı aktif üye bulunamadı.', style: SoboTheme.fontSans(fontSize: 12, color: SoboTheme.secondary))),
-              )
-            else
-              ListView.separated(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                itemCount: activeMembers.length,
-                separatorBuilder: (_, __) => const SizedBox(height: 10),
-                itemBuilder: (context, index) {
-                  final m = activeMembers[index];
-                  final String username = m['kullanici_adi'] != null ? '@${m['kullanici_adi']}' : '';
-                  final String phone = m['telefon'] ?? 'Telefon Yok';
+              if (_isLoadingMembers)
+                const Center(child: Padding(padding: EdgeInsets.all(32), child: CircularProgressIndicator(color: SoboTheme.espresso)))
+              else if (displayedActiveMembers.isEmpty)
+                Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14), border: Border.all(color: SoboTheme.line)),
+                  child: Center(
+                    child: Text(
+                      _memberFilterTab == 'BIREYSEL'
+                          ? 'Kayıtlı bireysel ders üyesi bulunamadı.'
+                          : _memberFilterTab == 'GRUP'
+                              ? 'Kayıtlı grup dersi üyesi bulunamadı.'
+                              : 'Kayıtlı aktif üye bulunamadı.',
+                      style: SoboTheme.fontSans(fontSize: 12, color: SoboTheme.secondary),
+                    ),
+                  ),
+                )
+              else
+                ListView.separated(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: displayedActiveMembers.length,
+                  separatorBuilder: (_, __) => const SizedBox(height: 10),
+                  itemBuilder: (context, index) {
+                    final m = displayedActiveMembers[index];
+                    final String username = m['kullanici_adi'] != null ? '@${m['kullanici_adi']}' : '';
+                    final String phone = m['telefon'] ?? 'Telefon Yok';
                   final int bakiye = m['bakiye'] ?? 0;
                   final String activePkgName = m['aktif_paket_adi'] ?? 'Aktif Paket Yok';
                   final bool isAdminMember = m['is_admin'] == true;
@@ -4937,6 +5402,31 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
                                             fontSize: 9,
                                             fontWeight: FontWeight.bold,
                                             color: isAdminMember ? Colors.white : SoboTheme.sage,
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 6),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                                        decoration: BoxDecoration(
+                                          color: _isBireyselMember(m)
+                                              ? const Color(0xFFFBF4E8)
+                                              : SoboTheme.sandLight,
+                                          borderRadius: BorderRadius.circular(6),
+                                          border: Border.all(
+                                            color: _isBireyselMember(m)
+                                                ? const Color(0xFFD4AF37).withOpacity(0.6)
+                                                : SoboTheme.line,
+                                          ),
+                                        ),
+                                        child: Text(
+                                          _isBireyselMember(m) ? '💎 Bireysel' : '👥 Grup',
+                                          style: TextStyle(
+                                            fontSize: 9,
+                                            fontWeight: FontWeight.bold,
+                                            color: _isBireyselMember(m)
+                                                ? const Color(0xFF8B6508)
+                                                : SoboTheme.secondary,
                                           ),
                                         ),
                                       ),
@@ -5331,6 +5821,28 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
                               ),
                             ),
                           ),
+                          // 1 Aylık Sabit Seansları Takvime İşle Butonu
+                          Container(
+                            margin: const EdgeInsets.only(bottom: 8),
+                            width: double.infinity,
+                            child: ElevatedButton.icon(
+                              onPressed: () => _showAutoBookModal(m),
+                              icon: const Icon(Icons.auto_awesome_rounded, size: 15, color: Colors.white),
+                              label: Text(
+                                _isBireyselMember(m)
+                                    ? '⚡ 1 Aylık Bireysel Seansları Takvime İşle'
+                                    : '⚡ 1 Aylık Grup Seanslarını Takvime İşle',
+                                style: SoboTheme.fontSans(fontSize: 11.5, fontWeight: FontWeight.bold, color: Colors.white),
+                              ),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: _isBireyselMember(m) ? const Color(0xFF8B5E3C) : SoboTheme.espresso,
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(vertical: 9, horizontal: 12),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                elevation: 1,
+                              ),
+                            ),
+                          ),
                         ] else ...[
                           InkWell(
                             onTap: () => _showQuickEditSabitSaatModal(m),
@@ -5453,10 +5965,11 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
                 },
               ),
           ],
-        ),
+        ],
       ),
-    );
-  }
+    ),
+  );
+}
 
   // TAB 5: BİLDİRİM KONSOLU & DERS PAKETLERİ
   Widget _buildNotificationAndPackagesTab() {

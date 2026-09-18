@@ -1,5 +1,7 @@
 from datetime import date, datetime, time, timezone, timedelta
+from zoneinfo import ZoneInfo
 import logging
+import re
 
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy import select, delete, update
@@ -887,12 +889,13 @@ async def update_admin_credentials_endpoint(
 from app.models import (
     Booking, BookingDurumu, BookingKaynagi, ClassSession, Member, WaitlistEntry, 
     CreditLedger, LedgerTipi, MemberPackage, DeviceToken, Notification,
-    ClassType, Instructor, StudioEvent, Package,
+    ClassType, Instructor, StudioEvent, Package, Room, SessionDurumu,
 )
 from app.services.kredi import bakiye, hareket_ekle
 from app.schemas.admin import (
     MemberUpdateRequest, MemberAdminDetailResponse, MemberSinglePushRequest,
     EventCreateRequest, EventResponse, PackageResponse, PackageCreateUpdateRequest,
+    AutoBookFixedScheduleRequest, AutoBookFixedScheduleResponse,
 )
 
 async def _build_member_detail_response(db: AsyncSession, m: Member) -> MemberAdminDetailResponse:
@@ -942,6 +945,14 @@ async def _build_member_detail_response(db: AsyncSession, m: Member) -> MemberAd
                 pkg_bitis_str = bitis_str
                 kalan_gun = max(0, days_left)
 
+    is_bireysel_member = any(
+        any(k in (getattr(mp, "ozel_paket_adi", None) or (p.ad if p else "")).lower() for k in ["bireysel", "özel", "birebir", "1-on-1"])
+        for mp, p in mp_rows
+    ) or any(
+        any(k in h.lower() for k in ["bireysel", "özel", "birebir", "1-on-1"])
+        for h in pkg_history
+    ) or (m.sabit_ders_saatleri is not None and any(k in m.sabit_ders_saatleri.lower() for k in ["bireysel", "özel", "birebir"]))
+
     # Aktif Gelecek Ders Rezervasyonlarını Çek
     now = datetime.now(timezone.utc)
     res_bookings = await db.execute(
@@ -988,6 +999,7 @@ async def _build_member_detail_response(db: AsyncSession, m: Member) -> MemberAd
         aktif_paket_adi=aktif_pkg_ad,
         paket_bitis_tarihi=pkg_bitis_str,
         kalan_gun_sayisi=kalan_gun,
+        is_bireysel=is_bireysel_member,
         aktif_paketler=aktif_paketler,
         tanimlanan_paketler=pkg_history,
         aktif_rezervasyonlar=rezerve_ders_listesi,
@@ -1825,6 +1837,257 @@ async def create_admin_single_booking(
     await db.refresh(booking)
 
     return {"booking_id": booking.id, "durum": booking.durum, "mesaj": "Tek ders kaydı başarıyla eklendi."}
+
+
+# --- Sabit Ders Saatlerini Otomatik Takvime İşleme (Bireysel / Grup) ---
+
+GUNLER_MAP = {
+    "pazartesi": 0, "pt": 0,
+    "salı": 1, "sali": 1, "sa": 1,
+    "çarşamba": 2, "carsamba": 2, "çar": 2, "car": 2,
+    "perşembe": 3, "persembe": 3, "per": 3,
+    "cuma": 4, "cu": 4,
+    "cumartesi": 5, "cmt": 5,
+    "pazar": 6, "pz": 6,
+}
+
+
+def parse_sabit_ders_saatleri(text: str | None) -> list[tuple[int, int, int]]:
+    """'Salı, Perşembe 11.30' veya 'Çarşamba 19:10 / Cuma 19:10' string'lerini (weekday, hour, minute) listesine çevirir."""
+    if not text:
+        return []
+    slots = []
+    parts = re.split(r"[/;\n]|(?:\s+ve\s+)", text, flags=re.IGNORECASE)
+    for part in parts:
+        part = part.strip()
+        if not part:
+            continue
+        time_matches = list(re.finditer(r"(\d{1,2})[:.](\d{2})", part))
+        if not time_matches:
+            continue
+        t_hour = int(time_matches[0].group(1))
+        t_min = int(time_matches[0].group(2))
+        days_in_part = []
+        for word in re.split(r"[, ]+", part):
+            w_clean = word.lower().strip(",. :")
+            if w_clean in GUNLER_MAP:
+                days_in_part.append(GUNLER_MAP[w_clean])
+        for d in days_in_part:
+            slots.append((d, t_hour, t_min))
+    return sorted(list(set(slots)))
+
+
+@router.post("/members/{member_id}/auto-book-fixed-schedule", response_model=AutoBookFixedScheduleResponse)
+async def auto_book_fixed_schedule(
+    member_id: int,
+    hafta_sayisi: int = 4,
+    body: AutoBookFixedScheduleRequest | None = None,
+    db: AsyncSession = Depends(get_db),
+    current_admin: Member = Depends(get_current_admin),
+):
+    """
+    Üyenin 'sabit_ders_saatleri' alanındaki gün ve saatleri ayrıştırarak (örn: 'Salı, Perşembe 11.30'),
+    önümüzdeki N hafta boyunca (varsayılan 4 hafta / 1 ay) seansları otomatik takvime işler ve
+    üyeyi bu seanslara rezerve eder.
+    Bireysel üyeler için kontenjan=1 bireysel seans (Bireysel Reformer Odası), grup üyeleri için
+    kontenjan=5 grup seansı üretir.
+    12 saat kuralı bu rezervasyonlar için de üye iptalinde aynen işler.
+    """
+    from app.services.rezervasyon import rezerve_et
+    from app.services.bildirim import bildirim_gonder
+    from zoneinfo import ZoneInfo
+    import re
+
+    m = await db.get(Member, member_id)
+    if not m:
+        raise HTTPException(status_code=404, detail="Üye bulunamadı.")
+
+    if not m.sabit_ders_saatleri or not m.sabit_ders_saatleri.strip():
+        raise HTTPException(
+            status_code=400,
+            detail="Üyenin sabit ders saati tanımlı değil. Lütfen önce sabit ders saati ekleyin (örn: Salı, Perşembe 11.30)."
+        )
+
+    slots = parse_sabit_ders_saatleri(m.sabit_ders_saatleri)
+    if not slots:
+        raise HTTPException(
+            status_code=400,
+            detail=f"'{m.sabit_ders_saatleri}' formatı çözümlenemedi. Örnek: Salı, Perşembe 11:30 veya Çarşamba 19:10"
+        )
+
+    target_weeks = body.hafta_sayisi if (body and body.hafta_sayisi) else hafta_sayisi
+    target_weeks = max(1, min(12, target_weeks))
+
+    # Bireysel üye mi?
+    mp_res = await db.execute(
+        select(MemberPackage, Package)
+        .join(Package, MemberPackage.package_id == Package.id)
+        .where(MemberPackage.member_id == m.id)
+        .order_by(MemberPackage.id.desc())
+    )
+    mp_rows = mp_res.all()
+    is_bireysel = False
+    pkg_name_all = ""
+    for mp, p in mp_rows:
+        p_name = (p.ad if p else "").lower()
+        pkg_name_all += " " + p_name
+        if any(k in p_name for k in ["bireysel", "özel", "birebir", "1-on-1"]):
+            is_bireysel = True
+
+    if any(k in m.sabit_ders_saatleri.lower() for k in ["bireysel", "özel", "birebir"]):
+        is_bireysel = True
+
+    # Salon belirle
+    if is_bireysel:
+        room = (await db.execute(select(Room).where(Room.ad.ilike("%bireysel%")))).scalars().first()
+        if not room:
+            room = (await db.execute(select(Room).order_by(Room.id))).scalars().first()
+    else:
+        room = (await db.execute(select(Room).where(Room.ad.ilike("%main%")))).scalars().first()
+        if not room:
+            room = (await db.execute(select(Room).order_by(Room.id))).scalars().first()
+
+    # Ders tipi & kontenjan belirle
+    target_ct_id = body.class_type_id if (body and body.class_type_id) else None
+    if target_ct_id:
+        class_type = await db.get(ClassType, target_ct_id)
+        kontenjan = class_type.kontenjan if class_type else (1 if is_bireysel else 5)
+    elif is_bireysel:
+        if "barre" in pkg_name_all:
+            class_type = (await db.execute(select(ClassType).where(ClassType.ad.ilike("%bireysel barre%")))).scalars().first()
+        elif "pilates" in pkg_name_all and "reformer" not in pkg_name_all:
+            class_type = (await db.execute(select(ClassType).where(ClassType.ad.ilike("%bireysel pilates%")))).scalars().first()
+        else:
+            class_type = (await db.execute(select(ClassType).where(ClassType.ad.ilike("%bireysel reformer%")))).scalars().first()
+        if not class_type:
+            class_type = (await db.execute(select(ClassType).where(ClassType.kontenjan == 1))).scalars().first()
+        kontenjan = 1
+    else:
+        if "barre" in pkg_name_all:
+            class_type = (await db.execute(select(ClassType).where(ClassType.ad.ilike("%barre class%")))).scalars().first()
+        elif "yoga" in pkg_name_all:
+            class_type = (await db.execute(select(ClassType).where(ClassType.ad.ilike("%yoga%")))).scalars().first()
+        else:
+            class_type = (await db.execute(select(ClassType).where(ClassType.ad.ilike("%reformer pilates%")))).scalars().first()
+        if not class_type:
+            class_type = (await db.execute(select(ClassType).where(ClassType.kontenjan > 1, ClassType.ad.in_(["Reformer Pilates", "Barre Class", "Barre"])))).scalars().first()
+        if not class_type:
+            class_type = (await db.execute(select(ClassType).where(ClassType.kontenjan > 1))).scalars().first()
+        kontenjan = class_type.kontenjan if class_type else 5
+
+    # Eğitmen belirle
+    target_inst_id = body.instructor_id if (body and body.instructor_id) else None
+    if target_inst_id:
+        instructor = await db.get(Instructor, target_inst_id)
+    else:
+        instructor = (await db.execute(select(Instructor).where(Instructor.ad.ilike("%eda%")))).scalars().first()
+        if not instructor:
+            instructor = (await db.execute(select(Instructor).order_by(Instructor.id))).scalars().first()
+
+    # Tarih adaylarını üret
+    start_date = date.today()
+    candidates = []
+    for day_offset in range(target_weeks * 7 + 1):
+        cur_day = start_date + timedelta(days=day_offset)
+        for (slot_w_day, s_hour, s_min) in slots:
+            if cur_day.weekday() == slot_w_day:
+                dt_local = datetime.combine(cur_day, time(s_hour, s_min)).replace(tzinfo=ZoneInfo("Europe/Istanbul"))
+                dt_utc = dt_local.astimezone(timezone.utc)
+                if dt_utc <= datetime.now(timezone.utc):
+                    continue
+                candidates.append((dt_local, dt_utc))
+
+    candidates.sort(key=lambda x: x[1])
+
+    booked_dates = []
+    failed_dates = []
+
+    for dt_local, dt_utc in candidates:
+        curr_bakiye = await bakiye(db, m.id)
+        if curr_bakiye < 1:
+            failed_dates.append(f"{dt_local.strftime('%d.%m %H:%M')} (Kredi Yetersiz)")
+            continue
+
+        sess_res = await db.execute(
+            select(ClassSession).where(
+                ClassSession.baslangic == dt_utc,
+                ClassSession.room_id == room.id,
+                ClassSession.durum == SessionDurumu.AKTIF,
+            )
+        )
+        session = sess_res.scalar_one_or_none()
+
+        if not session:
+            session = ClassSession(
+                baslangic=dt_utc,
+                class_type_id=class_type.id,
+                instructor_id=instructor.id,
+                room_id=room.id,
+                kontenjan=kontenjan,
+                dolu_sayi=0,
+                fiyat_tl=0.0,
+                tek_ders_acik=False,
+                durum=SessionDurumu.AKTIF,
+            )
+            db.add(session)
+            await db.flush()
+
+        existing_bk = (await db.execute(
+            select(Booking).where(
+                Booking.session_id == session.id,
+                Booking.member_id == m.id,
+                Booking.durum.in_([BookingDurumu.BOOKED, BookingDurumu.ATTENDED])
+            )
+        )).scalar_one_or_none()
+
+        if existing_bk:
+            continue
+
+        if session.dolu_sayi >= session.kontenjan:
+            failed_dates.append(f"{dt_local.strftime('%d.%m %H:%M')} (Ders Dolu)")
+            continue
+
+        try:
+            await rezerve_et(
+                db,
+                member_id=m.id,
+                session_id=session.id,
+                now=datetime.now(timezone.utc),
+                kaynak=BookingKaynagi.ADMIN,
+            )
+            booked_dates.append(dt_local.strftime("%d.%m %H:%M"))
+        except Exception as e:
+            failed_dates.append(f"{dt_local.strftime('%d.%m %H:%M')} ({str(e)})")
+
+    rem_bakiye = await bakiye(db, m.id)
+
+    if booked_dates:
+        session_type_str = "Bireysel Özel" if is_bireysel else "Grup"
+        await bildirim_gonder(
+            db,
+            member_id=m.id,
+            baslik=f"📅 Sabit {session_type_str} Seanslarınız Takvime Eklendi!",
+            mesaj=f"Önümüzdeki {target_weeks} haftalık ({len(booked_dates)} seans) sabit dersleriniz stüdyo programına işlendi ve rezerve edildi ({m.sabit_ders_saatleri}). 'Derslerim' ekranından görebilirsiniz.",
+            tip="DERS_REZERVASYON",
+        )
+
+    await db.commit()
+
+    msg = f"{m.ad} için {len(booked_dates)} sabit seans takvime işlendi ve rezerve edildi."
+    if failed_dates:
+        msg += f" (Uyarı: {len(failed_dates)} seans atlandı: {', '.join(failed_dates[:3])})"
+
+    return AutoBookFixedScheduleResponse(
+        success=True,
+        member_id=m.id,
+        member_name=m.ad,
+        is_bireysel=is_bireysel,
+        booked_count=len(booked_dates),
+        failed_count=len(failed_dates),
+        kalan_bakiye=rem_bakiye,
+        dates=booked_dates,
+        message=msg,
+    )
 
 
 
