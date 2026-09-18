@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.deps import get_current_member, get_db
 from app.models.bildirim import DeviceToken, Notification
 from app.models.uyelik import Member
-from app.services.bildirim import device_token_kaydet
+from app.services.bildirim import device_token_kaydet, badge_sifirla
 
 router = APIRouter(tags=["Notifications"])
 
@@ -31,6 +31,11 @@ async def get_my_notifications(
     db: AsyncSession = Depends(get_db),
 ):
     """Giriş yapmış üyenin tüm bildirimlerini getirir."""
+    try:
+        await badge_sifirla(db, member.id)
+    except Exception:
+        pass
+
     res = await db.execute(
         select(Notification)
         .where(Notification.member_id == member.id)
@@ -93,6 +98,10 @@ async def delete_all_notifications(
         .where(Notification.member_id == member.id)
     )
     await db.commit()
+    try:
+        await badge_sifirla(db, member.id)
+    except Exception:
+        pass
     return {"mesaj": "Tüm bildirimler silindi"}
 
 
@@ -106,4 +115,9 @@ async def register_device_token(
     dt = await device_token_kaydet(
         db, member_id=member.id, device_token=body.device_token, platform=body.platform
     )
+    if body.platform == "ios":
+        try:
+            await badge_sifirla(db, member.id)
+        except Exception:
+            pass
     return {"mesaj": "Cihaz token'ı kaydedildi", "id": dt.id}

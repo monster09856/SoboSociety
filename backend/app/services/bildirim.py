@@ -159,3 +159,36 @@ async def adminlere_bildirim_gonder(
         logger.error(f"[ADMIN PUSH ERROR] adminlere_bildirim_gonder failed: {err}")
         return []
 
+
+async def badge_sifirla(db: AsyncSession, member_id: int):
+    """Üyenin iOS cihazlarındaki kırmızı bildirim rozetini (badge) sıfırlar."""
+    if not _firebase_app:
+        return
+    try:
+        res = await db.execute(
+            select(DeviceToken).where(
+                DeviceToken.member_id == member_id, DeviceToken.platform == "ios"
+            )
+        )
+        tokens = res.scalars().all()
+        for tok in tokens:
+            try:
+                msg = messaging.Message(
+                    apns=messaging.APNSConfig(
+                        headers={"apns-priority": "10", "apns-push-type": "alert"},
+                        payload=messaging.APNSPayload(
+                            aps=messaging.Aps(
+                                badge=0,
+                            )
+                        ),
+                    ),
+                    token=tok.device_token,
+                )
+                messaging.send(msg)
+                logger.info(f"[BADGE RESET] Cleared badge for member {member_id} token {tok.device_token[:15]}...")
+            except Exception as e:
+                logger.warning(f"[BADGE RESET ERROR] {tok.device_token[:15]}: {e}")
+    except Exception as err:
+        logger.warning(f"[BADGE RESET OVERALL ERROR] {err}")
+
+
