@@ -2319,6 +2319,7 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
     final TextEditingController boyCtrl = TextEditingController(text: m['boy'] ?? '');
     final TextEditingController kiloCtrl = TextEditingController(text: m['kilo'] ?? '');
     final TextEditingController saglikNotuCtrl = TextEditingController(text: m['saglik_notu'] ?? '');
+    final TextEditingController passwordCtrl = TextEditingController();
     bool isUpdating = false;
 
     showModalBottomSheet<void>(
@@ -2423,12 +2424,23 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
                       maxLines: 2,
                       decoration: const InputDecoration(labelText: 'Sağlık Notu / Alerji / Postür Bilgisi', filled: true, fillColor: Colors.white),
                     ),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: passwordCtrl,
+                      decoration: const InputDecoration(
+                        labelText: 'Yeni Şifre Ata (İsteğe Bağlı)',
+                        hintText: 'Şifresini unuttuysa yeni şifre belirleyin',
+                        filled: true,
+                        fillColor: Colors.white,
+                        prefixIcon: Icon(Icons.key_rounded, size: 20),
+                      ),
+                    ),
                     const SizedBox(height: 16),
                     ElevatedButton(
                       onPressed: isUpdating ? null : () async {
                         setModalState(() => isUpdating = true);
                         try {
-                          await ApiClient.put('/admin/members/${m['id']}', <String, dynamic>{
+                          final Map<String, dynamic> payload = <String, dynamic>{
                             'ad': nameCtrl.text.trim(),
                             'telefon': phoneCtrl.text.trim(),
                             'bakiye_override': int.tryParse(bakiyeCtrl.text) ?? 0,
@@ -2444,7 +2456,11 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
                             'kilo': kiloCtrl.text.trim(),
                             'saglik_notu': saglikNotuCtrl.text.trim(),
                             'sabit_ders_saatleri': sabitDersCtrl.text.trim(),
-                          });
+                          };
+                          if (passwordCtrl.text.trim().isNotEmpty) {
+                            payload['yeni_sifre'] = passwordCtrl.text.trim();
+                          }
+                          await ApiClient.put('/admin/members/${m['id']}', payload);
                           if (mounted) {
                             Navigator.pop(context);
                             ScaffoldMessenger.of(this.context).showSnackBar(

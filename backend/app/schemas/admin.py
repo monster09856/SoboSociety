@@ -127,6 +127,7 @@ class MemberUpdateRequest(BaseModel):
     kilo: str | None = None
     saglik_notu: str | None = None
     sabit_ders_saatleri: str | None = None
+    yeni_sifre: str | None = Field(default=None, description="Üyeye yeni şifre belirleme / sıfırlama")
 
 
 class MemberPackageDetail(BaseModel):

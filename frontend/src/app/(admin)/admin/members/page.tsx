@@ -6,7 +6,7 @@ import { buyukHarf } from '@/lib/utils'
 import { AdminNav } from '@/components/admin/admin-nav'
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
-import { Users, Search, Plus, CreditCard, Send, Edit2, ShieldAlert, CheckCircle2, Loader2, Sparkles, UserCheck, AtSign, Phone, Ruler, X, Package, Trash2, UserX, Clock, XCircle, Calendar } from 'lucide-react'
+import { Users, Search, Plus, CreditCard, Send, Edit2, ShieldAlert, CheckCircle2, Loader2, Sparkles, UserCheck, AtSign, Phone, Ruler, X, Package, Trash2, UserX, Clock, XCircle, Calendar, KeyRound } from 'lucide-react'
 
 interface MemberDetail {
   id: number
@@ -107,6 +107,7 @@ export default function AdminMembersPage() {
   const [editKilo, setEditKilo] = useState('')
   const [editSaglikNotu, setEditSaglikNotu] = useState('')
   const [editSabitDersSaatleri, setEditSabitDersSaatleri] = useState('')
+  const [editPassword, setEditPassword] = useState('')
   const [updating, setUpdating] = useState(false)
 
   // Package Edit Modal State
@@ -257,6 +258,7 @@ export default function AdminMembersPage() {
     setEditKilo(m.kilo || '')
     setEditSaglikNotu(m.saglik_notu || '')
     setEditSabitDersSaatleri(m.sabit_ders_saatleri || '')
+    setEditPassword('')
   }
 
   const openEditPackageModal = (m: MemberDetail, pkg: any) => {
@@ -294,9 +296,11 @@ export default function AdminMembersPage() {
         kilo: editKilo,
         saglik_notu: editSaglikNotu,
         sabit_ders_saatleri: editSabitDersSaatleri,
+        ...(editPassword.trim() ? { yeni_sifre: editPassword.trim() } : {}),
       })
-      setSuccess(`${newName} üyesinin tüm bilgileri, sabit ders saatleri ve bakiyesi güncellendi.`)
+      setSuccess(`${newName} üyesinin tüm bilgileri, sabit ders saatleri ve bakiyesi güncellendi.${editPassword.trim() ? ' Yeni şifre başarıyla tanımlandı.' : ''}`)
       setEditingMember(null)
+      setEditPassword('')
       loadMembers(search)
     } catch (err: any) {
       setError(err?.message || 'Üye güncellenirken bir hata oluştu.')
@@ -1090,6 +1094,24 @@ export default function AdminMembersPage() {
                     <p className="text-[11px] text-secondary mt-1">
                       Üyenin her hafta düzenli geleceği sabit gün ve saatler. Üye uygulamasında ve profilinde bunu görebilir.
                     </p>
+                  </div>
+
+                  {/* Şifre Sıfırlama / Yeni Şifre Ata */}
+                  <div className="p-4 rounded-xl bg-ivory/80 border border-line space-y-2">
+                    <div className="flex items-center gap-2">
+                      <KeyRound className="w-4 h-4 text-espresso" />
+                      <span className="text-xs font-bold text-espresso uppercase tracking-wider">Şifre Sıfırlama / Yeni Şifre Ata</span>
+                    </div>
+                    <p className="text-[11px] text-secondary">
+                      Üye şifresini unuttuysa veya giriş yapamıyorsa buraya yeni bir şifre yazabilirsiniz (örn: 123456). Boş bırakılırsa mevcut şifresi değişmez.
+                    </p>
+                    <Input
+                      type="text"
+                      placeholder="Yeni şifre belirleyin (boş bırakılırsa değişmez)"
+                      value={editPassword}
+                      onChange={(e) => setEditPassword(e.target.value)}
+                      className="bg-white border-line text-xs font-medium rounded-xl h-10"
+                    />
                   </div>
 
                   <div className="flex justify-end gap-2 pt-2">

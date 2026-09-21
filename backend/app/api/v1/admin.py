@@ -1087,6 +1087,12 @@ async def update_admin_member(
     if body.aktif is not None:
         m.aktif = body.aktif
 
+    if body.yeni_sifre and body.yeni_sifre.strip():
+        new_pw = body.yeni_sifre.strip()
+        if len(new_pw) < 4:
+            raise HTTPException(status_code=400, detail="Yeni şifre en az 4 karakter olmalıdır.")
+        m.sifre_hash = hash_password(new_pw)
+
     measurement_fields = [
         "bel", "kalca", "sag_ic_bacak", "sag_bacak",
         "sol_ic_bacak", "sol_bacak", "sag_kol", "sol_kol",

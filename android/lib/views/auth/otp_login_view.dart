@@ -260,6 +260,94 @@ class _OTPLoginViewState extends State<OTPLoginView> with SingleTickerProviderSt
     _fadeController.forward();
   }
 
+  void _showForgotPasswordDialog() {
+    showDialog<void>(
+      context: context,
+      builder: (BuildContext ctx) => AlertDialog(
+        backgroundColor: SoboTheme.sand,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        title: Row(
+          children: <Widget>[
+            const Icon(Icons.help_outline_rounded, color: SoboTheme.espresso),
+            const SizedBox(width: 8),
+            Text(
+              'Şifremi Unuttum',
+              style: SoboTheme.fontSerif(
+                fontWeight: FontWeight.bold,
+                fontSize: 18,
+                color: SoboTheme.ink,
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            Text(
+              'Şifrenizi unuttuysanız veya değiştirmek istiyorsanız lütfen stüdyo yöneticimiz ile iletişime geçiniz.',
+              style: SoboTheme.fontSans(
+                fontSize: 13,
+                color: SoboTheme.secondary,
+                height: 1.4,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: SoboTheme.ivory,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: SoboTheme.line),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Text(
+                    'HIZLI DESTEK',
+                    style: SoboTheme.fontSans(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 11,
+                      color: SoboTheme.espresso,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Yönetici panelinden yeni şifreniz anında tanımlanacak ve tarafınıza iletilecektir. ✨',
+                    style: SoboTheme.fontSans(
+                      fontSize: 12,
+                      color: SoboTheme.secondary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: <Widget>[
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: SoboTheme.espresso,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+            child: Text(
+              'Anladım',
+              style: SoboTheme.fontSans(
+                fontWeight: FontWeight.bold,
+                fontSize: 13,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -514,7 +602,25 @@ class _OTPLoginViewState extends State<OTPLoginView> with SingleTickerProviderSt
                                       obscureText: _obscureLoginPassword,
                                       onTogglePassword: () => setState(() => _obscureLoginPassword = !_obscureLoginPassword),
                                     ),
-                                    const SizedBox(height: 24),
+                                    const SizedBox(height: 8),
+                                    Align(
+                                      alignment: Alignment.centerRight,
+                                      child: GestureDetector(
+                                        onTap: _showForgotPasswordDialog,
+                                        child: Padding(
+                                          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                                          child: Text(
+                                            'Şifremi Unuttum?',
+                                            style: SoboTheme.fontSans(
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.w600,
+                                              color: SoboTheme.espresso,
+                                            ).copyWith(decoration: TextDecoration.underline),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 16),
                                     ElevatedButton(
                                       onPressed: _isLoading ? null : _handleLogin,
                                       style: ElevatedButton.styleFrom(

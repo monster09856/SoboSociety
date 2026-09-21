@@ -675,6 +675,7 @@ export const adminApi = {
       kilo?: string
       saglik_notu?: string
       sabit_ders_saatleri?: string
+      yeni_sifre?: string
     }
   ) =>
     apiFetch<{

@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { User, KeyRound, Loader2, AlertCircle, Sparkles, UserPlus, LogIn, Phone, Clock } from 'lucide-react'
+import { User, KeyRound, Loader2, AlertCircle, Sparkles, UserPlus, LogIn, Phone, Clock, HelpCircle, X } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card'
 import { api, ApiError } from '@/lib/api'
@@ -30,6 +30,7 @@ export function OtpForm({ onSuccess, redirectTo }: OtpFormProps) {
   // Login state
   const [loginKullaniciAdi, setLoginKullaniciAdi] = useState('')
   const [loginSifre, setLoginSifre] = useState('')
+  const [showForgotModal, setShowForgotModal] = useState(false)
 
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -131,7 +132,8 @@ export function OtpForm({ onSuccess, redirectTo }: OtpFormProps) {
   }
 
   return (
-    <Card className="w-full max-w-md bg-sand/80 border border-line shadow-md rounded-3xl p-2 text-ink">
+    <>
+      <Card className="w-full max-w-md bg-sand/80 border border-line shadow-md rounded-3xl p-2 text-ink">
       {/* Tab Switcher Header */}
       <div className="p-1 bg-ivory rounded-2xl border border-line flex mb-2">
         <button
@@ -218,9 +220,18 @@ export function OtpForm({ onSuccess, redirectTo }: OtpFormProps) {
             </div>
 
             <div className="space-y-2">
-              <label htmlFor="loginSifre" className="text-xs font-bold text-secondary uppercase tracking-wider block">
-                Şifre
-              </label>
+              <div className="flex items-center justify-between">
+                <label htmlFor="loginSifre" className="text-xs font-bold text-secondary uppercase tracking-wider block">
+                  Şifre
+                </label>
+                <button
+                  type="button"
+                  onClick={() => setShowForgotModal(true)}
+                  className="text-[11px] font-semibold text-mocha hover:text-espresso underline underline-offset-2 transition-colors cursor-pointer"
+                >
+                  Şifremi Unuttum?
+                </button>
+              </div>
               <div className="relative">
                 <KeyRound className="absolute left-4 top-3.5 h-5 w-5 text-mocha" />
                 <Input
@@ -355,5 +366,44 @@ export function OtpForm({ onSuccess, redirectTo }: OtpFormProps) {
         </p>
       </CardFooter>
     </Card>
+
+    {showForgotModal && (
+      <div className="fixed inset-0 z-50 bg-ink/60 backdrop-blur-xs flex items-center justify-center p-4">
+        <div className="bg-sand border border-line rounded-3xl p-6 max-w-sm w-full shadow-2xl space-y-4 animate-in fade-in zoom-in-95 duration-150">
+          <div className="flex items-center justify-between border-b border-line pb-3">
+            <div className="flex items-center gap-2 text-espresso font-serif font-bold text-lg">
+              <HelpCircle className="w-5 h-5 text-mocha" />
+              <span>Şifremi Unuttum</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowForgotModal(false)}
+              className="text-secondary hover:text-ink p-1 rounded-full hover:bg-ivory cursor-pointer"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+
+          <div className="space-y-3 text-xs text-secondary leading-relaxed">
+            <p>
+              Şifrenizi unuttuysanız veya değiştirmek istiyorsanız lütfen stüdyo yöneticimiz ile iletişime geçiniz.
+            </p>
+            <div className="p-3 bg-ivory rounded-2xl border border-line text-ink font-medium space-y-1">
+              <p className="font-bold text-espresso text-[11px] uppercase tracking-wider">Hızlı Destek</p>
+              <p>Yönetici panelinden yeni şifreniz anında tanımlanacak ve tarafınıza iletilecektir. ✨</p>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setShowForgotModal(false)}
+            className="w-full h-11 rounded-2xl bg-espresso hover:bg-espresso-dark text-ivory font-bold text-xs uppercase tracking-wider cursor-pointer shadow-xs transition-colors"
+          >
+            Anladım
+          </button>
+        </div>
+      </div>
+    )}
+  </>
   )
 }
