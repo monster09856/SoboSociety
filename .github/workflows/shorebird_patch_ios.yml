@@ -1,0 +1,41 @@
+name: Shorebird iOS Patch
+
+on:
+  push:
+    branches:
+      - master
+    paths:
+      - 'android/lib/**'
+      - 'android/pubspec.yaml'
+      - 'android/pubspec.lock'
+
+jobs:
+  patch_ios:
+    name: iOS Patch (Shorebird)
+    runs-on: macos-latest
+
+    steps:
+      - name: 📥 Kodu İndir
+        uses: actions/checkout@v4
+
+      - name: 🐦 Flutter Kur
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.24.5'
+          channel: 'stable'
+          cache: true
+
+      - name: 📦 Bağımlılıkları Yükle
+        run: flutter pub get
+        working-directory: android
+
+      - name: 🐦 Shorebird Kur
+        uses: shorebirdtech/setup-shorebird@v1
+        with:
+          cache: true
+
+      - name: 🚀 iOS Patch Gönder
+        run: shorebird patch -p ios --allow-asset-diffs
+        working-directory: android
+        env:
+          SHOREBIRD_TOKEN: ${{ secrets.SHOREBIRD_TOKEN }}
