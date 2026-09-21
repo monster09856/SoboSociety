@@ -722,6 +722,10 @@ export const adminApi = {
     apiFetch<any>(`/admin/members/${memberId}/packages/${memberPackageId}/cancel`, {
       method: 'POST',
     }),
+  cancelBooking: (bookingId: number) =>
+    apiFetch<any>(`/admin/bookings/${bookingId}/cancel`, {
+      method: 'POST',
+    }),
   approveMember: (memberId: number) =>
     apiFetch<any>(`/admin/members/${memberId}/approve`, {
       method: 'POST',

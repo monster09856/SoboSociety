@@ -2146,7 +2146,7 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           title: Text('1 Ders Düşülsün mü?', style: SoboTheme.fontSerif(fontSize: 18, fontWeight: FontWeight.bold, color: SoboTheme.espresso)),
           content: Text(
-            '${m['ad']} isimli üyenin derse geldiği işlenecek ve paketinden 1 ders hakkı düşülecektir.\n\nMevcut Bakiye: $currentBakiye Ders\nYeni Bakiye: ${currentBakiye - 1} Ders',
+            '${m['ad']} isimli üyenin derse geldiği işlenecek ve boşta kalan paket bakiyesinden 1 ders düşülecektir.\n\nMevcut Boş Bakiye: $currentBakiye Ders\nYeni Boş Bakiye: ${currentBakiye - 1} Ders\n\n💡 Not: Üyenin zaten rezerve edilmiş seansı varsa derse geldiğinde tekrar ders düşmenize gerek yoktur. Bu buton randevusuz / ekstra katılımlar içindir.',
             style: SoboTheme.fontSans(fontSize: 13, color: SoboTheme.ink, height: 1.4),
           ),
           actions: [
@@ -5546,7 +5546,7 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
                                       borderRadius: BorderRadius.circular(6),
                                     ),
                                     child: Text(
-                                      '${reservations.length} Rezerve',
+                                      '${reservations.length} Rezerve (${bakiye + reservations.length} Toplam)',
                                       style: SoboTheme.fontSans(fontSize: 9.5, fontWeight: FontWeight.w600, color: SoboTheme.forest),
                                     ),
                                   ),
@@ -5871,6 +5871,14 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
                                       ],
                                     ),
                                   )),
+                                if (totalReservations > 0)
+                                  Padding(
+                                    padding: const EdgeInsets.only(top: 4),
+                                    child: Text(
+                                      '💡 $totalReservations ders rezerve edildiği için boş hak $bakiye derstir. Derse katıldığında tekrar ders düşülmez.',
+                                      style: SoboTheme.fontSans(fontSize: 9.5, fontStyle: FontStyle.italic, color: SoboTheme.secondary),
+                                    ),
+                                  ),
                               ],
                             ),
                           ),

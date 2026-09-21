@@ -43,6 +43,13 @@ interface MemberDetail {
   }[]
   tanimlanan_paketler?: string[]
   aktif_rezervasyonlar?: string[]
+  rezerve_ders_detaylari?: {
+    booking_id: number
+    session_id: number
+    ders_adi: string
+    tarih_saat: string
+    egitmen: string
+  }[]
 }
 
 export default function AdminMembersPage() {
@@ -333,6 +340,17 @@ export default function AdminMembersPage() {
     }
   }
 
+  const handleCancelReservation = async (bookingId: number, memberName: string, sessionInfo: string) => {
+    if (!confirm(`${memberName} üyesinin "${sessionInfo}" rezervasyonunu iptal etmek istediğinize emin misiniz?\n\n• Ders hakkı üyenin bakiyesine anında geri iade edilecektir.\n• Seans kontenjanı boşalacaktır.`)) return
+    try {
+      await admin.cancelBooking(bookingId)
+      setSuccess(`${memberName} üyesinin rezervasyonu iptal edildi ve ders hakkı iade edildi.`)
+      await loadMembers(search)
+    } catch (err: any) {
+      setError(err?.message || 'Rezervasyon iptal edilirken bir hata oluştu.')
+    }
+  }
+
   const handleDeleteMember = async (m: MemberDetail) => {
     if (!confirm(`${m.ad} (${m.telefon || 'Telefon Yok'}) isimli üyeyi ve tüm geçmiş ders kayıtlarını veritabanından kalıcı olarak silmek istediğinizden emin misiniz?`)) return
     try {
@@ -559,7 +577,7 @@ export default function AdminMembersPage() {
                                 <div className="font-bold text-ink text-xs flex items-center gap-1.5 truncate">
                                   <CheckCircle2 className="w-3.5 h-3.5 text-sage shrink-0" />
                                   <span className="truncate">{pkg.ad}</span>
-                                  <span className="text-[10px] text-mocha font-extrabold shrink-0">({pkg.toplam_ders} Ders)</span>
+                                  <span className="text-[10px] text-mocha font-extrabold shrink-0">({pkg.toplam_ders} Derslik Paket)</span>
                                 </div>
                                 <div className="text-[10px] text-secondary font-medium pl-5 flex items-center gap-2">
                                   <span>Son Gün: {pkg.bitis_tarihi}</span>
@@ -654,16 +672,42 @@ export default function AdminMembersPage() {
                       </button>
                     )}
 
-                    <div className="flex items-center justify-between p-3 rounded-xl bg-ivory border border-line">
-                      <span className="text-secondary font-semibold">Toplam Kalan Ders Hakkı:</span>
-                      <span className="font-serif text-xl font-bold text-espresso">{m.bakiye} Ders</span>
-                    </div>
+                    {/* Ders Bakiye ve Rezervasyon Özeti */}
+                    {(() => {
+                      const rezerveCount = m.rezerve_ders_detaylari?.length ?? m.aktif_rezervasyonlar?.length ?? 0
+                      const toplamBakiye = m.bakiye + rezerveCount
+                      return (
+                        <div className="p-3 rounded-xl bg-ivory border border-line space-y-2">
+                          <div className="flex items-center justify-between">
+                            <span className="text-secondary font-bold text-xs">Paket Ders Durumu:</span>
+                            <span className="font-serif text-base font-bold text-espresso">
+                              {toplamBakiye} Derslik Bakiye
+                            </span>
+                          </div>
+                          <div className="grid grid-cols-2 gap-2 pt-1 border-t border-line/60">
+                            <div className="p-2 rounded-lg bg-white/90 border border-line/50">
+                              <span className="text-[10px] text-secondary font-semibold block">Rezerveye Açık (Boş)</span>
+                              <span className="text-sm font-bold text-forest">{m.bakiye} Ders</span>
+                            </div>
+                            <div className="p-2 rounded-lg bg-white/90 border border-line/50">
+                              <span className="text-[10px] text-secondary font-semibold block">Rezerve Edilmiş</span>
+                              <span className="text-sm font-bold text-mocha">{rezerveCount} Ders</span>
+                            </div>
+                          </div>
+                          {rezerveCount > 0 && (
+                            <p className="text-[10.5px] text-secondary italic leading-tight pt-0.5">
+                              💡 Bilgi: Üye {rezerveCount} derse kaydedildiği için kontenjan tutulmuştur ({toplamBakiye} &rarr; {m.bakiye}). Derse geldiğinde tekrar ders düşülmez.
+                            </p>
+                          )}
+                        </div>
+                      )
+                    })()}
 
                     {/* Rezerve Ettiği Dersler Rozeti */}
-                    <div className="p-3 rounded-xl bg-sand-light border border-sage/30 space-y-1 text-[11px] shadow-2xs">
+                    <div className="p-3 rounded-xl bg-sand-light border border-sage/30 space-y-1.5 text-[11px] shadow-2xs">
                       <div className="flex items-center justify-between text-secondary font-bold border-b border-line/50 pb-1">
                         <span className="flex items-center gap-1 text-espresso font-extrabold">
-                          <CheckCircle2 className="w-3.5 h-3.5 text-sage" /> Rezerve Ettiği Dersler ({m.aktif_rezervasyonlar?.length || 0})
+                          <CheckCircle2 className="w-3.5 h-3.5 text-sage" /> Rezerve Dersleri ({m.rezerve_ders_detaylari?.length ?? m.aktif_rezervasyonlar?.length ?? 0})
                         </span>
                         <button
                           type="button"
@@ -675,7 +719,28 @@ export default function AdminMembersPage() {
                           <span>+ Derse Kaydet</span>
                         </button>
                       </div>
-                      {m.aktif_rezervasyonlar && m.aktif_rezervasyonlar.length > 0 ? (
+                      {m.rezerve_ders_detaylari && m.rezerve_ders_detaylari.length > 0 ? (
+                        <div className="space-y-1.5 pt-1">
+                          {m.rezerve_ders_detaylari.map((rd) => (
+                            <div key={rd.booking_id} className="p-1.5 rounded-lg bg-white/90 border border-line/60 flex items-center justify-between gap-1.5 shadow-2xs">
+                              <div className="flex items-center gap-1.5 truncate">
+                                <span className="w-1.5 h-1.5 rounded-full bg-sage shrink-0" />
+                                <span className="font-bold text-ink text-[11px] truncate">
+                                  {rd.ders_adi} · {rd.tarih_saat} {rd.egitmen ? `(${rd.egitmen})` : ''}
+                                </span>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => handleCancelReservation(rd.booking_id, m.ad, `${rd.ders_adi} (${rd.tarih_saat})`)}
+                                className="px-2 py-0.5 rounded text-[10px] font-bold text-clay hover:bg-clay/10 border border-clay/30 transition-all shrink-0 cursor-pointer"
+                                title="Bu rezervasyonu iptal et ve ders hakkını iade et"
+                              >
+                                İptal Et
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      ) : m.aktif_rezervasyonlar && m.aktif_rezervasyonlar.length > 0 ? (
                         <div className="space-y-1 pt-1">
                           {m.aktif_rezervasyonlar.map((ders, idx) => (
                             <div key={idx} className="font-bold text-ink text-[11px] flex items-center gap-1.5">
