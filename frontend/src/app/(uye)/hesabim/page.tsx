@@ -26,6 +26,7 @@ import {
   Ruler,
   X,
   KeyRound,
+  CreditCard,
 } from 'lucide-react'
 
 export default function HesabimPage() {
@@ -368,6 +369,43 @@ export default function HesabimPage() {
                 </Link>
               </div>
             </div>
+
+            {/* Borç / Bekleyen Ödeme Durumu Kartı */}
+            {(summary.borc_bakiye ?? 0) > 0 ? (
+              <div className="p-4 rounded-2xl bg-amber-50 border border-amber-300 text-amber-950 shadow-xs space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 font-bold text-xs uppercase tracking-wider text-amber-800">
+                    <CreditCard className="w-4 h-4 text-amber-700" />
+                    <span>Bekleyen Paket Ödemesi</span>
+                  </div>
+                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-amber-200 text-amber-900 border border-amber-300">
+                    Ödeme Bekleniyor
+                  </span>
+                </div>
+                <div className="flex items-baseline justify-between pt-0.5">
+                  <div>
+                    <span className="text-2xl font-serif font-bold text-amber-950">
+                      {summary.borc_bakiye} TL
+                    </span>
+                    <span className="text-xs text-amber-800 font-medium ml-1.5">Borç Bakiyesi</span>
+                  </div>
+                  <span className="text-[11px] font-semibold text-amber-800">
+                    Dersleriniz Aktif ✨
+                  </span>
+                </div>
+                <p className="text-[11px] text-amber-800/90 leading-relaxed border-t border-amber-200 pt-2">
+                  Paket ödemenizi stüdyo resepsiyonunda nakit/kart veya banka havalesi ile gerçekleştirebilirsiniz. Sorularınız için eğitmenimizle iletişime geçebilirsiniz.
+                </p>
+              </div>
+            ) : (
+              <div className="p-3 rounded-xl bg-sage/10 border border-sage/30 flex items-center justify-between text-xs">
+                <span className="font-bold text-sage flex items-center gap-1.5">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-sage" />
+                  Ödeme Durumu: Borcunuz Bulunmamaktadır
+                </span>
+                <span className="font-extrabold text-sage text-[11px]">0 TL</span>
+              </div>
+            )}
 
             {/* Haftalık Sabit Ders Programı (Eda Hanım Tanımlı) */}
             {summary.sabit_ders_saatleri && summary.sabit_ders_saatleri.trim().length > 0 && (

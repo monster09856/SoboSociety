@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, String, Text
+from sqlalchemy import Boolean, DateTime, ForeignKey, String, Text, Float
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import Base, ZamanDamgali
@@ -42,6 +42,7 @@ class Member(ZamanDamgali, Base):
     kilo: Mapped[str | None] = mapped_column(String(40), default=None)
     saglik_notu: Mapped[str | None] = mapped_column(Text, default=None)
     sabit_ders_saatleri: Mapped[str | None] = mapped_column(String(200), default=None)
+    borc_bakiye: Mapped[float] = mapped_column(Float, default=0.0)
 
     aktif: Mapped[bool] = mapped_column(Boolean, default=True)
 

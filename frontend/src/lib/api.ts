@@ -283,6 +283,7 @@ export interface MemberSummaryResponse {
   kullanici_adi?: string | null
   telefon: string
   bakiye: number
+  borc_bakiye?: number
   sabit_ders_saatleri?: string | null
   aktif_paket_adi?: string | null
   paket_bitis_tarihi?: string | null
@@ -493,6 +494,7 @@ export interface PackageAssignRequest {
   ozel_ders_adedi?: number
   ozel_gecerlilik_gun?: number
   sabit_ders_saatleri?: string | null
+  borc_bakiye?: number
 }
 
 export interface MemberPackageResponse {
@@ -639,6 +641,7 @@ export const adminApi = {
         kullanici_adi?: string | null
         telefon?: string | null
         bakiye: number
+        borc_bakiye?: number
         aktif: boolean
         is_admin: boolean
         bel?: string | null
@@ -668,6 +671,7 @@ export const adminApi = {
       telefon?: string
       aktif?: boolean
       bakiye_override?: number
+      borc_bakiye?: number
       bel?: string
       kalca?: string
       sag_ic_bacak?: string
@@ -688,6 +692,7 @@ export const adminApi = {
       ad: string
       telefon: string
       bakiye: number
+      borc_bakiye?: number
       aktif: boolean
       is_admin: boolean
       bel?: string | null
@@ -704,6 +709,10 @@ export const adminApi = {
     }>(`/admin/members/${memberId}`, {
       method: 'PUT',
       body: JSON.stringify(data),
+    }),
+  sendDebtReminder: (memberId: number) =>
+    apiFetch<{ mesaj: string }>(`/admin/members/${memberId}/send-debt-reminder`, {
+      method: 'POST',
     }),
   updateMemberPackage: (
     memberId: number,

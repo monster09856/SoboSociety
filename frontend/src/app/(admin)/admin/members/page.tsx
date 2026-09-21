@@ -6,7 +6,7 @@ import { buyukHarf } from '@/lib/utils'
 import { AdminNav } from '@/components/admin/admin-nav'
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
-import { Users, Search, Plus, CreditCard, Send, Edit2, ShieldAlert, CheckCircle2, Loader2, Sparkles, UserCheck, AtSign, Phone, Ruler, X, Package, Trash2, UserX, Clock, XCircle, Calendar, KeyRound } from 'lucide-react'
+import { Users, Search, Plus, CreditCard, Send, Edit2, ShieldAlert, CheckCircle2, Loader2, Sparkles, UserCheck, AtSign, Phone, Ruler, X, Package, Trash2, UserX, Clock, XCircle, Calendar, KeyRound, Bell } from 'lucide-react'
 
 interface MemberDetail {
   id: number
@@ -14,6 +14,7 @@ interface MemberDetail {
   kullanici_adi?: string | null
   telefon?: string | null
   bakiye: number
+  borc_bakiye?: number
   aktif: boolean
   is_admin: boolean
   bel?: string | null
@@ -108,6 +109,8 @@ export default function AdminMembersPage() {
   const [editSaglikNotu, setEditSaglikNotu] = useState('')
   const [editSabitDersSaatleri, setEditSabitDersSaatleri] = useState('')
   const [editPassword, setEditPassword] = useState('')
+  const [editBorcBakiye, setEditBorcBakiye] = useState<number>(0)
+  const [remindingDebtId, setRemindingDebtId] = useState<number | null>(null)
   const [updating, setUpdating] = useState(false)
 
   // Package Edit Modal State
@@ -138,7 +141,23 @@ export default function AdminMembersPage() {
   const [customUnit, setCustomUnit] = useState<'hafta' | 'gun'>('hafta')
   const [customVal, setCustomVal] = useState(6)
   const [pkgSabitDersSaatleri, setPkgSabitDersSaatleri] = useState('')
+  const [pkgBorcBakiye, setPkgBorcBakiye] = useState<number>(0)
   const [assigningPkg, setAssigningPkg] = useState(false)
+
+  const handleSendDebtReminder = async (m: MemberDetail) => {
+    if (!confirm(`${m.ad} üyesine ${m.borc_bakiye} TL tutarındaki bekleyen paket ödemesi için hatırlatma bildirimi gönderilsin mi?`)) return
+    setRemindingDebtId(m.id)
+    setError(null)
+    setSuccess(null)
+    try {
+      const res = await admin.sendDebtReminder(m.id)
+      setSuccess(res.mesaj || `${m.ad} üyesine borç hatırlatma bildirimi gönderildi. 🔔`)
+    } catch (err: any) {
+      setError(err?.message || 'Borç hatırlatması gönderilemedi.')
+    } finally {
+      setRemindingDebtId(null)
+    }
+  }
 
   // Book Member into Session Modal State
   const [bookingMember, setBookingMember] = useState<MemberDetail | null>(null)
@@ -233,6 +252,7 @@ export default function AdminMembersPage() {
     setCustomUnit('hafta')
     setCustomVal(6)
     setPkgSabitDersSaatleri(m.sabit_ders_saatleri || '')
+    setPkgBorcBakiye(0)
     setPkgBaslangic(todayStr)
 
     const defaultPkg = availablePackages.find((p) => p.id === selectedPkgId) || availablePackages[0]
@@ -246,6 +266,7 @@ export default function AdminMembersPage() {
     setEditingMember(m)
     setNewName(m.ad)
     setNewBakiye(m.bakiye)
+    setEditBorcBakiye(m.borc_bakiye || 0)
     setEditBel(m.bel || '')
     setEditKalca(m.kalca || '')
     setEditSagIcBacak(m.sag_ic_bacak || '')
@@ -284,6 +305,7 @@ export default function AdminMembersPage() {
       await admin.updateMember(editingMember.id, {
         ad: newName,
         bakiye_override: Number(newBakiye),
+        borc_bakiye: Number(editBorcBakiye),
         bel: editBel,
         kalca: editKalca,
         sag_ic_bacak: editSagIcBacak,
@@ -298,7 +320,7 @@ export default function AdminMembersPage() {
         sabit_ders_saatleri: editSabitDersSaatleri,
         ...(editPassword.trim() ? { yeni_sifre: editPassword.trim() } : {}),
       })
-      setSuccess(`${newName} üyesinin tüm bilgileri, sabit ders saatleri ve bakiyesi güncellendi.${editPassword.trim() ? ' Yeni şifre başarıyla tanımlandı.' : ''}`)
+      setSuccess(`${newName} üyesinin tüm bilgileri, sabit ders saatleri, bakiyesi ve borç durumu güncellendi.${editPassword.trim() ? ' Yeni şifre başarıyla tanımlandı.' : ''}`)
       setEditingMember(null)
       setEditPassword('')
       loadMembers(search)
@@ -383,6 +405,7 @@ export default function AdminMembersPage() {
           baslangic: pkgBaslangic || undefined,
           bitis: pkgBitis || undefined,
           sabit_ders_saatleri: pkgSabitDersSaatleri.trim() || undefined,
+          borc_bakiye: Number(pkgBorcBakiye) || 0,
         })
         setSuccess(`${pkgMember.ad} üyesine özel ${customPkgName || 'Özel Paket'} (${customCredits} Ders / ${actualDays} Gün - ${customUnit === 'hafta' ? `${customVal} Hafta` : ''}) tanımlandı.`)
       } else {
@@ -392,6 +415,7 @@ export default function AdminMembersPage() {
           baslangic: pkgBaslangic || undefined,
           bitis: pkgBitis || undefined,
           sabit_ders_saatleri: pkgSabitDersSaatleri.trim() || undefined,
+          borc_bakiye: Number(pkgBorcBakiye) || 0,
         })
         setSuccess(`${pkgMember.ad} üyesine ders paketi tanımlandı.`)
       }
@@ -792,6 +816,37 @@ export default function AdminMembersPage() {
                       )
                     })()}
 
+                    {/* Borç / Bekleyen Ödeme Durumu Rozeti */}
+                    {(m.borc_bakiye ?? 0) > 0 ? (
+                      <div className="p-2.5 rounded-xl bg-amber-50 border border-amber-300 flex items-center justify-between text-xs shadow-2xs">
+                        <div className="space-y-0.5">
+                          <div className="flex items-center gap-1.5 font-bold text-amber-900">
+                            <CreditCard className="w-3.5 h-3.5 text-amber-700 shrink-0" />
+                            <span>Borç Bakiyesi:</span>
+                            <span className="font-extrabold text-amber-950 text-sm">{m.borc_bakiye} TL</span>
+                          </div>
+                          <span className="text-[10px] text-amber-800 font-medium block">Ödenmemiş paket tutarı</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleSendDebtReminder(m)}
+                          disabled={remindingDebtId === m.id}
+                          className="px-2.5 py-1.5 rounded-lg text-[10px] font-extrabold bg-amber-700 hover:bg-amber-800 text-white flex items-center gap-1 transition-all shadow-2xs cursor-pointer disabled:opacity-50"
+                          title="Üyenin telefonuna borç hatırlatma push bildirimi gönder"
+                        >
+                          <Bell className="w-3 h-3" />
+                          <span>{remindingDebtId === m.id ? 'Gönderiliyor...' : 'Hatırlat 🔔'}</span>
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="px-2.5 py-1.5 rounded-lg bg-sand-light/60 border border-line/50 flex items-center justify-between text-[11px] text-secondary">
+                        <span className="flex items-center gap-1 text-sage font-bold">
+                          <CheckCircle2 className="w-3 h-3 text-sage" /> Ödeme: Borç Yok
+                        </span>
+                        <span className="font-semibold text-[10px] text-muted">0 TL</span>
+                      </div>
+                    )}
+
                     {/* Rezerve Ettiği Dersler Rozeti */}
                     <div className="p-3 rounded-xl bg-sand-light border border-sage/30 space-y-1.5 text-[11px] shadow-2xs">
                       <div className="flex items-center justify-between text-secondary font-bold border-b border-line/50 pb-1">
@@ -968,6 +1023,28 @@ export default function AdminMembersPage() {
                         required
                       />
                     </div>
+                  </div>
+
+                  {/* Borç Bakiyesi Alanı */}
+                  <div className="p-3.5 rounded-xl bg-amber-50/70 border border-amber-200/80 space-y-1">
+                    <div className="flex items-center justify-between">
+                      <label className="block text-xs font-bold text-amber-900 uppercase">
+                        Borç / Bekleyen Ödeme Bakiyesi (TL)
+                      </label>
+                      <span className="text-[10px] text-amber-800 font-semibold">0 = Borç Yok</span>
+                    </div>
+                    <Input
+                      type="number"
+                      min={0}
+                      step="any"
+                      placeholder="0"
+                      value={editBorcBakiye}
+                      onChange={(e) => setEditBorcBakiye(Number(e.target.value))}
+                      className="bg-white border-amber-300 text-sm font-bold text-amber-950 rounded-xl h-10"
+                    />
+                    <p className="text-[10.5px] text-amber-800/90 leading-tight">
+                      Üyenin paket ödemesi eksik veya ödenmemişse buraya tutarı girebilirsiniz. Üye kendi profilinde bu borcu görecektir.
+                    </p>
                   </div>
 
                   {/* Vücut Ölçüleri Grid */}
@@ -1417,6 +1494,28 @@ export default function AdminMembersPage() {
                     />
                     <p className="text-[11px] text-secondary mt-1">
                       Üyenin her hafta düzenli katılacağı sabit ders saatleri.
+                    </p>
+                  </div>
+
+                  {/* Borç / Ödenmemiş Paket Tutarı */}
+                  <div className="p-3.5 rounded-xl bg-amber-50/70 border border-amber-200/80 space-y-1">
+                    <div className="flex items-center justify-between">
+                      <label className="block text-xs font-bold text-amber-900 uppercase">
+                        Borç / Bekleyen Ödeme Tutarı (TL - Opsiyonel)
+                      </label>
+                      <span className="text-[10px] text-amber-800 font-semibold">Ödenmediyse Yazın</span>
+                    </div>
+                    <Input
+                      type="number"
+                      min={0}
+                      step="any"
+                      placeholder="Örn: 3500 (Üye henüz ödemediyse borç bakiyesi olarak kaydedilir)"
+                      value={pkgBorcBakiye || ''}
+                      onChange={(e) => setPkgBorcBakiye(Number(e.target.value))}
+                      className="bg-white border-amber-300 text-xs font-medium rounded-xl h-10"
+                    />
+                    <p className="text-[10.5px] text-amber-800/90 leading-tight">
+                      Üye paketi tanımlanırken henüz ödeme yapmadıysa tutarı buraya girebilirsiniz. Üye kendi hesabında borcunu görecektir.
                     </p>
                   </div>
 

@@ -118,6 +118,7 @@ async def get_my_summary(
         kalan_gun_sayisi=kalan_gun,
         toplam_ders_adedi=toplam_ders,
         sabit_ders_saatleri=current_member.sabit_ders_saatleri,
+        borc_bakiye=float(current_member.borc_bakiye or 0.0),
         paketler=paket_listesi,
         aktif_rezervasyonlar=aktif,
         gecmis_rezervasyonlar=gecmis,

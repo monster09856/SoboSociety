@@ -56,6 +56,7 @@ class PackageAssignRequest(BaseModel):
     ozel_gecerlilik_gun: int | None = Field(default=None, description="Özelleştirilmiş geçerlilik gün sayısı")
     sabit_ders_saatleri: str | None = Field(default=None, description="Haftalık sabit gün ve saatler (örn: Salı, Perşembe 11:30)")
     session_id: int | None = Field(default=None, description="Opsiyonel ilk ders oturumu ID'si")
+    borc_bakiye: float | None = Field(default=None, description="Paket tanımlanırken işlenecek borç bakiyesi TL")
 
 
 class AdminBookSessionRequest(BaseModel):
@@ -128,6 +129,7 @@ class MemberUpdateRequest(BaseModel):
     saglik_notu: str | None = None
     sabit_ders_saatleri: str | None = None
     yeni_sifre: str | None = Field(default=None, description="Üyeye yeni şifre belirleme / sıfırlama")
+    borc_bakiye: float | None = Field(default=None, description="Üyenin güncellenen borç bakiyesi TL")
 
 
 class MemberPackageDetail(BaseModel):
@@ -158,6 +160,7 @@ class MemberAdminDetailResponse(BaseModel):
     kullanici_adi: str | None = None
     telefon: str | None = None
     bakiye: int
+    borc_bakiye: float = 0.0
     aktif: bool
     is_admin: bool
     toplam_rezervasyon: int = 0

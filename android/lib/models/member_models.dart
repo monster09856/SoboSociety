@@ -72,6 +72,7 @@ class MemberSummaryResponse {
   final String? kullaniciAdi;
   final String telefon;
   final int bakiye;
+  final double borcBakiye;
   final String? aktifPaketAdi;
   final String? paketBitisTarihi;
   final int? kalanGunSayisi;
@@ -87,6 +88,7 @@ class MemberSummaryResponse {
     this.kullaniciAdi,
     required this.telefon,
     required this.bakiye,
+    this.borcBakiye = 0.0,
     this.aktifPaketAdi,
     this.paketBitisTarihi,
     this.kalanGunSayisi,
@@ -125,6 +127,7 @@ class MemberSummaryResponse {
       kullaniciAdi: json['kullanici_adi'] as String?,
       telefon: json['telefon'] as String? ?? '',
       bakiye: json['bakiye'] as int? ?? 0,
+      borcBakiye: (json['borc_bakiye'] as num?)?.toDouble() ?? 0.0,
       aktifPaketAdi: json['aktif_paket_adi'] as String?,
       paketBitisTarihi: json['paket_bitis_tarihi'] as String?,
       kalanGunSayisi: json['kalan_gun_sayisi'] as int?,

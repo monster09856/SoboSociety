@@ -2307,6 +2307,7 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
     final TextEditingController nameCtrl = TextEditingController(text: m['ad'] ?? '');
     final TextEditingController phoneCtrl = TextEditingController(text: m['telefon'] ?? '');
     final TextEditingController bakiyeCtrl = TextEditingController(text: (m['bakiye'] ?? 0).toString());
+    final TextEditingController borcCtrl = TextEditingController(text: ((m['borc_bakiye'] ?? 0.0) > 0 ? (m['borc_bakiye'] ?? 0.0).toString() : ''));
     final TextEditingController sabitDersCtrl = TextEditingController(text: m['sabit_ders_saatleri'] ?? '');
     final TextEditingController belCtrl = TextEditingController(text: m['bel'] ?? '');
     final TextEditingController kalcaCtrl = TextEditingController(text: m['kalca'] ?? '');
@@ -2397,6 +2398,40 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
                       decoration: const InputDecoration(labelText: 'Kalan Ders Adedi', filled: true, fillColor: Colors.white),
                     ),
                     const SizedBox(height: 8),
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFFFBEB),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: const Color(0xFFFBD38D)),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              const Icon(Icons.credit_card_rounded, size: 14, color: Color(0xFFB45309)),
+                              const SizedBox(width: 4),
+                              Text('Borç Bakiyesi (TL)', style: SoboTheme.fontSans(fontSize: 10, fontWeight: FontWeight.bold, color: const Color(0xFF92400E))),
+                            ],
+                          ),
+                          const SizedBox(height: 6),
+                          TextField(
+                            controller: borcCtrl,
+                            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                            decoration: InputDecoration(
+                              labelText: 'Ödenmemiş Tutar (TL)',
+                              hintText: 'Boş bırakılırsa 0 TL',
+                              filled: true,
+                              fillColor: Colors.white,
+                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFFFBD38D))),
+                              focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFFB45309))),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 8),
                     TextField(
                       controller: sabitDersCtrl,
                       decoration: const InputDecoration(
@@ -2474,6 +2509,7 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
                             'ad': nameCtrl.text.trim(),
                             'telefon': phoneCtrl.text.trim(),
                             'bakiye_override': int.tryParse(bakiyeCtrl.text) ?? 0,
+                            'borc_bakiye': double.tryParse(borcCtrl.text.trim()) ?? 0.0,
                             'bel': belCtrl.text.trim(),
                             'kalca': kalcaCtrl.text.trim(),
                             'sag_ic_bacak': sagIcBacakCtrl.text.trim(),
@@ -2770,6 +2806,7 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
     final TextEditingController customDersCtrl = TextEditingController(text: '10');
     final TextEditingController customValCtrl = TextEditingController(text: '6');
     final TextEditingController sabitDersPkgCtrl = TextEditingController(text: m['sabit_ders_saatleri'] ?? '');
+    final TextEditingController borcCtrl = TextEditingController(text: '');
     String customUnit = 'hafta'; // 'hafta' or 'gun'
     bool isSubmitting = false;
 
@@ -3133,6 +3170,46 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
                     ),
 
                     const SizedBox(height: 14),
+                    Container(
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFFFBEB),
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: const Color(0xFFFBD38D)),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              const Icon(Icons.credit_card_rounded, size: 16, color: Color(0xFFB45309)),
+                              const SizedBox(width: 6),
+                              Text('BORÇ / BEKLEYen ÖDEME TUTARI (OPSİYONEL)', style: SoboTheme.fontSans(fontSize: 10, fontWeight: FontWeight.bold, color: const Color(0xFF92400E))),
+                            ],
+                          ),
+                          const SizedBox(height: 6),
+                          TextField(
+                            controller: borcCtrl,
+                            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                            decoration: InputDecoration(
+                              labelText: 'Ödenmemiş Tutar (TL)',
+                              hintText: 'Örn: 3500 — boş bırakılırsa 0 TL kaydedilir',
+                              filled: true,
+                              fillColor: Colors.white,
+                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFFFBD38D))),
+                              focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFFB45309))),
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'Üye paket ödeme yapmadıysa tutarı giriniz. Üye kendi profilinde borcunu görecektir.',
+                            style: SoboTheme.fontSans(fontSize: 10, color: const Color(0xFF92400E)),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    const SizedBox(height: 14),
                     Text('İLK DERSİ TAKVİME EKLE (OPSİYONEL)', style: SoboTheme.fontSans(fontSize: 10, fontWeight: FontWeight.bold, color: SoboTheme.secondary)),
                     const SizedBox(height: 6),
                     Container(
@@ -3200,6 +3277,10 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
                                 }
                                 if (selectedInitialSessionId != null) {
                                   payload['session_id'] = selectedInitialSessionId;
+                                }
+                                final double borcTutar = double.tryParse(borcCtrl.text.trim()) ?? 0.0;
+                                if (borcTutar > 0) {
+                                  payload['borc_bakiye'] = borcTutar;
                                 }
 
                                 await ApiClient.post('/admin/packages/assign', payload);
@@ -6185,6 +6266,67 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
                                     ].join(' • '),
                                     style: SoboTheme.fontSans(fontSize: 10, color: SoboTheme.secondary, fontWeight: FontWeight.w500),
                                     overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+
+                        // Borç Bakiyesi (Varsa)
+                        if ((m['borc_bakiye'] as num?)?.toDouble() != null && ((m['borc_bakiye'] as num?)?.toDouble() ?? 0.0) > 0) ...[ 
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                            margin: const EdgeInsets.only(bottom: 8),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFFFFBEB),
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(color: const Color(0xFFFBD38D)),
+                            ),
+                            child: Row(
+                              children: [
+                                const Icon(Icons.credit_card_rounded, size: 14, color: Color(0xFFB45309)),
+                                const SizedBox(width: 6),
+                                Expanded(
+                                  child: Text(
+                                    'Borç Bakiyesi: ${((m['borc_bakiye'] as num).toDouble()).toStringAsFixed(0)} TL',
+                                    style: SoboTheme.fontSans(fontSize: 11, fontWeight: FontWeight.bold, color: const Color(0xFF92400E)),
+                                  ),
+                                ),
+                                GestureDetector(
+                                  onTap: () async {
+                                    try {
+                                      await ApiClient.post('/admin/members/${m['id']}/send-debt-reminder', <String, dynamic>{});
+                                      if (mounted) {
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          SnackBar(
+                                            content: Text('${m['ad']} üyesine borç hatırlatma bildirimi gönderildi 🔔'),
+                                            backgroundColor: SoboTheme.sage,
+                                          ),
+                                        );
+                                      }
+                                    } catch (e) {
+                                      if (mounted) {
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          SnackBar(content: Text('Hata: ${e.toString().replaceAll('Exception: ', '')}'), backgroundColor: SoboTheme.clay),
+                                        );
+                                      }
+                                    }
+                                  },
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFB45309),
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        const Icon(Icons.notifications_active_rounded, size: 12, color: Colors.white),
+                                        const SizedBox(width: 3),
+                                        Text('Hatırlat', style: SoboTheme.fontSans(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.white)),
+                                      ],
+                                    ),
                                   ),
                                 ),
                               ],

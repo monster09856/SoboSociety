@@ -101,6 +101,7 @@ class MemberSummaryResponse(BaseModel):
     kalan_gun_sayisi: int | None = None
     toplam_ders_adedi: int | None = None
     sabit_ders_saatleri: str | None = None
+    borc_bakiye: float = 0.0
     paketler: list[MemberPackageSummary] = []
     aktif_rezervasyonlar: list[BookingResponse] = []
     gecmis_rezervasyonlar: list[BookingResponse] = []

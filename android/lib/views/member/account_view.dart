@@ -1286,6 +1286,83 @@ class _AccountViewState extends State<AccountView> {
             ),
             const SizedBox(height: 16),
 
+            // Borç Bakiyesi Kartı
+            if ((_summary?.borcBakiye ?? 0.0) > 0)
+              Container(
+                margin: const EdgeInsets.only(bottom: 16),
+                padding: const EdgeInsets.all(18),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFFFBEB),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: const Color(0xFFFBD38D), width: 1.5),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Row(
+                      children: <Widget>[
+                        const Icon(Icons.credit_card_rounded, size: 20, color: Color(0xFFB45309)),
+                        const SizedBox(width: 10),
+                        Text(
+                          'ÖDEME BİLGİSİ',
+                          style: SoboTheme.fontSans(fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 1.2, color: const Color(0xFF92400E)),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: <Widget>[
+                        Text(
+                          '${(_summary!.borcBakiye).toStringAsFixed(0)} TL',
+                          style: SoboTheme.fontSerif(fontSize: 28, fontWeight: FontWeight.bold, color: const Color(0xFFB45309)),
+                        ),
+                        const SizedBox(width: 8),
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 4),
+                          child: Text(
+                            'bekleyen ödeme',
+                            style: SoboTheme.fontSans(fontSize: 12, color: const Color(0xFF92400E)),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFDE68A).withOpacity(0.5),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Text(
+                        '💛 Ödeme yapmak için stüdyomuzla iletişime geçebilirsiniz.',
+                        style: SoboTheme.fontSans(fontSize: 11.5, color: const Color(0xFF92400E), height: 1.4),
+                      ),
+                    ),
+                  ],
+                ),
+              )
+            else
+              Container(
+                margin: const EdgeInsets.only(bottom: 16),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF0FDF4),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: const Color(0xFFBBF7D0)),
+                ),
+                child: Row(
+                  children: <Widget>[
+                    const Icon(Icons.check_circle_rounded, size: 16, color: Color(0xFF16A34A)),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Ödeme Durumu: Borç Yok ✓',
+                      style: SoboTheme.fontSans(fontSize: 12, fontWeight: FontWeight.w600, color: const Color(0xFF16A34A)),
+                    ),
+                  ],
+                ),
+              ),
+
             // Body Measurements Form Card
             Container(
               padding: const EdgeInsets.all(20),

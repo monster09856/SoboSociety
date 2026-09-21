@@ -252,6 +252,9 @@ async def assign_package(
         if body.sabit_ders_saatleri is not None:
             m.sabit_ders_saatleri = body.sabit_ders_saatleri.strip()
 
+        if body.borc_bakiye is not None:
+            m.borc_bakiye = float(body.borc_bakiye)
+
         # Opsiyonel: İlk ders seansına doğrudan kayıt
         booked_session_info = ""
         if body.session_id is not None:
@@ -999,6 +1002,7 @@ async def _build_member_detail_response(db: AsyncSession, m: Member) -> MemberAd
         kullanici_adi=m.kullanici_adi,
         telefon=m.telefon,
         bakiye=current_bakiye,
+        borc_bakiye=float(m.borc_bakiye or 0.0),
         aktif=m.aktif,
         is_admin=is_adm,
         toplam_rezervasyon=len(rezerve_ders_listesi),
@@ -1092,6 +1096,9 @@ async def update_admin_member(
         if len(new_pw) < 4:
             raise HTTPException(status_code=400, detail="Yeni şifre en az 4 karakter olmalıdır.")
         m.sifre_hash = hash_password(new_pw)
+
+    if body.borc_bakiye is not None:
+        m.borc_bakiye = float(body.borc_bakiye)
 
     measurement_fields = [
         "bel", "kalca", "sag_ic_bacak", "sag_bacak",
@@ -2144,5 +2151,28 @@ async def auto_book_fixed_schedule(
     )
 
 
-
-
+@router.post("/members/{member_id}/send-debt-reminder")
+async def send_member_debt_reminder_endpoint(
+    member_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_admin: Member = Depends(get_current_admin),
+):
+    """Üyeye bekleyen borç/paket ödeme hatırlatma bildirimi gönderir."""
+    m = await db.get(Member, member_id)
+    if not m:
+        raise HTTPException(status_code=404, detail="Üye bulunamadı.")
+    borc = float(m.borc_bakiye or 0.0)
+    tutar_str = f"{int(borc) if borc.is_integer() else borc:.2f} TL"
+    msg = (
+        f"Sayın {m.ad}, stüdyo paket ödemeniz ({tutar_str}) beklenmektedir. Ödemenizi stüdyo resepsiyonuna veya havale/EFT ile iletebilirsiniz. Sevgiler, Sobo Studio ✨"
+        if borc > 0
+        else f"Sayın {m.ad}, stüdyo paket ödemenizi resepsiyona veya havale ile iletebilirsiniz. Sevgiler, Sobo Studio ✨"
+    )
+    await bildirim_gonder(
+        db,
+        member_id=m.id,
+        baslik="Ödeme Hatırlatması 💳",
+        mesaj=msg,
+        fcm_data={"type": "payment_reminder", "borc": str(borc)},
+    )
+    return {"mesaj": f"{m.ad} üyesine ödeme hatırlatma bildirimi başarıyla iletildi! 🔔"}
