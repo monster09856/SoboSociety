@@ -112,7 +112,7 @@ class _OTPLoginViewState extends State<OTPLoginView> with SingleTickerProviderSt
                       color: SoboTheme.clay.withOpacity(0.15),
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(Icons.hourglass_top_rounded, color: SoboTheme.clay, size: 24),
+                    child: const Icon(Icons.schedule_rounded, color: SoboTheme.clay, size: 24),
                   ),
                   const SizedBox(width: 12),
                   Expanded(

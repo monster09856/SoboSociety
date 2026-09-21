@@ -415,7 +415,7 @@ class _WorkshopsViewState extends State<WorkshopsView> {
                                 child: Column(
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
-                                    const Icon(Icons.people_outline_rounded, size: 48, color: SoboTheme.secondary),
+                                    const Icon(Icons.people_alt_rounded, size: 48, color: SoboTheme.secondary),
                                     const SizedBox(height: 12),
                                     Text(
                                       'Henüz kayıtlı katılımcı yok',
@@ -524,14 +524,14 @@ class _WorkshopsViewState extends State<WorkshopsView> {
                                       // Quick Call
                                       if (phone.isNotEmpty)
                                         IconButton(
-                                          icon: const Icon(Icons.phone_rounded, color: SoboTheme.mocha, size: 20),
+                                          icon: const Icon(Icons.phone_android_rounded, color: SoboTheme.mocha, size: 20),
                                           tooltip: 'Ara',
                                           onPressed: () => launchUrl(Uri.parse('tel:$phone')),
                                         ),
                                       // Quick WhatsApp
                                       if (phone.isNotEmpty)
                                         IconButton(
-                                          icon: const Icon(Icons.chat_bubble_outline_rounded, color: Color(0xFF25D366), size: 20),
+                                          icon: const Icon(Icons.chat_bubble_rounded, color: Color(0xFF25D366), size: 20),
                                           tooltip: 'WhatsApp',
                                           onPressed: () {
                                             final digits = phone.replaceAll(RegExp(r'\D'), '');

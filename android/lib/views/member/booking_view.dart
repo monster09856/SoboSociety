@@ -1388,7 +1388,7 @@ class _BookingViewState extends State<BookingView> {
                           color: SoboTheme.forest,
                           borderRadius: BorderRadius.circular(14),
                         ),
-                        child: const Icon(Icons.alarm_on_rounded, color: Colors.white, size: 22),
+                        child: const Icon(Icons.schedule_rounded, color: Colors.white, size: 22),
                       ),
                       const SizedBox(width: 12),
                       Expanded(

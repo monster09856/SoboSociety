@@ -139,6 +139,16 @@ class MemberPackageDetail(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+class ReservedBookingDetail(BaseModel):
+    booking_id: int
+    session_id: int
+    ders_adi: str
+    tarih_saat: str
+    egitmen: str
+
+    model_config = ConfigDict(from_attributes=True)
+
+
 class MemberAdminDetailResponse(BaseModel):
     id: int
     ad: str
@@ -172,6 +182,7 @@ class MemberAdminDetailResponse(BaseModel):
     aktif_paketler: list[MemberPackageDetail] = Field(default_factory=list)
     tanimlanan_paketler: list[str] = Field(default_factory=list)
     aktif_rezervasyonlar: list[str] = Field(default_factory=list)
+    rezerve_ders_detaylari: list[ReservedBookingDetail] = Field(default_factory=list)
 
     model_config = ConfigDict(from_attributes=True)
 

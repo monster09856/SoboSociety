@@ -34,7 +34,7 @@ from app.schemas.admin import (
 from app.schemas.member import BookingResponse
 from app.services.bildirim import bildirim_gonder
 from app.services.kredi import paket_tanimla, hareket_ekle
-from app.services.program_uretimi import STUDYO_TZ, uret
+from app.services.program_uretimi import STUDYO_TZ, to_local_str, uret
 from app.services.rezervasyon import rezerve_et
 from app.services.telefon import normalize_telefon
 from app.services.yoklama import yoklama_al
@@ -264,7 +264,7 @@ async def assign_package(
                 session_obj = await db.get(ClassSession, body.session_id)
                 if session_obj:
                     c_name = session_obj.class_type.ad if session_obj.class_type else "Ders"
-                    t_str = session_obj.baslangic.strftime("%d.%m.%Y %H:%M")
+                    t_str = to_local_str(session_obj.baslangic, "%d.%m.%Y %H:%M")
                     booked_session_info = f"\n🗓 İlk Dersiniz: {c_name} ({t_str})"
             except Exception as b_err:
                 logger.warning("assign_package auto book session warning: %s", b_err)
@@ -354,7 +354,7 @@ async def admin_book_session_for_member(
         await db.refresh(booking)
 
         class_ad = session.class_type.ad if session.class_type else "Ders"
-        ders_tarih = session.baslangic.strftime("%d.%m.%Y %H:%M")
+        ders_tarih = to_local_str(session.baslangic, "%d.%m.%Y %H:%M")
         bildirim_mesaj = (
             f"Merhaba {m.ad}, {class_ad} seansına {booked_count} hafta boyunca kaydınız başarıyla tamamlandı. Detayları Derslerim ekranından görebilirsiniz ✨"
             if booked_count > 1
@@ -896,6 +896,7 @@ from app.schemas.admin import (
     MemberUpdateRequest, MemberAdminDetailResponse, MemberSinglePushRequest,
     EventCreateRequest, EventResponse, PackageResponse, PackageCreateUpdateRequest,
     AutoBookFixedScheduleRequest, AutoBookFixedScheduleResponse,
+    ReservedBookingDetail,
 )
 
 async def _build_member_detail_response(db: AsyncSession, m: Member) -> MemberAdminDetailResponse:
@@ -953,7 +954,7 @@ async def _build_member_detail_response(db: AsyncSession, m: Member) -> MemberAd
         for h in pkg_history
     ) or (m.sabit_ders_saatleri is not None and any(k in m.sabit_ders_saatleri.lower() for k in ["bireysel", "özel", "birebir"]))
 
-    # Aktif Gelecek Ders Rezervasyonlarını Çek
+    # Aktif Gelecek Ders Rezervasyonlarını Çek (Sadece aktif oturumlar ve booked rezervasyonlar)
     now = datetime.now(timezone.utc)
     res_bookings = await db.execute(
         select(Booking, ClassSession, ClassType, Instructor)
@@ -962,17 +963,28 @@ async def _build_member_detail_response(db: AsyncSession, m: Member) -> MemberAd
         .outerjoin(Instructor, ClassSession.instructor_id == Instructor.id)
         .where(
             Booking.member_id == m.id,
-            Booking.durum == "booked",
+            Booking.durum == BookingDurumu.BOOKED,
+            ClassSession.durum == SessionDurumu.AKTIF,
             ClassSession.baslangic >= now - timedelta(hours=2),
         )
         .order_by(ClassSession.baslangic.asc())
     )
     booking_rows = res_bookings.all()
     rezerve_ders_listesi = []
+    rezerve_ders_detaylari = []
     for b, cs, ct, inst in booking_rows:
-        tarih_str = cs.baslangic.strftime("%d.%m.%Y %H:%M")
+        tarih_str = to_local_str(cs.baslangic, "%d.%m.%Y %H:%M")
         inst_name = inst.ad if inst else "Eğitmen"
         rezerve_ders_listesi.append(f"{ct.ad} • {tarih_str} ({inst_name})")
+        rezerve_ders_detaylari.append(
+            ReservedBookingDetail(
+                booking_id=b.id,
+                session_id=cs.id,
+                ders_adi=ct.ad,
+                tarih_saat=tarih_str,
+                egitmen=inst_name,
+            )
+        )
 
     return MemberAdminDetailResponse(
         id=m.id,
@@ -1003,6 +1015,7 @@ async def _build_member_detail_response(db: AsyncSession, m: Member) -> MemberAd
         aktif_paketler=aktif_paketler,
         tanimlanan_paketler=pkg_history,
         aktif_rezervasyonlar=rezerve_ders_listesi,
+        rezerve_ders_detaylari=rezerve_ders_detaylari,
     )
 
 
@@ -1746,6 +1759,33 @@ async def reject_admin_booking(
     booking.cancelled_at = datetime.now(timezone.utc)
     await db.commit()
     return {"booking_id": booking.id, "durum": booking.durum, "mesaj": "Rezervasyon talebi reddedildi/iptal edildi."}
+
+
+@router.post("/bookings/{booking_id}/cancel")
+async def cancel_admin_booking(
+    booking_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_admin: Member = Depends(get_current_admin),
+):
+    """Admin üyenin rezerve dersini iptal eder, kredisini iade eder ve kontenjanı boşaltır."""
+    from app.services.iptal import iptal_et
+    try:
+        sonuc = await iptal_et(
+            db,
+            booking_id=booking_id,
+            now=datetime.now(timezone.utc),
+            is_admin=True,
+        )
+        await db.commit()
+        return {
+            "success": True,
+            "booking_id": booking_id,
+            "iade_edildi": sonuc.iade_edildi,
+            "mesaj": "Rezervasyon başarıyla iptal edildi ve 1 ders hakkı iade edildi.",
+        }
+    except Exception as e:
+        await db.rollback()
+        raise HTTPException(status_code=400, detail=str(e))
 
 
 @router.get("/single-bookings")

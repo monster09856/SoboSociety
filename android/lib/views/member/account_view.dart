@@ -1037,7 +1037,7 @@ class _AccountViewState extends State<AccountView> {
                         ),
                         child: Row(
                           children: [
-                            const Icon(Icons.alarm_on_rounded, size: 18, color: SoboTheme.forest),
+                            const Icon(Icons.schedule_rounded, size: 18, color: SoboTheme.forest),
                             const SizedBox(width: 10),
                             Expanded(
                               child: Column(

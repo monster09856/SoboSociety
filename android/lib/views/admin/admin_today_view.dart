@@ -823,7 +823,7 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
                             child: Column(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                const Icon(Icons.people_outline_rounded, size: 48, color: SoboTheme.secondary),
+                                const Icon(Icons.people_alt_rounded, size: 48, color: SoboTheme.secondary),
                                 const SizedBox(height: 12),
                                 Text(
                                   'Henüz kayıtlı katılımcı yok',
@@ -930,14 +930,14 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
                                   // Quick Call
                                   if (phone.isNotEmpty)
                                     IconButton(
-                                      icon: const Icon(Icons.phone_rounded, color: SoboTheme.mocha, size: 20),
+                                      icon: const Icon(Icons.phone_android_rounded, color: SoboTheme.mocha, size: 20),
                                       tooltip: 'Ara',
                                       onPressed: () => launchUrl(Uri.parse('tel:$phone')),
                                     ),
                                   // Quick WhatsApp
                                   if (phone.isNotEmpty)
                                     IconButton(
-                                      icon: const Icon(Icons.chat_bubble_outline_rounded, color: Color(0xFF25D366), size: 20),
+                                      icon: const Icon(Icons.chat_bubble_rounded, color: Color(0xFF25D366), size: 20),
                                       tooltip: 'WhatsApp',
                                       onPressed: () {
                                         final digits = phone.replaceAll(RegExp(r'\D'), '');
@@ -1078,7 +1078,7 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
                     children: [
                       Row(
                         children: [
-                          const Icon(Icons.auto_fix_high_rounded, color: SoboTheme.espresso, size: 22),
+                          const Icon(Icons.auto_awesome_rounded, color: SoboTheme.espresso, size: 22),
                           const SizedBox(width: 8),
                           Text('Otomatik Program Üret', style: SoboTheme.fontSerif(fontSize: 18, fontWeight: FontWeight.bold, color: SoboTheme.ink)),
                         ],
@@ -1177,7 +1177,7 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
                                 );
                                 if (p != null) setModalState(() => endDate = p);
                               },
-                              icon: const Icon(Icons.event_rounded, size: 14),
+                              icon: const Icon(Icons.calendar_today_rounded, size: 14),
                               label: Text('${endDate.day}.${endDate.month}.${endDate.year}', style: const TextStyle(fontSize: 12)),
                             ),
                           ],
@@ -1490,7 +1490,7 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
                           },
                     icon: saving
                         ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                        : const Icon(Icons.check_rounded, color: Colors.white),
+                        : const Icon(Icons.check_circle_rounded, color: Colors.white),
                     label: Text(saving ? 'Kaydediliyor...' : 'DEĞİŞİKLİKLERİ KAYDET', style: SoboTheme.fontSans(fontWeight: FontWeight.bold)),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: SoboTheme.espresso,
@@ -1546,7 +1546,7 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
                     children: [
                       Row(
                         children: [
-                          const Icon(Icons.edit_outlined, color: SoboTheme.espresso, size: 22),
+                          const Icon(Icons.edit_note_rounded, color: SoboTheme.espresso, size: 22),
                           const SizedBox(width: 8),
                           Text('Paketi Düzenle', style: SoboTheme.fontSerif(fontSize: 18, fontWeight: FontWeight.bold, color: SoboTheme.ink)),
                         ],
@@ -1632,7 +1632,7 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
                           },
                     icon: saving
                         ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                        : const Icon(Icons.check_rounded, color: Colors.white),
+                        : const Icon(Icons.check_circle_rounded, color: Colors.white),
                     label: Text(saving ? 'Kaydediliyor...' : 'PAKETİ GÜNCELLE', style: SoboTheme.fontSans(fontWeight: FontWeight.bold)),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: SoboTheme.espresso,
@@ -1721,7 +1721,7 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
                             final p = await showTimePicker(context: ctx, initialTime: time);
                             if (p != null) setModalState(() => time = p);
                           },
-                          icon: const Icon(Icons.alarm_rounded, size: 16),
+                          icon: const Icon(Icons.schedule_rounded, size: 16),
                           label: Text('Gönderim Saati: ${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}'),
                         ),
                       ),
@@ -3174,7 +3174,7 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
                         hintText: 'Örn: Salı 11:30, Perşembe 11:30',
                         filled: true,
                         fillColor: Colors.white,
-                        prefixIcon: Icon(Icons.alarm_on_rounded, color: SoboTheme.forest),
+                        prefixIcon: Icon(Icons.schedule_rounded, color: SoboTheme.forest),
                       ),
                     ),
                     const SizedBox(height: 14),
@@ -3350,7 +3350,7 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
                       hintText: 'Örn: Salı 11:30, Perşembe 11:30',
                       filled: true,
                       fillColor: Colors.white,
-                      prefixIcon: Icon(Icons.alarm_on_rounded, color: SoboTheme.forest),
+                      prefixIcon: Icon(Icons.schedule_rounded, color: SoboTheme.forest),
                     ),
                   ),
                   const SizedBox(height: 20),
@@ -3516,7 +3516,7 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
                                 shape: BoxShape.circle,
                               ),
                               child: Icon(
-                                isBireysel ? Icons.person_pin_circle_rounded : Icons.groups_rounded,
+                                isBireysel ? Icons.person_rounded : Icons.people_alt_rounded,
                                 size: 18,
                                 color: isBireysel ? const Color(0xFFB8860B) : SoboTheme.espresso,
                               ),
@@ -3608,7 +3608,7 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
                                   children: [
                                     Text('4 Hafta (1 Ay)', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: selectedWeeks == 4 ? Colors.white : SoboTheme.ink)),
                                     const SizedBox(width: 3),
-                                    const Icon(Icons.star_rounded, size: 13, color: Colors.amber),
+                                    const Icon(Icons.stars_rounded, size: 13, color: Colors.amber),
                                   ],
                                 ),
                                 Text('8 Seans (Standart)', style: TextStyle(fontSize: 10, color: selectedWeeks == 4 ? Colors.white70 : SoboTheme.secondary)),
@@ -3780,6 +3780,59 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Hata: ${e.toString().replaceAll('Exception: ', '')}'),
+            backgroundColor: SoboTheme.clay,
+          ),
+        );
+      }
+    }
+  }
+
+  
+  Future<void> _handleCancelReservation(dynamic m, int bookingId, {String? sessionInfo}) async {
+    final bool? confirm = await showDialog<bool>(
+      context: context,
+      builder: (dialogCtx) => AlertDialog(
+        backgroundColor: SoboTheme.ivory,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text('Rezervasyonu İptal Et', style: SoboTheme.fontSerif(fontWeight: FontWeight.bold, color: SoboTheme.ink)),
+        content: Text(
+          '${m["ad"]} üyesinin ${sessionInfo ?? "rezerve dersini"} iptal etmek istediğinize emin misiniz?\n\n• Ders hakkı üyenin bakiyesine iade edilecektir.\n• Seans kontenjanı boşalacaktır.',
+          style: SoboTheme.fontSans(fontSize: 13),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogCtx, false),
+            child: const Text('Vazgeç', style: TextStyle(color: SoboTheme.secondary)),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(dialogCtx, true),
+            style: ElevatedButton.styleFrom(backgroundColor: SoboTheme.clay, foregroundColor: Colors.white),
+            child: const Text('İptal Et & İade Yap'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
+    try {
+      final dynamic res = await ApiClient.post('/admin/bookings/$bookingId/cancel', <String, dynamic>{});
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(res['message']?.toString() ?? 'Rezervasyon iptal edildi ve ders hakkı iade edildi.'),
+            backgroundColor: SoboTheme.forest,
+          ),
+        );
+        _loadMembers(_searchMemberCtrl.text);
+        _loadTodaySessions();
+        _loadScheduleData();
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Hata: ${e.toString().replaceAll("Exception: ", "").trim()}'),
             backgroundColor: SoboTheme.clay,
           ),
         );
@@ -4174,7 +4227,7 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
                               Row(
                                 children: [
                                   Icon(
-                                    isCancel ? Icons.cancel_outlined : (isBooking ? Icons.check_circle_outline_rounded : Icons.notifications_active_outlined),
+                                    isCancel ? Icons.cancel_outlined : (isBooking ? Icons.check_circle_outline_rounded : Icons.notifications_active_rounded),
                                     color: isCancel ? SoboTheme.clay : (isBooking ? SoboTheme.sage : SoboTheme.espresso),
                                     size: 18,
                                   ),
@@ -4304,7 +4357,7 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
               child: Row(
                 children: [
                   IconButton(
-                    icon: const Icon(Icons.chevron_left_rounded, color: SoboTheme.espresso),
+                    icon: Transform.rotate(angle: 3.14159, child: const Icon(Icons.arrow_forward_rounded, color: SoboTheme.espresso)),
                     tooltip: 'Önceki Gün',
                     onPressed: () {
                       final prev = _todaySelectedDate.subtract(const Duration(days: 1));
@@ -4353,7 +4406,7 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
                     ),
                   ),
                   IconButton(
-                    icon: const Icon(Icons.chevron_right_rounded, color: SoboTheme.espresso),
+                    icon: const Icon(Icons.arrow_forward_rounded, color: SoboTheme.espresso),
                     tooltip: 'Sonraki Gün',
                     onPressed: () {
                       final next = _todaySelectedDate.add(const Duration(days: 1));
@@ -4613,7 +4666,7 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
                                         children: [
                                           ElevatedButton.icon(
                                             onPressed: () => _handleMarkAttended(bookingId, attendeeName),
-                                            icon: const Icon(Icons.check_rounded, size: 13, color: Colors.white),
+                                            icon: const Icon(Icons.check_circle_rounded, size: 13, color: Colors.white),
                                             label: Text('Geldi', style: SoboTheme.fontSans(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.white)),
                                             style: ElevatedButton.styleFrom(
                                               backgroundColor: SoboTheme.forest,
@@ -4683,7 +4736,7 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
                   Container(
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(color: SoboTheme.espresso, borderRadius: BorderRadius.circular(12)),
-                    child: const Icon(Icons.auto_fix_high_rounded, color: Colors.white, size: 20),
+                    child: const Icon(Icons.auto_awesome_rounded, color: Colors.white, size: 20),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
@@ -4892,7 +4945,7 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 IconButton(
-                                  icon: const Icon(Icons.edit_outlined, color: SoboTheme.espresso, size: 20),
+                                  icon: const Icon(Icons.edit_note_rounded, color: SoboTheme.espresso, size: 20),
                                   tooltip: 'Dersi Düzenle',
                                   onPressed: () => _showEditSessionModal(s),
                                 ),
@@ -5060,12 +5113,12 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
                             ),
                             if (phone.isNotEmpty) ...[
                               IconButton(
-                                icon: const Icon(Icons.phone_rounded, color: SoboTheme.mocha, size: 20),
+                                icon: const Icon(Icons.phone_android_rounded, color: SoboTheme.mocha, size: 20),
                                 tooltip: 'Ara',
                                 onPressed: () => _makePhoneCall(phone),
                               ),
                               IconButton(
-                                icon: const Icon(Icons.chat_bubble_outline_rounded, color: Color(0xFF25D366), size: 20),
+                                icon: const Icon(Icons.chat_bubble_rounded, color: Color(0xFF25D366), size: 20),
                                 tooltip: 'WhatsApp',
                                 onPressed: () => _openWhatsApp(
                                   phone,
@@ -5162,12 +5215,12 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
                 children: [
                   _buildFilterChip('ALL', 'Tümü (${activeMembers.length})', Icons.people_alt_rounded),
                   const SizedBox(width: 8),
-                  _buildFilterChip('BIREYSEL', '💎 Bireysel Üyeler (${bireyselMembers.length})', Icons.person_pin_circle_rounded),
+                  _buildFilterChip('BIREYSEL', '💎 Bireysel Üyeler (${bireyselMembers.length})', Icons.person_rounded),
                   const SizedBox(width: 8),
-                  _buildFilterChip('GRUP', '👥 Grup Üyeleri (${grupMembers.length})', Icons.groups_rounded),
+                  _buildFilterChip('GRUP', '👥 Grup Üyeleri (${grupMembers.length})', Icons.people_alt_rounded),
                   if (pendingMembers.isNotEmpty) ...[
                     const SizedBox(width: 8),
-                    _buildFilterChip('PENDING', '⏳ Onay Bekleyen (${pendingMembers.length})', Icons.hourglass_top_rounded),
+                    _buildFilterChip('PENDING', '⏳ Onay Bekleyen (${pendingMembers.length})', Icons.schedule_rounded),
                   ],
                 ],
               ),
@@ -5202,7 +5255,7 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
                             color: SoboTheme.clay.withOpacity(0.12),
                             shape: BoxShape.circle,
                           ),
-                          child: const Icon(Icons.person_add_rounded, color: SoboTheme.clay, size: 20),
+                          child: const Icon(Icons.person_add_alt_1_rounded, color: SoboTheme.clay, size: 20),
                         ),
                         const SizedBox(width: 12),
                         Expanded(
@@ -5265,7 +5318,7 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
                                     child: Row(
                                       mainAxisSize: MainAxisSize.min,
                                       children: [
-                                        Icon(Icons.hourglass_empty_rounded, size: 12, color: Colors.amber.shade800),
+                                        Icon(Icons.schedule_rounded, size: 12, color: Colors.amber.shade800),
                                         const SizedBox(width: 4),
                                         Text('Onay Bekliyor', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.amber.shade900)),
                                       ],
@@ -5279,7 +5332,7 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
                                   Expanded(
                                     child: ElevatedButton.icon(
                                       onPressed: () => _handleApproveMember(m),
-                                      icon: const Icon(Icons.check_rounded, size: 16),
+                                      icon: const Icon(Icons.check_circle_rounded, size: 16),
                                       label: const Text('Üyeliği Onayla', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
                                       style: ElevatedButton.styleFrom(
                                         backgroundColor: SoboTheme.sage,
@@ -5355,6 +5408,8 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
                   final bool isAdminMember = m['is_admin'] == true;
                   final List<dynamic> aktifPaketler = (m['aktif_paketler'] is List) ? (m['aktif_paketler'] as List) : <dynamic>[];
                   final List<dynamic> reservations = (m['aktif_rezervasyonlar'] is List) ? (m['aktif_rezervasyonlar'] as List) : <dynamic>[];
+                  final List<dynamic> detailedReservations = (m['rezerve_ders_detaylari'] is List) ? (m['rezerve_ders_detaylari'] as List) : <dynamic>[];
+                  final int totalReservations = detailedReservations.isNotEmpty ? detailedReservations.length : reservations.length;
                   final bool hasMeasures = (m['boy'] != null && m['boy'].toString().trim().isNotEmpty) ||
                       (m['kilo'] != null && m['kilo'].toString().trim().isNotEmpty) ||
                       (m['bel'] != null && m['bel'].toString().trim().isNotEmpty) ||
@@ -5449,7 +5504,7 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
                                           borderRadius: BorderRadius.circular(4),
                                           child: const Padding(
                                             padding: EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-                                            child: Icon(Icons.phone_rounded, size: 14, color: SoboTheme.mocha),
+                                            child: Icon(Icons.phone_android_rounded, size: 14, color: SoboTheme.mocha),
                                           ),
                                         ),
                                         InkWell(
@@ -5457,7 +5512,7 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
                                           borderRadius: BorderRadius.circular(4),
                                           child: const Padding(
                                             padding: EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-                                            child: Icon(Icons.chat_bubble_outline_rounded, size: 14, color: Color(0xFF25D366)),
+                                            child: Icon(Icons.chat_bubble_rounded, size: 14, color: Color(0xFF25D366)),
                                           ),
                                         ),
                                       ],
@@ -5467,13 +5522,36 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
                               ),
                             ),
                             const SizedBox(width: 8),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                              decoration: BoxDecoration(color: SoboTheme.sand, borderRadius: BorderRadius.circular(10)),
-                              child: Text(
-                                '$bakiye Ders',
-                                style: SoboTheme.fontSans(fontSize: 12, fontWeight: FontWeight.bold, color: SoboTheme.espresso),
-                              ),
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.end,
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: SoboTheme.sand,
+                                    borderRadius: BorderRadius.circular(10),
+                                    border: Border.all(color: SoboTheme.line),
+                                  ),
+                                  child: Text(
+                                    'Kalan: $bakiye Ders',
+                                    style: SoboTheme.fontSans(fontSize: 11.5, fontWeight: FontWeight.bold, color: SoboTheme.espresso),
+                                  ),
+                                ),
+                                if (reservations.isNotEmpty) ...[
+                                  const SizedBox(height: 3),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                                    decoration: BoxDecoration(
+                                      color: SoboTheme.sage.withOpacity(0.12),
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
+                                    child: Text(
+                                      '${reservations.length} Rezerve',
+                                      style: SoboTheme.fontSans(fontSize: 9.5, fontWeight: FontWeight.w600, color: SoboTheme.forest),
+                                    ),
+                                  ),
+                                ],
+                              ],
                             ),
                           ],
                         ),
@@ -5495,7 +5573,7 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
                                 children: [
                                   Row(
                                     children: [
-                                      const Icon(Icons.inventory_2_outlined, size: 14, color: SoboTheme.espresso),
+                                      const Icon(Icons.card_membership_rounded, size: 14, color: SoboTheme.espresso),
                                       const SizedBox(width: 6),
                                       Text(
                                         'Tanımlı Aktif Paketler',
@@ -5559,7 +5637,7 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
                                                   ),
                                                   const SizedBox(width: 4),
                                                   Text(
-                                                    '(${pkg['toplam_ders']} Ders)',
+                                                    '(Toplam ${pkg['toplam_ders']} Derslik Paket)',
                                                     style: SoboTheme.fontSans(fontSize: 10, fontWeight: FontWeight.bold, color: SoboTheme.mocha),
                                                   ),
                                                 ],
@@ -5592,7 +5670,7 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
                                                 child: Row(
                                                   mainAxisSize: MainAxisSize.min,
                                                   children: [
-                                                    const Icon(Icons.more_time_rounded, size: 12, color: SoboTheme.espresso),
+                                                    const Icon(Icons.edit_calendar_rounded, size: 12, color: SoboTheme.espresso),
                                                     const SizedBox(width: 3),
                                                     Text('Uzat/Düzenle', style: SoboTheme.fontSans(fontSize: 10, fontWeight: FontWeight.bold, color: SoboTheme.espresso)),
                                                   ],
@@ -5666,7 +5744,7 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
                                             child: Row(
                                               mainAxisSize: MainAxisSize.min,
                                               children: [
-                                                const Icon(Icons.more_time_rounded, size: 12, color: SoboTheme.espresso),
+                                                const Icon(Icons.edit_calendar_rounded, size: 12, color: SoboTheme.espresso),
                                                 const SizedBox(width: 3),
                                                 Text('Uzat/Düzenle', style: SoboTheme.fontSans(fontSize: 10, fontWeight: FontWeight.bold, color: SoboTheme.espresso)),
                                               ],
@@ -5708,7 +5786,7 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
                         ),
 
                         // Rezerve Ettiği Dersler (Varsa)
-                        if (reservations.isNotEmpty) ...[
+                        if (totalReservations > 0) ...[
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                             margin: const EdgeInsets.only(bottom: 6),
@@ -5725,36 +5803,74 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
                                     const Icon(Icons.event_available_rounded, size: 13, color: SoboTheme.sage),
                                     const SizedBox(width: 5),
                                     Text(
-                                      'Rezerve Dersleri (${reservations.length})',
+                                      'Rezerve Dersleri ($totalReservations)',
                                       style: SoboTheme.fontSans(fontSize: 11, fontWeight: FontWeight.bold, color: SoboTheme.espresso),
                                     ),
                                   ],
                                 ),
                                 const SizedBox(height: 4),
-                                ...reservations.take(3).map((dynamic r) => Padding(
-                                  padding: const EdgeInsets.symmetric(vertical: 1.5),
-                                  child: Row(
-                                    children: [
-                                      Container(width: 4, height: 4, decoration: const BoxDecoration(color: SoboTheme.sage, shape: BoxShape.circle)),
-                                      const SizedBox(width: 6),
-                                      Expanded(
-                                        child: Text(
-                                          r.toString(),
-                                          style: SoboTheme.fontSans(fontSize: 10, fontWeight: FontWeight.w600, color: SoboTheme.ink),
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
+                                if (detailedReservations.isNotEmpty)
+                                  ...detailedReservations.map((dynamic rd) {
+                                    final int bId = rd['booking_id'] is int ? rd['booking_id'] as int : int.tryParse(rd['booking_id']?.toString() ?? '0') ?? 0;
+                                    final String dName = rd['ders_adi'] ?? 'Ders';
+                                    final String dTime = rd['tarih_saat'] ?? '';
+                                    final String ins = (rd['egitmen'] != null && rd['egitmen'].toString().isNotEmpty) ? ' • ${rd['egitmen']}' : '';
+                                    return Padding(
+                                      padding: const EdgeInsets.symmetric(vertical: 2),
+                                      child: Row(
+                                        children: [
+                                          Container(width: 5, height: 5, decoration: const BoxDecoration(color: SoboTheme.sage, shape: BoxShape.circle)),
+                                          const SizedBox(width: 6),
+                                          Expanded(
+                                            child: Text(
+                                              '$dName ($dTime$ins)',
+                                              style: SoboTheme.fontSans(fontSize: 10.5, fontWeight: FontWeight.w600, color: SoboTheme.ink),
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                          ),
+                                          const SizedBox(width: 6),
+                                          if (bId > 0)
+                                            InkWell(
+                                              onTap: () => _handleCancelReservation(m, bId, sessionInfo: '$dName ($dTime)'),
+                                              borderRadius: BorderRadius.circular(4),
+                                              child: Container(
+                                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                                decoration: BoxDecoration(
+                                                  color: SoboTheme.clay.withOpacity(0.1),
+                                                  borderRadius: BorderRadius.circular(4),
+                                                  border: Border.all(color: SoboTheme.clay.withOpacity(0.3)),
+                                                ),
+                                                child: Row(
+                                                  mainAxisSize: MainAxisSize.min,
+                                                  children: [
+                                                    const Icon(Icons.close_rounded, size: 10, color: SoboTheme.clay),
+                                                    const SizedBox(width: 2),
+                                                    Text('İptal Et', style: SoboTheme.fontSans(fontSize: 9, fontWeight: FontWeight.bold, color: SoboTheme.clay)),
+                                                  ],
+                                                ),
+                                              ),
+                                            ),
+                                        ],
                                       ),
-                                    ],
-                                  ),
-                                )),
-                                if (reservations.length > 3)
-                                  Padding(
-                                    padding: const EdgeInsets.only(top: 2),
-                                    child: Text(
-                                      '+${reservations.length - 3} ders daha...',
-                                      style: SoboTheme.fontSans(fontSize: 9, color: SoboTheme.secondary, fontStyle: FontStyle.italic),
+                                    );
+                                  })
+                                else
+                                  ...reservations.map((dynamic r) => Padding(
+                                    padding: const EdgeInsets.symmetric(vertical: 1.5),
+                                    child: Row(
+                                      children: [
+                                        Container(width: 4, height: 4, decoration: const BoxDecoration(color: SoboTheme.sage, shape: BoxShape.circle)),
+                                        const SizedBox(width: 6),
+                                        Expanded(
+                                          child: Text(
+                                            r.toString(),
+                                            style: SoboTheme.fontSans(fontSize: 10, fontWeight: FontWeight.w600, color: SoboTheme.ink),
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ),
+                                      ],
                                     ),
-                                  ),
+                                  )),
                               ],
                             ),
                           ),
@@ -5806,7 +5922,7 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
                               ),
                               child: Row(
                                 children: [
-                                  const Icon(Icons.alarm_on_rounded, size: 15, color: SoboTheme.forest),
+                                  const Icon(Icons.schedule_rounded, size: 15, color: SoboTheme.forest),
                                   const SizedBox(width: 6),
                                   Expanded(
                                     child: Text(
@@ -5816,7 +5932,7 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
                                     ),
                                   ),
                                   const SizedBox(width: 4),
-                                  const Icon(Icons.edit_rounded, size: 13, color: SoboTheme.forest),
+                                  const Icon(Icons.edit_note_rounded, size: 13, color: SoboTheme.forest),
                                 ],
                               ),
                             ),
@@ -5857,7 +5973,7 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
                               ),
                               child: Row(
                                 children: [
-                                  Icon(Icons.add_alarm_rounded, size: 14, color: SoboTheme.secondary),
+                                  Icon(Icons.schedule_rounded, size: 14, color: SoboTheme.secondary),
                                   const SizedBox(width: 6),
                                   Expanded(
                                     child: Text(
@@ -5865,7 +5981,7 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
                                       style: SoboTheme.fontSans(fontSize: 10.5, fontWeight: FontWeight.w600, color: SoboTheme.secondary),
                                     ),
                                   ),
-                                  Icon(Icons.add, size: 13, color: SoboTheme.secondary),
+                                  Icon(Icons.add_rounded, size: 13, color: SoboTheme.secondary),
                                 ],
                               ),
                             ),
@@ -5893,7 +6009,7 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
                             Expanded(
                               child: ElevatedButton.icon(
                                 onPressed: () => _showAssignPackageModal(m),
-                                icon: const Icon(Icons.add_circle_outline_rounded, size: 14, color: Colors.white),
+                                icon: const Icon(Icons.add_rounded, size: 14, color: Colors.white),
                                 label: const Text('+ Paket', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.white)),
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: SoboTheme.clay,
@@ -6042,7 +6158,7 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
                       ],
                     ),
                   ),
-                  const Icon(Icons.arrow_forward_ios_rounded, color: Colors.white70, size: 16),
+                  const Icon(Icons.arrow_forward_rounded, color: Colors.white70, size: 16),
                 ],
               ),
             ),
@@ -6118,7 +6234,7 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
                   children: [
                     Row(
                       children: [
-                        const Icon(Icons.alarm_on_rounded, color: SoboTheme.espresso, size: 20),
+                        const Icon(Icons.schedule_rounded, color: SoboTheme.espresso, size: 20),
                         const SizedBox(width: 6),
                         Text('GÜNLÜK OTOMATİK KAMPANYALAR', style: SoboTheme.fontSans(fontSize: 12, fontWeight: FontWeight.bold, color: SoboTheme.espresso)),
                       ],
@@ -6307,7 +6423,7 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
                             child: Text('${pkg['ders_adedi']} Ders', style: SoboTheme.fontSans(fontSize: 13, fontWeight: FontWeight.bold, color: SoboTheme.espresso)),
                           ),
                           IconButton(
-                            icon: const Icon(Icons.edit_outlined, color: SoboTheme.espresso, size: 20),
+                            icon: const Icon(Icons.edit_note_rounded, color: SoboTheme.espresso, size: 20),
                             tooltip: 'Paketi Düzenle',
                             onPressed: () => _showEditPackageModal(pkg),
                           ),
@@ -6393,7 +6509,7 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
                 ),
                 TextButton.icon(
                   onPressed: _loadWorkshops,
-                  icon: const Icon(Icons.refresh_rounded, size: 16, color: SoboTheme.espresso),
+                  icon: const Icon(Icons.flash_on_rounded, size: 16, color: SoboTheme.espresso),
                   label: Text('Yenile', style: SoboTheme.fontSans(fontSize: 11, fontWeight: FontWeight.bold, color: SoboTheme.espresso)),
                 ),
               ],
@@ -6498,7 +6614,7 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
                             const SizedBox(width: 4),
                             Text(dateStr, style: SoboTheme.fontSans(fontSize: 11.5, color: SoboTheme.secondary)),
                             const SizedBox(width: 14),
-                            const Icon(Icons.payments_outlined, size: 14, color: SoboTheme.secondary),
+                            const Icon(Icons.confirmation_number_rounded, size: 14, color: SoboTheme.secondary),
                             const SizedBox(width: 4),
                             Text(w['ucret'] ?? 'Ücretsiz', style: SoboTheme.fontSans(fontSize: 11.5, fontWeight: FontWeight.bold, color: SoboTheme.espresso)),
                           ],
@@ -6520,7 +6636,7 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
                           children: [
                             ElevatedButton.icon(
                               onPressed: () => _showWorkshopAttendeesModal(w),
-                              icon: const Icon(Icons.people_alt_outlined, size: 14, color: Colors.white),
+                              icon: const Icon(Icons.people_alt_rounded, size: 14, color: Colors.white),
                               label: Text(
                                 'Katılımcılar (${(w['katilimcilar'] is List) ? (w['katilimcilar'] as List).length : (w['dolu_sayi'] ?? 0)})',
                                 style: SoboTheme.fontSans(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.white),
@@ -6538,7 +6654,7 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
                               children: [
                                 OutlinedButton.icon(
                                   onPressed: () => _showWorkshopFormModal(eventToEdit: w),
-                                  icon: const Icon(Icons.edit_outlined, size: 14, color: SoboTheme.espresso),
+                                  icon: const Icon(Icons.edit_note_rounded, size: 14, color: SoboTheme.espresso),
                                   label: Text('Düzenle', style: SoboTheme.fontSans(fontSize: 11, fontWeight: FontWeight.bold, color: SoboTheme.espresso)),
                                   style: OutlinedButton.styleFrom(
                                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),

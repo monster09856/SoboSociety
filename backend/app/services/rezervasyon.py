@@ -140,11 +140,13 @@ async def rezerve_et(
         booking_id=kayit.id,
     )
     from app.services.bildirim import bildirim_gonder, adminlere_bildirim_gonder
+    from app.services.program_uretimi import to_local_str
+    local_saat_str = to_local_str(oturum.baslangic, "%d.%m %H:%M")
     await bildirim_gonder(
         db,
         member_id=member_id,
         baslik="Rezervasyon Onayı 🎯",
-        mesaj=f"{tip.ad} dersine yeriniz ayrıldı ({oturum.baslangic:%d.%m %H:%M}).",
+        mesaj=f"{tip.ad} dersine yeriniz ayrıldı ({local_saat_str}).",
         tip="REZERVE_ONAY",
     )
 
@@ -152,11 +154,10 @@ async def rezerve_et(
     if kaynak != BookingKaynagi.ADMIN:
         member_rec = await db.get(Member, member_id)
         member_ad = member_rec.ad if member_rec else f"Üye #{member_id}"
-        ders_saat_str = oturum.baslangic.strftime("%d.%m %H:%M")
         await adminlere_bildirim_gonder(
             db,
             baslik="📅 Yeni Ders Rezervasyonu!",
-            mesaj=f"{member_ad} üyesi {tip.ad} ({ders_saat_str}) dersine rezervasyon yaptı. (Doluluk: {oturum.dolu_sayi}/{oturum.kontenjan})",
+            mesaj=f"{member_ad} üyesi {tip.ad} ({local_saat_str}) dersine rezervasyon yaptı. (Doluluk: {oturum.dolu_sayi}/{oturum.kontenjan})",
             tip="YENI_REZERVASYON",
         )
     return kayit

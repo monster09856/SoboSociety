@@ -11,6 +11,15 @@ from app.models import ClassSession, ClassType, ScheduleTemplate
 STUDYO_TZ = ZoneInfo("Europe/Istanbul")
 
 
+def to_local_str(dt: datetime | None, fmt: str = "%d.%m.%Y %H:%M") -> str:
+    """UTC olarak saklanan datetime nesnesini stüdyo yerel saatine (Europe/Istanbul UTC+3) çevirip formatlar."""
+    if not dt:
+        return ""
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=ZoneInfo("UTC"))
+    return dt.astimezone(STUDYO_TZ).strftime(fmt)
+
+
 def _yerel_ani_utc_ye_cevir(gun: date, saat_dk: int) -> datetime:
     """Şablondaki yerel saati o güne uygulayıp UTC'ye çevirir.
 

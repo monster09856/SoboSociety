@@ -506,7 +506,7 @@ class _MyBookingsViewState extends State<MyBookingsView> with SingleTickerProvid
                                       color: isWithin12 ? SoboTheme.clay : SoboTheme.forest,
                                       borderRadius: BorderRadius.circular(14),
                                     ),
-                                    child: Icon(isWithin12 ? Icons.hourglass_bottom_rounded : Icons.alarm_on_rounded, color: Colors.white, size: 22),
+                                    child: const Icon(Icons.schedule_rounded, color: Colors.white, size: 22),
                                   ),
                                   const SizedBox(width: 12),
                                   Expanded(
@@ -566,7 +566,7 @@ class _MyBookingsViewState extends State<MyBookingsView> with SingleTickerProvid
                                         const SizedBox(height: 12),
                                         OutlinedButton.icon(
                                           onPressed: _handleFixedScheduleCancellation,
-                                          icon: Icon(Icons.chat_bubble_outline_rounded, size: 15, color: isWithin12 ? SoboTheme.clay : SoboTheme.forest),
+                                          icon: Icon(Icons.chat_bubble_rounded, size: 15, color: isWithin12 ? SoboTheme.clay : SoboTheme.forest),
                                           label: Text(
                                             isWithin12 ? 'GEÇ İPTAL BİLDİR (12 SAAT DOLDU)' : 'BU HAFTAKİ SABİT DERSİ İPTAL BİLDİR',
                                             style: SoboTheme.fontSans(

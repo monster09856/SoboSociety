@@ -96,9 +96,10 @@ async def iptal_et(
 
     # Bildirimler: Hem üyeye hem de adminlere (Eda Hanım) anlık push & in-app
     from app.services.bildirim import bildirim_gonder, adminlere_bildirim_gonder
+    from app.services.program_uretimi import to_local_str
     member_rec = await db.get(Member, kayit.member_id)
     member_ad = member_rec.ad if member_rec else f"Üye #{kayit.member_id}"
-    ders_saat_str = oturum.baslangic.strftime("%d.%m %H:%M")
+    ders_saat_str = to_local_str(oturum.baslangic, "%d.%m %H:%M")
     durum_aciklama = "1 ders hakkı hesabınıza iade edildi." if iade else "Geç iptal (12 saatten az kala) sebebiyle stüdyo kuralı gereği ders hakkı iadesi yapılmadı (ders hakkınız yandı)."
 
     # Üyeye bildirim
