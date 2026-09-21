@@ -165,7 +165,7 @@ export interface MemberRegisterRequest {
   ad: string
   kullanici_adi: string
   sifre: string
-  telefon?: string
+  telefon: string
 }
 
 export interface MemberLoginRequest {

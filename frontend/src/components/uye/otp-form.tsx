@@ -40,13 +40,13 @@ export function OtpForm({ onSuccess, redirectTo }: OtpFormProps) {
     setError(null)
     setPendingApproval(false)
 
-    if (!regAd.trim() || !regKullaniciAdi.trim() || !regSifre.trim()) {
-      setError('Lütfen Ad Soyad, Kullanıcı Adı ve Şifre alanlarını doldurun.')
+    if (!regAd.trim() || !regKullaniciAdi.trim() || !regSifre.trim() || !regTelefon.trim()) {
+      setError('Lütfen Ad Soyad, Kullanıcı Adı, Şifre ve Cep Telefonu alanlarını eksiksiz doldurun.')
       return
     }
 
     const cleanPhone = regTelefon.replace(/\D/g, '')
-    if (cleanPhone && (cleanPhone.length < 10 || cleanPhone.length > 11 || (!cleanPhone.startsWith('5') && !cleanPhone.startsWith('05')))) {
+    if (!cleanPhone || cleanPhone.length < 10 || cleanPhone.length > 11 || (!cleanPhone.startsWith('5') && !cleanPhone.startsWith('05'))) {
       setError('Telefon numaranızı eksik veya yanlış tuşladınız. Lütfen kontrol ediniz (örn: 05XX XXX XX XX).')
       return
     }
@@ -57,7 +57,7 @@ export function OtpForm({ onSuccess, redirectTo }: OtpFormProps) {
         ad: regAd.trim(),
         kullanici_adi: regKullaniciAdi.trim(),
         sifre: regSifre.trim(),
-        telefon: regTelefon.trim() || undefined,
+        telefon: regTelefon.trim(),
       })
 
       if (res.aktif === false || !res.access_token) {
@@ -311,7 +311,7 @@ export function OtpForm({ onSuccess, redirectTo }: OtpFormProps) {
 
             <div className="space-y-1.5">
               <label htmlFor="regTelefon" className="text-xs font-bold text-secondary uppercase tracking-wider block">
-                Cep Telefonu (Opsiyonel)
+                Cep Telefonu *
               </label>
               <div className="relative">
                 <Phone className="absolute left-4 top-3 h-4 w-4 text-mocha" />
@@ -323,6 +323,7 @@ export function OtpForm({ onSuccess, redirectTo }: OtpFormProps) {
                   onChange={(e) => setRegTelefon(e.target.value)}
                   className="bg-ivory border-line text-ink placeholder-muted focus:border-espresso focus:ring-2 focus:ring-espresso/20 rounded-2xl h-11 pl-11 pr-4 font-medium text-sm"
                   disabled={loading}
+                  required
                 />
               </div>
             </div>
