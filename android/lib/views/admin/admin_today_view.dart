@@ -2702,14 +2702,14 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
     final List<Map<String, dynamic>> fallbackPackages = [
       {'id': 9, 'ad': 'Barre Class Tek Ders', 'ders_adedi': 1, 'gecerlilik_gun': 7, 'aktif': true},
       {'id': 10, 'ad': 'Barre Class 4 Ders (4 Hafta)', 'ders_adedi': 4, 'gecerlilik_gun': 28, 'aktif': true},
-      {'id': 11, 'ad': 'Sobo Class (8 Ders / 6 Hafta)', 'ders_adedi': 8, 'gecerlilik_gun': 42, 'aktif': true},
-      {'id': 12, 'ad': 'Sobo Class (12 Ders / 8 Hafta)', 'ders_adedi': 12, 'gecerlilik_gun': 56, 'aktif': true},
+      {'id': 11, 'ad': 'Barre Class (8 Ders / 6 Hafta)', 'ders_adedi': 8, 'gecerlilik_gun': 42, 'aktif': true},
+      {'id': 12, 'ad': 'Barre Class (12 Ders / 8 Hafta)', 'ders_adedi': 12, 'gecerlilik_gun': 56, 'aktif': true},
       {'id': 13, 'ad': 'Yoga Class Tek Ders', 'ders_adedi': 1, 'gecerlilik_gun': 7, 'aktif': true},
       {'id': 14, 'ad': 'Yoga Class 4 Ders (5 Hafta)', 'ders_adedi': 4, 'gecerlilik_gun': 35, 'aktif': true},
-      {'id': 15, 'ad': 'Barre Class Bireysel (8 Ders)', 'ders_adedi': 8, 'gecerlilik_gun': 42, 'aktif': true},
-      {'id': 16, 'ad': 'Barre Class Bireysel Premium (12 Ders)', 'ders_adedi': 12, 'gecerlilik_gun': 56, 'aktif': true},
-      {'id': 17, 'ad': 'Reformer Class Bireysel (8 Ders)', 'ders_adedi': 8, 'gecerlilik_gun': 42, 'aktif': true},
-      {'id': 18, 'ad': 'Reformer Class Bireysel Elite (12 Ders)', 'ders_adedi': 12, 'gecerlilik_gun': 56, 'aktif': true},
+      {'id': 15, 'ad': 'Barre - Bireysel Mini', 'ders_adedi': 8, 'gecerlilik_gun': 42, 'aktif': true},
+      {'id': 16, 'ad': 'Barre - Bireysel Standart', 'ders_adedi': 12, 'gecerlilik_gun': 56, 'aktif': true},
+      {'id': 17, 'ad': 'Reformer Pilates - Bireysel Mini', 'ders_adedi': 8, 'gecerlilik_gun': 42, 'aktif': true},
+      {'id': 18, 'ad': 'Reformer Pilates - Bireysel Standart', 'ders_adedi': 12, 'gecerlilik_gun': 56, 'aktif': true},
     ];
 
     List<dynamic> activePackages = _packages.where((p) => p['aktif'] == true).toList();
@@ -2726,6 +2726,17 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
     final TextEditingController sabitDersPkgCtrl = TextEditingController(text: m['sabit_ders_saatleri'] ?? '');
     String customUnit = 'hafta'; // 'hafta' or 'gun'
     bool isSubmitting = false;
+
+    DateTime packageStartDate = DateTime.now();
+    int initialDays = 42;
+    final dynamic initialPkg = activePackages.firstWhere(
+      (p) => p['id'] == selectedPackageId,
+      orElse: () => activePackages.isNotEmpty ? activePackages.first : null,
+    );
+    if (initialPkg != null && initialPkg['gecerlilik_gun'] != null) {
+      initialDays = (initialPkg['gecerlilik_gun'] as num).toInt();
+    }
+    DateTime packageEndDate = packageStartDate.add(Duration(days: initialDays));
 
     showModalBottomSheet<void>(
       context: context,
@@ -2831,7 +2842,19 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
                                 ),
                               );
                             }).toList(),
-                            onChanged: (val) => setModalState(() => selectedPackageId = val),
+                            onChanged: (val) {
+                              setModalState(() {
+                                selectedPackageId = val;
+                                final dynamic chosenPkg = activePackages.firstWhere(
+                                  (p) => p['id'] == val,
+                                  orElse: () => null,
+                                );
+                                if (chosenPkg != null && chosenPkg['gecerlilik_gun'] != null) {
+                                  final int days = (chosenPkg['gecerlilik_gun'] as num).toInt();
+                                  packageEndDate = packageStartDate.add(Duration(days: days));
+                                }
+                              });
+                            },
                           ),
                         ),
                       ),
@@ -2865,6 +2888,7 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
                                         setModalState(() {
                                           customUnit = 'hafta';
                                           customValCtrl.text = '6';
+                                          packageEndDate = packageStartDate.add(const Duration(days: 42));
                                         });
                                       },
                                       child: Container(
@@ -2890,6 +2914,7 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
                                         setModalState(() {
                                           customUnit = 'gun';
                                           customValCtrl.text = '42';
+                                          packageEndDate = packageStartDate.add(const Duration(days: 42));
                                         });
                                       },
                                       child: Container(
@@ -2915,7 +2940,13 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
                                 TextField(
                                   controller: customValCtrl,
                                   keyboardType: TextInputType.number,
-                                  onChanged: (_) => setModalState(() {}),
+                                  onChanged: (_) {
+                                    setModalState(() {
+                                      final int numV = int.tryParse(customValCtrl.text) ?? (customUnit == 'hafta' ? 6 : 42);
+                                      final int calcDays = customUnit == 'hafta' ? numV * 7 : numV;
+                                      packageEndDate = packageStartDate.add(Duration(days: calcDays));
+                                    });
+                                  },
                                   decoration: InputDecoration(
                                     labelText: customUnit == 'hafta' ? 'Hafta Sayısı' : 'Gün Sayısı',
                                     filled: true,
@@ -2933,6 +2964,115 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
                         ],
                       ),
                     ],
+
+                    const SizedBox(height: 14),
+                    Text('PAKET GEÇERLİLİK TARİHLERİ', style: SoboTheme.fontSans(fontSize: 10, fontWeight: FontWeight.bold, color: SoboTheme.secondary)),
+                    const SizedBox(height: 6),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: InkWell(
+                            onTap: () async {
+                              final picked = await showDatePicker(
+                                context: modalCtx,
+                                initialDate: packageStartDate,
+                                firstDate: DateTime(2020),
+                                lastDate: DateTime(2035),
+                              );
+                              if (picked != null) {
+                                setModalState(() {
+                                  packageStartDate = picked;
+                                  final int numV = int.tryParse(customValCtrl.text) ?? (customUnit == 'hafta' ? 6 : 42);
+                                  final int daysToUse = isCustom
+                                      ? (customUnit == 'hafta' ? numV * 7 : numV)
+                                      : ((activePackages.firstWhere((p) => p['id'] == selectedPackageId, orElse: () => null)?['gecerlilik_gun'] as num?)?.toInt() ?? 42);
+                                  packageEndDate = packageStartDate.add(Duration(days: daysToUse));
+                                });
+                              }
+                            },
+                            borderRadius: BorderRadius.circular(12),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: SoboTheme.line),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text('Başlangıç Tarihi', style: SoboTheme.fontSans(fontSize: 10, color: SoboTheme.secondary)),
+                                  const SizedBox(height: 3),
+                                  Row(
+                                    children: [
+                                      const Icon(Icons.calendar_today_rounded, size: 13, color: SoboTheme.espresso),
+                                      const SizedBox(width: 4),
+                                      Expanded(
+                                        child: Text(
+                                          '${packageStartDate.day.toString().padLeft(2, '0')}.${packageStartDate.month.toString().padLeft(2, '0')}.${packageStartDate.year}',
+                                          style: SoboTheme.fontSans(fontSize: 12, fontWeight: FontWeight.bold, color: SoboTheme.espresso),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: InkWell(
+                            onTap: () async {
+                              final picked = await showDatePicker(
+                                context: modalCtx,
+                                initialDate: packageEndDate,
+                                firstDate: DateTime(2020),
+                                lastDate: DateTime(2035),
+                              );
+                              if (picked != null) {
+                                setModalState(() {
+                                  packageEndDate = picked;
+                                });
+                              }
+                            },
+                            borderRadius: BorderRadius.circular(12),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: SoboTheme.line),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text('Bitiş Tarihi', style: SoboTheme.fontSans(fontSize: 10, color: SoboTheme.secondary)),
+                                  const SizedBox(height: 3),
+                                  Row(
+                                    children: [
+                                      const Icon(Icons.calendar_today_rounded, size: 13, color: SoboTheme.espresso),
+                                      const SizedBox(width: 4),
+                                      Expanded(
+                                        child: Text(
+                                          '${packageEndDate.day.toString().padLeft(2, '0')}.${packageEndDate.month.toString().padLeft(2, '0')}.${packageEndDate.year}',
+                                          style: SoboTheme.fontSans(fontSize: 12, fontWeight: FontWeight.bold, color: SoboTheme.espresso),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '💡 Başlangıç ve bitiş tarihlerini geçmişe veya geleceğe dönük ayarlayabilirsiniz.',
+                      style: SoboTheme.fontSans(fontSize: 10, color: SoboTheme.secondary),
+                    ),
 
                     const SizedBox(height: 14),
                     Text('HAFTALIK SABİT DERS GÜN & SAATLERİ (OPSİYONEL)', style: SoboTheme.fontSans(fontSize: 10, fontWeight: FontWeight.bold, color: SoboTheme.secondary)),
@@ -2994,6 +3134,8 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
                               try {
                                 final Map<String, dynamic> payload = <String, dynamic>{
                                   'member_id': m['id'],
+                                  'baslangic': '${packageStartDate.year}-${packageStartDate.month.toString().padLeft(2, '0')}-${packageStartDate.day.toString().padLeft(2, '0')}',
+                                  'bitis': '${packageEndDate.year}-${packageEndDate.month.toString().padLeft(2, '0')}-${packageEndDate.day.toString().padLeft(2, '0')}',
                                 };
 
                                 if (isCustom) {
@@ -3085,8 +3227,42 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
           ? pkg['sabit_ders_saatleri'].toString()
           : (m['sabit_ders_saatleri']?.toString() ?? ''),
     );
+
+    DateTime? parseDate(dynamic dateVal) {
+      if (dateVal == null) return null;
+      final str = dateVal.toString().trim();
+      if (str.isEmpty || str == '-') return null;
+      if (str.contains('.')) {
+        final parts = str.split('.');
+        if (parts.length == 3) {
+          final d = int.tryParse(parts[0]);
+          final m = int.tryParse(parts[1]);
+          final y = int.tryParse(parts[2]);
+          if (d != null && m != null && y != null) {
+            return DateTime(y, m, d);
+          }
+        }
+      } else if (str.contains('-')) {
+        final parts = str.split('-');
+        if (parts.length == 3) {
+          final y = int.tryParse(parts[0]);
+          final m = int.tryParse(parts[1]);
+          final d = int.tryParse(parts[2]);
+          if (d != null && m != null && y != null) {
+            return DateTime(y, m, d);
+          }
+        }
+      }
+      return DateTime.tryParse(str);
+    }
+
+    DateTime customStartDate = parseDate(pkg != null ? pkg['baslangic_tarihi'] : null) ??
+        parseDate(m['paket_baslangic_tarihi']) ??
+        DateTime.now();
+    DateTime customEndDate = parseDate(pkg != null ? pkg['bitis_tarihi'] : null) ??
+        parseDate(m['paket_bitis_tarihi']) ??
+        DateTime.now().add(const Duration(days: 30));
     int? additionalDays;
-    DateTime? customEndDate;
     bool isSaving = false;
 
     showModalBottomSheet<void>(
@@ -3129,25 +3305,101 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
                     ),
                     const SizedBox(height: 14),
 
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: SoboTheme.sand.withOpacity(0.5),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: SoboTheme.line),
-                      ),
-                      child: Row(
-                        children: [
-                          const Icon(Icons.calendar_today_rounded, size: 16, color: SoboTheme.espresso),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              'Mevcut Bitiş: ${m['paket_bitis_tarihi'] ?? "-"} (${m['kalan_gun_sayisi'] ?? 0} gün kaldı)',
-                              style: SoboTheme.fontSans(fontSize: 12, fontWeight: FontWeight.w600, color: SoboTheme.espresso),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: InkWell(
+                            onTap: () async {
+                              final picked = await showDatePicker(
+                                context: modalCtx,
+                                initialDate: customStartDate,
+                                firstDate: DateTime(2020),
+                                lastDate: DateTime(2035),
+                              );
+                              if (picked != null) {
+                                setModalState(() {
+                                  customStartDate = picked;
+                                });
+                              }
+                            },
+                            borderRadius: BorderRadius.circular(12),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: SoboTheme.line),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text('Başlangıç Tarihi', style: SoboTheme.fontSans(fontSize: 10, color: SoboTheme.secondary)),
+                                  const SizedBox(height: 3),
+                                  Row(
+                                    children: [
+                                      const Icon(Icons.calendar_today_rounded, size: 13, color: SoboTheme.espresso),
+                                      const SizedBox(width: 4),
+                                      Expanded(
+                                        child: Text(
+                                          '${customStartDate.day.toString().padLeft(2, '0')}.${customStartDate.month.toString().padLeft(2, '0')}.${customStartDate.year}',
+                                          style: SoboTheme.fontSans(fontSize: 12, fontWeight: FontWeight.bold, color: SoboTheme.espresso),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
-                        ],
-                      ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: InkWell(
+                            onTap: () async {
+                              final picked = await showDatePicker(
+                                context: modalCtx,
+                                initialDate: customEndDate,
+                                firstDate: DateTime(2020),
+                                lastDate: DateTime(2035),
+                              );
+                              if (picked != null) {
+                                setModalState(() {
+                                  customEndDate = picked;
+                                  additionalDays = null;
+                                });
+                              }
+                            },
+                            borderRadius: BorderRadius.circular(12),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: SoboTheme.line),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text('Bitiş Tarihi', style: SoboTheme.fontSans(fontSize: 10, color: SoboTheme.secondary)),
+                                  const SizedBox(height: 3),
+                                  Row(
+                                    children: [
+                                      const Icon(Icons.calendar_today_rounded, size: 13, color: SoboTheme.espresso),
+                                      const SizedBox(width: 4),
+                                      Expanded(
+                                        child: Text(
+                                          '${customEndDate.day.toString().padLeft(2, '0')}.${customEndDate.month.toString().padLeft(2, '0')}.${customEndDate.year}',
+                                          style: SoboTheme.fontSans(fontSize: 12, fontWeight: FontWeight.bold, color: SoboTheme.espresso),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                     const SizedBox(height: 14),
 
@@ -3179,53 +3431,27 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
                     ),
                     const SizedBox(height: 14),
 
-                    Text('SÜRE UZATMA / BİTİŞ TARİHİ', style: SoboTheme.fontSans(fontSize: 11, fontWeight: FontWeight.bold, color: SoboTheme.espresso)),
+                    Text('HIZLI BİTİŞ UZATMA (+ GÜN)', style: SoboTheme.fontSans(fontSize: 11, fontWeight: FontWeight.bold, color: SoboTheme.espresso)),
                     const SizedBox(height: 8),
                     Wrap(
                       spacing: 8,
                       children: [7, 14, 30, 45, 60].map((days) {
-                        final bool isSelected = additionalDays == days;
-                        return ChoiceChip(
+                        return ActionChip(
                           label: Text('+$days Gün'),
-                          selected: isSelected,
-                          selectedColor: SoboTheme.clay,
-                          labelStyle: TextStyle(
-                            color: isSelected ? Colors.white : SoboTheme.espresso,
+                          backgroundColor: SoboTheme.sand,
+                          labelStyle: SoboTheme.fontSans(
+                            color: SoboTheme.espresso,
                             fontWeight: FontWeight.bold,
                             fontSize: 12,
                           ),
-                          onSelected: (val) {
+                          onPressed: () {
                             setModalState(() {
-                              additionalDays = val ? days : null;
-                              customEndDate = null;
+                              customEndDate = customEndDate.add(Duration(days: days));
+                              additionalDays = null;
                             });
                           },
                         );
                       }).toList(),
-                    ),
-                    const SizedBox(height: 8),
-                    OutlinedButton.icon(
-                      onPressed: () async {
-                        final picked = await showDatePicker(
-                          context: modalCtx,
-                          initialDate: DateTime.now().add(const Duration(days: 30)),
-                          firstDate: DateTime.now(),
-                          lastDate: DateTime.now().add(const Duration(days: 365)),
-                        );
-                        if (picked != null) {
-                          setModalState(() {
-                            customEndDate = picked;
-                            additionalDays = null;
-                          });
-                        }
-                      },
-                      icon: const Icon(Icons.calendar_month_rounded, size: 16),
-                      label: Text(
-                        customEndDate != null
-                            ? 'Yeni Bitiş: ${customEndDate!.day}.${customEndDate!.month}.${customEndDate!.year}'
-                            : 'Takvimden Özel Tarih Seç',
-                        style: const TextStyle(fontSize: 12),
-                      ),
                     ),
 
                     const SizedBox(height: 20),
@@ -3235,7 +3461,10 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
                           : () async {
                               setModalState(() => isSaving = true);
                               try {
-                                final Map<String, dynamic> payload = <String, dynamic>{};
+                                final Map<String, dynamic> payload = <String, dynamic>{
+                                  'baslangic': '${customStartDate.year}-${customStartDate.month.toString().padLeft(2, '0')}-${customStartDate.day.toString().padLeft(2, '0')}',
+                                  'bitis': '${customEndDate.year}-${customEndDate.month.toString().padLeft(2, '0')}-${customEndDate.day.toString().padLeft(2, '0')}',
+                                };
                                 final int? newLessons = int.tryParse(remainingLessonsCtrl.text.trim());
                                 if (newLessons != null) {
                                   payload['kalan_ders'] = newLessons;
@@ -5646,7 +5875,7 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
                                               Padding(
                                                 padding: const EdgeInsets.only(left: 17),
                                                 child: Text(
-                                                  'Son Gün: ${pkg['bitis_tarihi'] ?? "-"} • (${pkg['kalan_gun'] ?? 0} Gün Kaldı)',
+                                                  '${pkg['baslangic_tarihi'] != null && pkg['baslangic_tarihi'].toString().isNotEmpty ? "Başlangıç: ${pkg['baslangic_tarihi']} • " : ""}Son Gün: ${pkg['bitis_tarihi'] ?? "-"} • (${pkg['kalan_gun'] ?? 0} Gün Kaldı)',
                                                   style: SoboTheme.fontSans(fontSize: 10, color: SoboTheme.secondary),
                                                 ),
                                               ),
@@ -5717,7 +5946,7 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
                                           ),
                                           const SizedBox(height: 2),
                                           Text(
-                                            'Bitiş: ${m['paket_bitis_tarihi'] ?? "-"} (${m['kalan_gun_sayisi'] ?? 0} gün kaldı)',
+                                            '${m['paket_baslangic_tarihi'] != null && m['paket_baslangic_tarihi'].toString().isNotEmpty ? "Başlangıç: ${m['paket_baslangic_tarihi']} • " : ""}Bitiş: ${m['paket_bitis_tarihi'] ?? "-"} (${m['kalan_gun_sayisi'] ?? 0} gün kaldı)',
                                             style: SoboTheme.fontSans(fontSize: 10, color: SoboTheme.secondary),
                                           ),
                                         ],
@@ -5730,6 +5959,8 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
                                           onTap: () => _showEditMemberPackageModal(m, <String, dynamic>{
                                             'id': m['aktif_member_package_id'],
                                             'ad': m['aktif_paket_adi'],
+                                            'baslangic_tarihi': m['paket_baslangic_tarihi'],
+                                            'bitis_tarihi': m['paket_bitis_tarihi'],
                                             'kalan_ders': m['bakiye'],
                                           }),
                                           borderRadius: BorderRadius.circular(6),

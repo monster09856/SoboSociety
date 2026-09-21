@@ -50,6 +50,7 @@ class PackageAssignRequest(BaseModel):
     member_id: int = Field(..., description="Paket tanımlanacak üye ID'si")
     package_id: int | None = Field(default=None, description="Tanımlanacak paket ID'si")
     baslangic: date | None = Field(default=None, description="Paket başlangıç tarihi (varsayılan bugün)")
+    bitis: date | None = Field(default=None, description="Paket bitiş tarihi (opsiyonel)")
     ozel_paket_adi: str | None = Field(default=None, description="Özelleştirilmiş paket adı")
     ozel_ders_adedi: int | None = Field(default=None, description="Özelleştirilmiş ders kredisi adedi")
     ozel_gecerlilik_gun: int | None = Field(default=None, description="Özelleştirilmiş geçerlilik gün sayısı")
@@ -73,6 +74,7 @@ class MemberPackageResponse(BaseModel):
 
 
 class MemberPackageUpdateRequest(BaseModel):
+    baslangic: date | None = Field(default=None, description="Yeni başlangıç tarihi (YYYY-MM-DD)")
     bitis: date | None = Field(default=None, description="Yeni bitiş tarihi (YYYY-MM-DD)")
     ek_gun: int | None = Field(default=None, description="Mevcut bitişe eklenecek gün sayısı")
     kalan_ders: int | None = Field(default=None, description="Yeni kalan ders adedi")
@@ -176,6 +178,7 @@ class MemberAdminDetailResponse(BaseModel):
     # Aktif Paket Bilgileri & Paket Geçmişi & Aktif Ders Rezervasyonları
     aktif_member_package_id: int | None = None
     aktif_paket_adi: str | None = None
+    paket_baslangic_tarihi: str | None = None
     paket_bitis_tarihi: str | None = None
     kalan_gun_sayisi: int | None = None
     is_bireysel: bool = False

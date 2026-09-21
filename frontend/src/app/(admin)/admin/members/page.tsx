@@ -30,6 +30,7 @@ interface MemberDetail {
   sabit_ders_saatleri?: string | null
   aktif_member_package_id?: number | null
   aktif_paket_adi?: string | null
+  paket_baslangic_tarihi?: string | null
   paket_bitis_tarihi?: string | null
   kalan_gun_sayisi?: number | null
   aktif_paketler?: {
@@ -50,6 +51,37 @@ interface MemberDetail {
     tarih_saat: string
     egitmen: string
   }[]
+}
+
+const formatDateToInput = (d: Date): string => {
+  const year = d.getFullYear()
+  const month = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
+const addDaysToDate = (dateStr: string, days: number): string => {
+  if (!dateStr) return ''
+  const parts = dateStr.split('-')
+  if (parts.length !== 3) return ''
+  const d = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]))
+  d.setDate(d.getDate() + days)
+  return formatDateToInput(d)
+}
+
+const toIsoDate = (dStr: string | null | undefined): string => {
+  if (!dStr) return ''
+  if (dStr.includes('-')) return dStr
+  if (dStr.includes('.')) {
+    const parts = dStr.split('.')
+    if (parts.length === 3) {
+      const d = parts[0].padStart(2, '0')
+      const m = parts[1].padStart(2, '0')
+      const y = parts[2]
+      return `${y}-${m}-${d}`
+    }
+  }
+  return ''
 }
 
 export default function AdminMembersPage() {
@@ -83,6 +115,7 @@ export default function AdminMembersPage() {
   const [pkgEditKalanDers, setPkgEditKalanDers] = useState<number>(0)
   const [pkgEditSabitDers, setPkgEditSabitDers] = useState<string>('')
   const [pkgEditEkGun, setPkgEditEkGun] = useState<number | null>(null)
+  const [pkgEditBaslangic, setPkgEditBaslangic] = useState<string>('')
   const [pkgEditBitis, setPkgEditBitis] = useState<string>('')
   const [updatingPkg, setUpdatingPkg] = useState(false)
 
@@ -94,7 +127,10 @@ export default function AdminMembersPage() {
 
   // Assign Package Modal State
   const [pkgMember, setPkgMember] = useState<MemberDetail | null>(null)
+  const [availablePackages, setAvailablePackages] = useState<any[]>([])
   const [selectedPkgId, setSelectedPkgId] = useState<number>(11)
+  const [pkgBaslangic, setPkgBaslangic] = useState<string>('')
+  const [pkgBitis, setPkgBitis] = useState<string>('')
   const [isCustomPkg, setIsCustomPkg] = useState(false)
   const [customPkgName, setCustomPkgName] = useState('')
   const [customCredits, setCustomCredits] = useState(10)
@@ -163,13 +199,46 @@ export default function AdminMembersPage() {
     }
   }
 
+  const loadPackages = async () => {
+    try {
+      const pkgs = await admin.getPackages()
+      const activePkgs = (pkgs || []).filter((p: any) => p.aktif)
+      const list = activePkgs.length > 0 ? activePkgs : pkgs || []
+      setAvailablePackages(list)
+      if (list.length > 0) {
+        setSelectedPkgId(list[0].id)
+      }
+    } catch (err) {
+      console.error('Paketler yüklenemedi:', err)
+    }
+  }
+
   useEffect(() => {
     loadMembers()
+    loadPackages()
   }, [])
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()
     loadMembers(search)
+  }
+
+  const openAssignModal = (m: MemberDetail) => {
+    const todayStr = formatDateToInput(new Date())
+    setPkgMember(m)
+    setIsCustomPkg(false)
+    setCustomPkgName(`${m.ad} Özel Paket`)
+    setCustomCredits(10)
+    setCustomUnit('hafta')
+    setCustomVal(6)
+    setPkgSabitDersSaatleri(m.sabit_ders_saatleri || '')
+    setPkgBaslangic(todayStr)
+
+    const defaultPkg = availablePackages.find((p) => p.id === selectedPkgId) || availablePackages[0]
+    const pId = defaultPkg ? defaultPkg.id : 11
+    setSelectedPkgId(pId)
+    const days = defaultPkg ? defaultPkg.gecerlilik_gun : 42
+    setPkgBitis(addDaysToDate(todayStr, days))
   }
 
   const openEditModal = (m: MemberDetail) => {
@@ -196,7 +265,10 @@ export default function AdminMembersPage() {
     setPkgEditKalanDers(pkg.toplam_ders || m.bakiye || 0)
     setPkgEditSabitDers(m.sabit_ders_saatleri || '')
     setPkgEditEkGun(null)
-    setPkgEditBitis(pkg.bitis_tarihi || '')
+    const startIso = toIsoDate(pkg.baslangic_tarihi || m.paket_baslangic_tarihi)
+    setPkgEditBaslangic(startIso || formatDateToInput(new Date()))
+    const endIso = toIsoDate(pkg.bitis_tarihi || m.paket_bitis_tarihi)
+    setPkgEditBitis(endIso)
   }
 
   const handleUpdateMember = async (e: React.FormEvent) => {
@@ -243,6 +315,7 @@ export default function AdminMembersPage() {
     try {
       const payload: any = {}
       if (pkgEditKalanDers !== undefined) payload.kalan_ders = Number(pkgEditKalanDers)
+      if (pkgEditBaslangic) payload.baslangic = pkgEditBaslangic
       if (pkgEditEkGun) payload.ek_gun = Number(pkgEditEkGun)
       else if (pkgEditBitis) payload.bitis = pkgEditBitis
       if (pkgEditSabitDers !== undefined) payload.sabit_ders_saatleri = pkgEditSabitDers.trim()
@@ -303,6 +376,8 @@ export default function AdminMembersPage() {
           ozel_paket_adi: customPkgName.trim() || 'Özel Üye Paketi',
           ozel_ders_adedi: Number(customCredits),
           ozel_gecerlilik_gun: actualDays,
+          baslangic: pkgBaslangic || undefined,
+          bitis: pkgBitis || undefined,
           sabit_ders_saatleri: pkgSabitDersSaatleri.trim() || undefined,
         })
         setSuccess(`${pkgMember.ad} üyesine özel ${customPkgName || 'Özel Paket'} (${customCredits} Ders / ${actualDays} Gün - ${customUnit === 'hafta' ? `${customVal} Hafta` : ''}) tanımlandı.`)
@@ -310,6 +385,8 @@ export default function AdminMembersPage() {
         await admin.assignPackage({
           member_id: pkgMember.id,
           package_id: selectedPkgId,
+          baslangic: pkgBaslangic || undefined,
+          bitis: pkgBitis || undefined,
           sabit_ders_saatleri: pkgSabitDersSaatleri.trim() || undefined,
         })
         setSuccess(`${pkgMember.ad} üyesine ders paketi tanımlandı.`)
@@ -579,8 +656,9 @@ export default function AdminMembersPage() {
                                   <span className="truncate">{pkg.ad}</span>
                                   <span className="text-[10px] text-mocha font-extrabold shrink-0">({pkg.toplam_ders} Derslik Paket)</span>
                                 </div>
-                                <div className="text-[10px] text-secondary font-medium pl-5 flex items-center gap-2">
-                                  <span>Son Gün: {pkg.bitis_tarihi}</span>
+                                <div className="text-[10px] text-secondary font-medium pl-5 flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                                  {pkg.baslangic_tarihi && <span>Başlangıç: {pkg.baslangic_tarihi}</span>}
+                                  <span>Bitiş: {pkg.bitis_tarihi}</span>
                                   <span className="text-sage font-bold">({pkg.kalan_gun} Gün Kaldı)</span>
                                 </div>
                               </div>
@@ -613,15 +691,22 @@ export default function AdminMembersPage() {
                                 <CheckCircle2 className="w-3.5 h-3.5 text-sage shrink-0" />
                                 <span>{m.aktif_paket_adi}</span>
                               </div>
-                              <div className="text-[10px] text-mocha font-semibold pl-5">
-                                Son Kullanma: {m.paket_bitis_tarihi}
+                              <div className="text-[10px] text-mocha font-semibold pl-5 flex flex-wrap items-center gap-x-2">
+                                {m.paket_baslangic_tarihi && <span>Başlangıç: {m.paket_baslangic_tarihi}</span>}
+                                <span>Bitiş: {m.paket_bitis_tarihi}</span>
                               </div>
                             </div>
                             {m.aktif_member_package_id && (
                               <div className="flex items-center gap-1.5 shrink-0">
                                 <button
                                   type="button"
-                                  onClick={() => openEditPackageModal(m, { id: m.aktif_member_package_id, ad: m.aktif_paket_adi, bitis_tarihi: m.paket_bitis_tarihi, toplam_ders: m.bakiye })}
+                                  onClick={() => openEditPackageModal(m, { 
+                                    id: m.aktif_member_package_id, 
+                                    ad: m.aktif_paket_adi, 
+                                    baslangic_tarihi: m.paket_baslangic_tarihi,
+                                    bitis_tarihi: m.paket_bitis_tarihi, 
+                                    toplam_ders: m.bakiye 
+                                  })}
                                   className="px-2 py-1 rounded-md text-[10px] font-extrabold text-espresso hover:bg-espresso/10 border border-espresso/30 transition-all flex items-center gap-1 cursor-pointer shadow-2xs"
                                   title="Paketi uzat, kalan ders veya sabit saatleri düzenle"
                                 >
@@ -784,15 +869,7 @@ export default function AdminMembersPage() {
                       </button>
 
                       <button
-                        onClick={() => {
-                          setPkgMember(m)
-                          setSelectedPkgId(1)
-                          setIsCustomPkg(false)
-                          setCustomPkgName(`${m.ad} Özel Paket`)
-                          setCustomCredits(10)
-                          setCustomUnit('hafta')
-                          setCustomVal(6)
-                        }}
+                        onClick={() => openAssignModal(m)}
                         className="p-1.5 rounded-xl bg-ivory border border-line hover:border-espresso text-ink hover:text-espresso text-[10px] font-bold flex flex-col items-center gap-1 transition-all cursor-pointer"
                         title="Paket Tanımla"
                       >
@@ -1141,19 +1218,36 @@ export default function AdminMembersPage() {
                       <label className="block text-xs font-bold text-secondary uppercase mb-1">Hazır Paket Seçimi</label>
                       <select
                         value={selectedPkgId}
-                        onChange={(e) => setSelectedPkgId(Number(e.target.value))}
+                        onChange={(e) => {
+                          const newId = Number(e.target.value)
+                          setSelectedPkgId(newId)
+                          const pkg = availablePackages.find((p) => p.id === newId)
+                          if (pkg && pkgBaslangic) {
+                            setPkgBitis(addDaysToDate(pkgBaslangic, pkg.gecerlilik_gun))
+                          }
+                        }}
                         className="w-full bg-ivory border-line text-ink rounded-xl h-11 px-3 text-xs font-medium focus:ring-2 focus:ring-espresso"
                       >
-                        <option value={9}>Barre Class Tek Ders (1 Ders / 7 Gün)</option>
-                        <option value={10}>Barre Class 4 Ders (4 Ders / 28 Gün - 4 Hafta)</option>
-                        <option value={11}>Sobo Class (8 Ders / 42 Gün - 6 Hafta)</option>
-                        <option value={12}>Sobo Class (12 Ders / 56 Gün - 8 Hafta)</option>
-                        <option value={13}>Yoga Class Tek Ders (1 Ders / 7 Gün)</option>
-                        <option value={14}>Yoga Class 4 Ders (4 Ders / 35 Gün - 5 Hafta)</option>
-                        <option value={15}>Barre Class Bireysel (8 Ders / 42 Gün - 6 Hafta)</option>
-                        <option value={16}>Barre Class Bireysel Premium (12 Ders / 56 Gün - 8 Hafta)</option>
-                        <option value={17}>Reformer Class Bireysel (8 Ders / 42 Gün - 6 Hafta)</option>
-                        <option value={18}>Reformer Class Bireysel Elite (12 Ders / 56 Gün - 8 Hafta)</option>
+                        {availablePackages.length > 0 ? (
+                          availablePackages.map((p) => (
+                            <option key={p.id} value={p.id}>
+                              {p.ad} ({p.ders_adedi} Ders / {p.gecerlilik_gun} Gün)
+                            </option>
+                          ))
+                        ) : (
+                          <>
+                            <option value={9}>Barre Class - 1 Ders (1 Ders / 7 Gün)</option>
+                            <option value={10}>Barre Class (4 Ders/4 Hafta) (4 Ders / 28 Gün)</option>
+                            <option value={11}>Barre Class (8 Ders / 6 Hafta) (8 Ders / 42 Gün)</option>
+                            <option value={12}>Barre Class (12 Ders / 8 Hafta) (12 Ders / 56 Gün)</option>
+                            <option value={13}>Yoga Class - 1 Ders (1 Ders / 7 Gün)</option>
+                            <option value={14}>Yoga Class 4 Ders / 5 Hafta (4 Ders / 35 Gün)</option>
+                            <option value={15}>Barre - Bireysel Mini (8 Ders / 42 Gün)</option>
+                            <option value={16}>Barre - Bireysel Standart (12 Ders / 56 Gün)</option>
+                            <option value={17}>Reformer Pilates - Bireysel Mini (8 Ders / 42 Gün)</option>
+                            <option value={18}>Reformer Pilates - Bireysel Standart (12 Ders / 56 Gün)</option>
+                          </>
+                        )}
                       </select>
                     </div>
                   ) : (
@@ -1190,14 +1284,22 @@ export default function AdminMembersPage() {
                             <div className="flex items-center gap-1 bg-ivory p-0.5 rounded-lg border border-line">
                               <button
                                 type="button"
-                                onClick={() => { setCustomUnit('hafta'); setCustomVal(6); }}
+                                onClick={() => {
+                                  setCustomUnit('hafta')
+                                  setCustomVal(6)
+                                  if (pkgBaslangic) setPkgBitis(addDaysToDate(pkgBaslangic, 42))
+                                }}
                                 className={`px-2 py-0.5 text-[10px] font-extrabold rounded cursor-pointer transition-all ${customUnit === 'hafta' ? 'bg-espresso text-ivory shadow-xs' : 'text-secondary hover:text-ink'}`}
                               >
                                 Hafta
                               </button>
                               <button
                                 type="button"
-                                onClick={() => { setCustomUnit('gun'); setCustomVal(42); }}
+                                onClick={() => {
+                                  setCustomUnit('gun')
+                                  setCustomVal(42)
+                                  if (pkgBaslangic) setPkgBitis(addDaysToDate(pkgBaslangic, 42))
+                                }}
                                 className={`px-2 py-0.5 text-[10px] font-extrabold rounded cursor-pointer transition-all ${customUnit === 'gun' ? 'bg-espresso text-ivory shadow-xs' : 'text-secondary hover:text-ink'}`}
                               >
                                 Gün
@@ -1209,7 +1311,14 @@ export default function AdminMembersPage() {
                             min={1}
                             max={52}
                             value={customVal}
-                            onChange={(e) => setCustomVal(Number(e.target.value))}
+                            onChange={(e) => {
+                              const val = Number(e.target.value)
+                              setCustomVal(val)
+                              const days = customUnit === 'hafta' ? val * 7 : val
+                              if (pkgBaslangic) {
+                                setPkgBitis(addDaysToDate(pkgBaslangic, days))
+                              }
+                            }}
                             className="bg-ivory border-line text-sm font-bold text-espresso rounded-xl h-10"
                             required
                           />
@@ -1220,6 +1329,46 @@ export default function AdminMembersPage() {
                       </div>
                     </div>
                   )}
+
+                  {/* Paket Başlangıç & Bitiş Tarihleri */}
+                  <div className="grid grid-cols-2 gap-3 p-3.5 rounded-xl bg-ivory border border-line">
+                    <div>
+                      <label className="block text-xs font-bold text-secondary uppercase mb-1">
+                        Başlangıç Tarihi
+                      </label>
+                      <Input
+                        type="date"
+                        value={pkgBaslangic}
+                        onChange={(e) => {
+                          const newStart = e.target.value
+                          setPkgBaslangic(newStart)
+                          const days = isCustomPkg
+                            ? (customUnit === 'hafta' ? customVal * 7 : customVal)
+                            : (availablePackages.find((p) => p.id === selectedPkgId)?.gecerlilik_gun || 42)
+                          if (newStart) {
+                            setPkgBitis(addDaysToDate(newStart, days))
+                          }
+                        }}
+                        className="bg-sand border-line text-xs font-medium rounded-xl h-10"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-secondary uppercase mb-1">
+                        Bitiş Tarihi
+                      </label>
+                      <Input
+                        type="date"
+                        value={pkgBitis}
+                        onChange={(e) => setPkgBitis(e.target.value)}
+                        className="bg-sand border-line text-xs font-medium rounded-xl h-10"
+                        required
+                      />
+                    </div>
+                    <p className="col-span-2 text-[11px] text-mocha font-medium">
+                      💡 Başlangıç ve bitiş tarihlerini geçmişe veya ileriye dönük dilediğiniz gibi ayarlayabilirsiniz. Bitiş tarihi otomatik hesaplanır, isterseniz serbestçe değiştirebilirsiniz.
+                    </p>
+                  </div>
 
                   <div>
                     <label className="block text-xs font-bold text-secondary uppercase mb-1">
@@ -1275,9 +1424,28 @@ export default function AdminMembersPage() {
               </CardHeader>
               <CardContent className="pt-6 space-y-4">
                 <form onSubmit={handleUpdatePackage} className="space-y-4">
-                  <div className="p-3 rounded-xl bg-ivory border border-line flex items-center justify-between text-xs">
-                    <span className="text-secondary font-semibold">Mevcut Bitiş:</span>
-                    <span className="font-bold text-espresso">{editingPkg.bitis_tarihi || editingPkgMember.paket_bitis_tarihi || 'Belirtilmemiş'}</span>
+                  <div className="grid grid-cols-2 gap-3 p-3 rounded-xl bg-ivory border border-line">
+                    <div>
+                      <label className="block text-xs font-bold text-secondary uppercase mb-1">Başlangıç Tarihi</label>
+                      <Input
+                        type="date"
+                        value={pkgEditBaslangic}
+                        onChange={(e) => setPkgEditBaslangic(e.target.value)}
+                        className="bg-sand border-line text-xs font-medium rounded-xl h-10"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-secondary uppercase mb-1">Bitiş Tarihi</label>
+                      <Input
+                        type="date"
+                        value={pkgEditBitis}
+                        onChange={(e) => {
+                          setPkgEditBitis(e.target.value)
+                          setPkgEditEkGun(null)
+                        }}
+                        className="bg-sand border-line text-xs font-medium rounded-xl h-10"
+                      />
+                    </div>
                   </div>
 
                   <div>
@@ -1310,34 +1478,24 @@ export default function AdminMembersPage() {
                   </div>
 
                   <div>
-                    <label className="block text-xs font-bold text-secondary uppercase mb-1">Süre Uzatma / Bitiş Tarihi</label>
-                    <div className="flex flex-wrap gap-2 mb-2">
+                    <label className="block text-xs font-bold text-secondary uppercase mb-1">Hızlı Bitiş Uzatma (+ Gün)</label>
+                    <div className="flex flex-wrap gap-2">
                       {[7, 14, 30, 45, 60].map((days) => (
                         <button
                           key={days}
                           type="button"
                           onClick={() => {
-                            setPkgEditEkGun(pkgEditEkGun === days ? null : days)
+                            const base = pkgEditBitis ? new Date(pkgEditBitis) : new Date()
+                            base.setDate(base.getDate() + days)
+                            setPkgEditBitis(formatDateToInput(base))
+                            setPkgEditEkGun(null)
                           }}
-                          className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                            pkgEditEkGun === days
-                              ? 'bg-clay text-white shadow-xs'
-                              : 'bg-ivory text-espresso border border-line hover:border-espresso'
-                          }`}
+                          className="px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer bg-ivory text-espresso border border-line hover:border-espresso hover:bg-espresso hover:text-ivory"
                         >
-                          +{days} Gün
+                          +{days} Gün Ekle
                         </button>
                       ))}
                     </div>
-                    <Input
-                      type="date"
-                      value={pkgEditBitis}
-                      onChange={(e) => {
-                        setPkgEditBitis(e.target.value)
-                        setPkgEditEkGun(null)
-                      }}
-                      className="bg-ivory border-line text-xs font-medium rounded-xl h-10"
-                    />
                   </div>
 
                   <div className="flex justify-end gap-2 pt-2">

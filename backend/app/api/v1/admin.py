@@ -246,6 +246,8 @@ async def assign_package(
             package_id=target_pkg_id,
             baslangic=baslangic,
         )
+        if body.bitis is not None:
+            uye_paketi.bitis = body.bitis
 
         if body.sabit_ders_saatleri is not None:
             m.sabit_ders_saatleri = body.sabit_ders_saatleri.strip()
@@ -437,6 +439,9 @@ async def update_member_package_endpoint(
     mp = await db.get(MemberPackage, member_package_id)
     if not mp or mp.member_id != member_id:
         raise HTTPException(status_code=404, detail="Paket kaydı bulunamadı.")
+
+    if body.baslangic is not None:
+        mp.baslangic = body.baslangic
 
     if body.bitis is not None:
         mp.bitis = body.bitis
@@ -913,6 +918,7 @@ async def _build_member_detail_response(db: AsyncSession, m: Member) -> MemberAd
 
     aktif_mp_id = None
     aktif_pkg_ad = None
+    pkg_baslangic_str = None
     pkg_bitis_str = None
     kalan_gun = None
     aktif_paketler = []
@@ -925,7 +931,7 @@ async def _build_member_detail_response(db: AsyncSession, m: Member) -> MemberAd
         baslangic_str = mp.baslangic.strftime('%d.%m.%Y') if mp.baslangic else ""
         bitis_str = mp.bitis.strftime('%d.%m.%Y') if mp.bitis else ""
         days_left = (mp.bitis - today).days if mp.bitis else 0
-        is_active = (mp.baslangic <= today < mp.bitis) if (mp.baslangic and mp.bitis) else False
+        is_active = (today < mp.bitis) if mp.bitis else False
 
         pkg_history.append(f"{pkg_name} ({ders_sayisi} Ders / Bitiş: {bitis_str})")
         if is_active:
@@ -943,6 +949,7 @@ async def _build_member_detail_response(db: AsyncSession, m: Member) -> MemberAd
             if aktif_pkg_ad is None:
                 aktif_mp_id = mp.id
                 aktif_pkg_ad = pkg_name
+                pkg_baslangic_str = baslangic_str
                 pkg_bitis_str = bitis_str
                 kalan_gun = max(0, days_left)
 
@@ -1009,6 +1016,7 @@ async def _build_member_detail_response(db: AsyncSession, m: Member) -> MemberAd
         sabit_ders_saatleri=m.sabit_ders_saatleri,
         aktif_member_package_id=aktif_mp_id,
         aktif_paket_adi=aktif_pkg_ad,
+        paket_baslangic_tarihi=pkg_baslangic_str,
         paket_bitis_tarihi=pkg_bitis_str,
         kalan_gun_sayisi=kalan_gun,
         is_bireysel=is_bireysel_member,

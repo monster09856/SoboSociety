@@ -483,6 +483,7 @@ export interface PackageAssignRequest {
   member_id: number
   package_id?: number
   baslangic?: string | null
+  bitis?: string | null
   ozel_paket_adi?: string
   ozel_ders_adedi?: number
   ozel_gecerlilik_gun?: number
@@ -702,6 +703,7 @@ export const adminApi = {
     memberId: number,
     memberPackageId: number,
     data: {
+      baslangic?: string
       bitis?: string
       ek_gun?: number
       kalan_ders?: number
