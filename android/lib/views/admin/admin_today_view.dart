@@ -2349,6 +2349,36 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
                         IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.pop(context)),
                       ],
                     ),
+                    const SizedBox(height: 10),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                      decoration: BoxDecoration(
+                        color: SoboTheme.sand,
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: SoboTheme.line),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text('KULLANICI ADI', style: SoboTheme.fontSans(fontSize: 9.5, fontWeight: FontWeight.bold, color: SoboTheme.secondary)),
+                              const SizedBox(height: 2),
+                              Text(m['kullanici_adi'] != null ? '@${m['kullanici_adi']}' : 'Tanımsız', style: SoboTheme.fontSans(fontSize: 13, fontWeight: FontWeight.bold, color: SoboTheme.espresso)),
+                            ],
+                          ),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            children: [
+                              Text('KAYITLI TELEFON', style: SoboTheme.fontSans(fontSize: 9.5, fontWeight: FontWeight.bold, color: SoboTheme.secondary)),
+                              const SizedBox(height: 2),
+                              Text(m['telefon'] ?? 'Kayıtsız', style: SoboTheme.fontSans(fontSize: 13, fontWeight: FontWeight.bold, color: SoboTheme.ink)),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
                     const SizedBox(height: 12),
                     TextField(
                       controller: nameCtrl,

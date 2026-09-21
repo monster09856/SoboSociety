@@ -932,6 +932,18 @@ export default function AdminMembersPage() {
               </CardHeader>
               <CardContent className="pt-6 space-y-5 overflow-y-auto flex-1">
                 <form onSubmit={handleUpdateMember} className="space-y-4">
+                  {/* Üye Hesap Bilgileri Özeti */}
+                  <div className="flex items-center justify-between p-3 rounded-xl bg-ivory border border-line text-xs">
+                    <div>
+                      <span className="text-[10px] uppercase font-bold text-secondary block">Kullanıcı Adı</span>
+                      <span className="font-bold text-espresso">@{editingMember.kullanici_adi || 'Tanımsız'}</span>
+                    </div>
+                    <div className="text-right">
+                      <span className="text-[10px] uppercase font-bold text-secondary block">Kayıtlı Telefon</span>
+                      <span className="font-semibold text-ink">{editingMember.telefon || 'Kayıtsız'}</span>
+                    </div>
+                  </div>
+
                   {/* Temel Üye Bilgileri */}
                   <div className="grid grid-cols-2 gap-3">
                     <div>
