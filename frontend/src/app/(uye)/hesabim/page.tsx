@@ -25,6 +25,7 @@ import {
   Save,
   Ruler,
   X,
+  KeyRound,
 } from 'lucide-react'
 
 export default function HesabimPage() {
@@ -51,6 +52,15 @@ export default function HesabimPage() {
   const [boy, setBoy] = useState('')
   const [kilo, setKilo] = useState('')
   const [saglikNotu, setSaglikNotu] = useState('')
+
+  // Password Change Form State
+  const [showPasswordModal, setShowPasswordModal] = useState(false)
+  const [currentPassword, setCurrentPassword] = useState('')
+  const [newPassword, setNewPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+  const [changingPassword, setChangingPassword] = useState(false)
+  const [pwError, setPwError] = useState<string | null>(null)
+  const [pwSuccess, setPwSuccess] = useState<string | null>(null)
 
   const fetchSummary = async () => {
     setLoading(true)
@@ -159,6 +169,45 @@ export default function HesabimPage() {
       setErrorMsg(err?.message || 'Workshop iptal edilirken bir hata oluştu.')
     } finally {
       setCancelWorkshopId(null)
+    }
+  }
+
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setPwError(null)
+    setPwSuccess(null)
+
+    if (!newPassword.trim()) {
+      setPwError('Lütfen yeni bir şifre girin.')
+      return
+    }
+    if (newPassword.length < 4) {
+      setPwError('Yeni şifreniz en az 4 karakter olmalıdır.')
+      return
+    }
+    if (newPassword !== confirmPassword) {
+      setPwError('Yeni şifreleriniz birbiriyle eşleşmiyor.')
+      return
+    }
+
+    setChangingPassword(true)
+    try {
+      const res = await api.auth.changePassword({
+        mevcut_sifre: currentPassword.trim() || undefined,
+        yeni_sifre: newPassword.trim(),
+      })
+      setPwSuccess(res.mesaj || 'Şifreniz başarıyla güncellendi! ✨')
+      setCurrentPassword('')
+      setNewPassword('')
+      setConfirmPassword('')
+      setTimeout(() => {
+        setShowPasswordModal(false)
+        setPwSuccess(null)
+      }, 2000)
+    } catch (err: any) {
+      setPwError(err?.message || 'Şifre güncellenirken bir hata oluştu.')
+    } finally {
+      setChangingPassword(false)
     }
   }
 
@@ -281,6 +330,16 @@ export default function HesabimPage() {
                   <div className="flex items-center gap-1.5 text-xs text-secondary font-medium">
                     <Phone className="w-3.5 h-3.5 text-mocha" />
                     <span>{summary.telefon || me?.kullanici_adi || 'Kayıtlı Üye'}</span>
+                  </div>
+                  <div className="flex items-center gap-2 pt-1.5">
+                    <button
+                      type="button"
+                      onClick={() => { setShowPasswordModal(true); setPwError(null); setPwSuccess(null); }}
+                      className="px-2.5 py-1 rounded-xl bg-ivory border border-line text-[11px] font-bold text-espresso hover:bg-sand transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs"
+                    >
+                      <KeyRound className="w-3 h-3 text-mocha" />
+                      <span>Şifremi Değiştir</span>
+                    </button>
                   </div>
                 </div>
               </div>
@@ -671,6 +730,94 @@ export default function HesabimPage() {
           )}
         </div>
       </main>
+
+      {showPasswordModal && (
+        <div className="fixed inset-0 z-50 bg-ink/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-sand border border-line rounded-3xl p-6 max-w-sm w-full shadow-2xl space-y-4 animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between border-b border-line pb-3">
+              <div className="flex items-center gap-2 text-espresso font-serif font-bold text-lg">
+                <KeyRound className="w-5 h-5 text-mocha" />
+                <span>Şifremi Değiştir</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowPasswordModal(false)}
+                className="text-secondary hover:text-ink p-1 rounded-full hover:bg-ivory cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {pwError && (
+              <div className="p-3 rounded-xl bg-clay/15 border border-clay/30 text-clay text-xs font-medium flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                <span>{pwError}</span>
+              </div>
+            )}
+
+            {pwSuccess && (
+              <div className="p-3 rounded-xl bg-sage/15 border border-sage/30 text-sage text-xs font-medium flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 shrink-0" />
+                <span>{pwSuccess}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleChangePassword} className="space-y-3 pt-1">
+              <div>
+                <label className="block text-[11px] font-bold text-secondary uppercase mb-1">Mevcut Şifreniz</label>
+                <Input
+                  type="password"
+                  placeholder="Mevcut şifreniz"
+                  value={currentPassword}
+                  onChange={(e) => setCurrentPassword(e.target.value)}
+                  className="bg-ivory border-line text-xs rounded-xl h-10"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-bold text-secondary uppercase mb-1">Yeni Şifre</label>
+                <Input
+                  type="password"
+                  placeholder="En az 4 karakter"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  className="bg-ivory border-line text-xs rounded-xl h-10"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-bold text-secondary uppercase mb-1">Yeni Şifre (Tekrar)</label>
+                <Input
+                  type="password"
+                  placeholder="Yeni şifrenizi tekrar girin"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  className="bg-ivory border-line text-xs rounded-xl h-10"
+                  required
+                />
+              </div>
+
+              <div className="pt-2">
+                <button
+                  type="submit"
+                  disabled={changingPassword}
+                  className="w-full h-11 rounded-2xl bg-espresso hover:bg-espresso-dark text-ivory font-extrabold text-xs uppercase tracking-wider cursor-pointer shadow-xs transition-colors flex items-center justify-center gap-2"
+                >
+                  {changingPassword ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Güncelleniyor...
+                    </>
+                  ) : (
+                    <span>ŞİFREYİ GÜNCELLE</span>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

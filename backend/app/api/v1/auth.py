@@ -13,6 +13,7 @@ from app.schemas.auth import (
     OTPSendResponse,
     OTPVerifyRequest,
     TokenResponse,
+    MemberChangePasswordRequest,
 )
 from app.services.hatalar import GecersizOTP, GecersizTelefon
 from app.services.telefon import normalize_telefon
@@ -303,3 +304,24 @@ async def update_me_endpoint(
         kilo=current_member.kilo,
         saglik_notu=current_member.saglik_notu,
     )
+
+
+@router.post("/change-password")
+async def change_password_endpoint(
+    body: MemberChangePasswordRequest,
+    db: AsyncSession = Depends(get_db),
+    current_member: Member = Depends(get_current_member),
+):
+    """Giriş yapmış üyenin kendi şifresini değiştirmesini sağlar."""
+    if current_member.sifre_hash:
+        if not body.mevcut_sifre or not verify_password(body.mevcut_sifre.strip(), current_member.sifre_hash):
+            raise HTTPException(status_code=400, detail="Mevcut şifrenizi hatalı girdiniz.")
+
+    new_pw = body.yeni_sifre.strip()
+    if len(new_pw) < 4:
+        raise HTTPException(status_code=400, detail="Yeni şifre en az 4 karakter olmalıdır.")
+
+    current_member.sifre_hash = hash_password(new_pw)
+    await db.commit()
+    return {"mesaj": "Şifreniz başarıyla değiştirildi. ✨"}
+

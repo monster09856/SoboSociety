@@ -75,3 +75,8 @@ class MemberProfileUpdateRequest(BaseModel):
     boy: str | None = None
     kilo: str | None = None
     saglik_notu: str | None = None
+
+
+class MemberChangePasswordRequest(BaseModel):
+    mevcut_sifre: str | None = Field(default=None, description="Mevcut şifre")
+    yeni_sifre: str = Field(..., min_length=4, description="Yeni şifre")

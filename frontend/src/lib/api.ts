@@ -322,6 +322,11 @@ export const api = {
         method: 'PUT',
         body: JSON.stringify(data),
       }),
+    changePassword: (data: { mevcut_sifre?: string; yeni_sifre: string }) =>
+      apiFetch<{ mesaj: string }>('/auth/change-password', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
   },
   sessions: {
     list: () => apiFetch<ClassSessionResponse[]>('/sessions'),

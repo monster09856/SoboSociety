@@ -529,6 +529,205 @@ class _AccountViewState extends State<AccountView> {
     );
   }
 
+  void _showChangePasswordDialog() {
+    final TextEditingController currentPwCtrl = TextEditingController();
+    final TextEditingController newPwCtrl = TextEditingController();
+    final TextEditingController confirmPwCtrl = TextEditingController();
+    bool isSubmitting = false;
+    String? localError;
+
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: SoboTheme.ivory,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      builder: (BuildContext ctx) {
+        return StatefulBuilder(
+          builder: (BuildContext context, StateSetter setModalState) {
+            return Padding(
+              padding: EdgeInsets.only(
+                top: 24,
+                left: 20,
+                right: 20,
+                bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+              ),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: <Widget>[
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: <Widget>[
+                        Row(
+                          children: <Widget>[
+                            const Icon(Icons.key_rounded, color: SoboTheme.espresso, size: 22),
+                            const SizedBox(width: 8),
+                            Text(
+                              'Şifre Değiştir',
+                              style: SoboTheme.fontSerif(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: SoboTheme.ink,
+                              ),
+                            ),
+                          ],
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.close_rounded, color: SoboTheme.secondary),
+                          onPressed: () => Navigator.pop(ctx),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 14),
+                    if (localError != null) ...<Widget>[
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: SoboTheme.clay.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: SoboTheme.clay.withOpacity(0.3)),
+                        ),
+                        child: Row(
+                          children: <Widget>[
+                            const Icon(Icons.error_outline_rounded, color: SoboTheme.clay, size: 18),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                localError!,
+                                style: SoboTheme.fontSans(fontSize: 12, color: SoboTheme.clay, fontWeight: FontWeight.w600),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                    ],
+                    TextField(
+                      controller: currentPwCtrl,
+                      obscureText: true,
+                      decoration: const InputDecoration(
+                        labelText: 'Mevcut Şifre',
+                        hintText: 'Mevcut şifreniz',
+                        filled: true,
+                        fillColor: Colors.white,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    TextField(
+                      controller: newPwCtrl,
+                      obscureText: true,
+                      decoration: const InputDecoration(
+                        labelText: 'Yeni Şifre',
+                        hintText: 'En az 4 karakter',
+                        filled: true,
+                        fillColor: Colors.white,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    TextField(
+                      controller: confirmPwCtrl,
+                      obscureText: true,
+                      decoration: const InputDecoration(
+                        labelText: 'Yeni Şifre (Tekrar)',
+                        hintText: 'Yeni şifrenizi tekrar girin',
+                        filled: true,
+                        fillColor: Colors.white,
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    ElevatedButton(
+                      onPressed: isSubmitting
+                          ? null
+                          : () async {
+                              final String newPw = newPwCtrl.text.trim();
+                              final String confirmPw = confirmPwCtrl.text.trim();
+                              final String currentPw = currentPwCtrl.text.trim();
+
+                              if (newPw.isEmpty) {
+                                setModalState(() => localError = 'Lütfen yeni bir şifre giriniz.');
+                                return;
+                              }
+                              if (newPw.length < 4) {
+                                setModalState(() => localError = 'Yeni şifreniz en az 4 karakter olmalıdır.');
+                                return;
+                              }
+                              if (newPw != confirmPw) {
+                                setModalState(() => localError = 'Yeni şifreleriniz birbiriyle uyuşmuyor.');
+                                return;
+                              }
+
+                              setModalState(() {
+                                isSubmitting = true;
+                                localError = null;
+                              });
+
+                              try {
+                                final Map<String, dynamic> payload = <String, dynamic>{
+                                  'yeni_sifre': newPw,
+                                };
+                                if (currentPw.isNotEmpty) {
+                                  payload['mevcut_sifre'] = currentPw;
+                                }
+
+                                final dynamic res = await ApiClient.post('/auth/change-password', payload);
+                                final String msg = (res is Map && res['mesaj'] != null)
+                                    ? res['mesaj'].toString()
+                                    : 'Şifreniz başarıyla değiştirildi! ✨';
+
+                                if (ctx.mounted) {
+                                  Navigator.pop(ctx);
+                                }
+                                if (mounted) {
+                                  ScaffoldMessenger.of(this.context).showSnackBar(
+                                    SnackBar(
+                                      content: Text(msg),
+                                      backgroundColor: SoboTheme.sage,
+                                    ),
+                                  );
+                                }
+                              } catch (e) {
+                                setModalState(() {
+                                  isSubmitting = false;
+                                  localError = e.toString().replaceAll('Exception: ', '');
+                                });
+                              }
+                            },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: SoboTheme.espresso,
+                        foregroundColor: Colors.white,
+                        minimumSize: const Size.fromHeight(48),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                      ),
+                      child: isSubmitting
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                            )
+                          : Text(
+                              'ŞİFREYİ GÜNCELLE',
+                              style: SoboTheme.fontSans(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 13,
+                                letterSpacing: 1.1,
+                              ),
+                            ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
   void _showStudioPassDialog() {
     showDialog<void>(
       context: context,
@@ -813,6 +1012,23 @@ class _AccountViewState extends State<AccountView> {
                         ),
                       ),
                     ],
+                  ),
+                  const SizedBox(height: 8),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: _showChangePasswordDialog,
+                      icon: const Icon(Icons.key_rounded, size: 16, color: SoboTheme.espresso),
+                      label: Text(
+                        'HESAP ŞİFRESİNİ DEĞİŞTİR',
+                        style: SoboTheme.fontSans(fontSize: 11, fontWeight: FontWeight.bold, color: SoboTheme.espresso, letterSpacing: 0.6),
+                      ),
+                      style: OutlinedButton.styleFrom(
+                        side: const BorderSide(color: SoboTheme.line),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                        padding: const EdgeInsets.symmetric(vertical: 10),
+                      ),
+                    ),
                   ),
                 ],
               ),
