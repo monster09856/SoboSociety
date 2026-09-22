@@ -33,14 +33,10 @@ export function Workshops() {
   const fetchEvents = async () => {
     try {
       const data = await api.events.list()
-      if (data && data.length > 0) {
-        setEvents(data)
-      } else {
-        setEvents(defaultWorkshops)
-      }
+      setEvents(data || [])
     } catch (err) {
       console.error('Workshoplar çekilemedi:', err)
-      setEvents(defaultWorkshops)
+      setEvents([])
     } finally {
       setLoading(false)
     }

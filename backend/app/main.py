@@ -53,6 +53,57 @@ async def sobo_hata_handler(request: Request, exc: SoboHata):
 app.include_router(api_v1_router)
 
 
+@app.on_event("startup")
+async def startup_event():
+    try:
+        from app.db.session import OturumFabrikasi
+        from app.models.program import StudioEvent
+        from sqlalchemy import select, func
+        from datetime import datetime, timedelta, timezone
+
+        async with OturumFabrikasi() as db:
+            res = await db.execute(select(func.count(StudioEvent.id)))
+            cnt = res.scalar_one() or 0
+            if cnt == 0:
+                now = datetime.now(timezone.utc)
+                events = [
+                    StudioEvent(
+                        baslik="Belgrad Ormanı Doğa Yürüyüşü & Kahve Buluşması",
+                        turu="YURUYUS",
+                        tarih_saat=now + timedelta(days=4, hours=9),
+                        aciklama="Temiz havada yürüyüş, nefes egzersizleri ve ardından tüm Sobo topluluğu ile kahve sohbeti.",
+                        kontenjan=20,
+                        dolu_sayi=0,
+                        ucret="Ücretsiz / Topluluk Etkinliği",
+                        aktif=True,
+                    ),
+                    StudioEvent(
+                        baslik="Ses Çanağı & Derin Meditasyon (Sound Bath)",
+                        turu="SOUNDBATH",
+                        tarih_saat=now + timedelta(days=5, hours=18),
+                        aciklama="Tibet ses çanaklarının şifalı frekansları eşliğinde derin zihinsel ve bedensel dinlenme seansı.",
+                        kontenjan=12,
+                        dolu_sayi=0,
+                        ucret="Üyelere Özel / Seans",
+                        aktif=True,
+                    ),
+                    StudioEvent(
+                        baslik="Postür Düzeltme & Omurga Sağlığı Atölyesi",
+                        turu="WORKSHOP",
+                        tarih_saat=now + timedelta(days=6, hours=14),
+                        aciklama="Günlük hayattaki duruş bozukluklarını düzeltmeye ve bel-boyun ağrılarını hafifletmeye yönelik uygulamalı atölye.",
+                        kontenjan=10,
+                        dolu_sayi=0,
+                        ucret="Üyelere Özel / Seans",
+                        aktif=True,
+                    ),
+                ]
+                db.add_all(events)
+                await db.commit()
+    except Exception as e:
+        print(f"[STARTUP SEED ERROR] {e}")
+
+
 @app.get("/")
 async def root():
     return {"mesaj": "Sobo API Katmanı Çalışıyor"}
