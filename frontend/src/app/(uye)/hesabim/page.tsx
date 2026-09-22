@@ -145,8 +145,8 @@ export default function HesabimPage() {
     setErrorMsg(null)
     setSuccessMsg(null)
     try {
-      await api.bookings.cancel(bookingId)
-      setSuccessMsg('Rezervasyonunuz başarıyla iptal edildi ve 1 ders hakkınız iade edildi.')
+      const res = await api.bookings.cancel(bookingId)
+      setSuccessMsg(res?.mesaj || 'Rezervasyonunuz başarıyla iptal edildi.')
       await fetchSummary()
     } catch (err) {
       const msg =
