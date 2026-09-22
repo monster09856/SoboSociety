@@ -6,6 +6,9 @@ import { Packages } from '@/components/site/packages'
 import { Footer } from '@/components/site/footer'
 import { AIConciergeModal } from '@/components/site/ai-concierge-modal'
 
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 export default function Home() {
   return (
     <div className="min-h-screen bg-ivory text-ink font-sans flex flex-col justify-between selection:bg-mocha/20 selection:text-espresso">

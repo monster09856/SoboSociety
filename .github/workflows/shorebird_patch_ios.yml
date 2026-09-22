@@ -35,8 +35,10 @@ jobs:
         with:
           cache: true
 
-      - name: 🚀 iOS Patch Gönder
-        run: printf 'y\ny\ny\n' | shorebird patch ios --no-codesign --allow-asset-diffs --allow-native-diffs
+      - name: 🚀 Android & iOS Shorebird Patch Gönder
+        run: |
+          printf 'y\ny\ny\n' | shorebird patch android --release-version=latest --allow-asset-diffs --allow-native-diffs || true
+          printf 'y\ny\ny\n' | shorebird patch ios --release-version=latest --no-codesign --allow-asset-diffs --allow-native-diffs
         working-directory: android
         env:
           SHOREBIRD_TOKEN: ${{ secrets.SHOREBIRD_TOKEN }}
