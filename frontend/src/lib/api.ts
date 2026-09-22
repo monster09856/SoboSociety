@@ -261,6 +261,8 @@ export interface BookingResponse {
   kaynak: string
   cancelled_at?: string | null
   session?: ClassSessionResponse | null
+  mesaj?: string | null
+  iade_edildi?: boolean | null
 }
 
 export interface WaitlistCreateRequest {
