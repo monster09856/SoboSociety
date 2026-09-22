@@ -36,7 +36,7 @@ jobs:
           cache: true
 
       - name: 🚀 iOS Patch Gönder
-        run: shorebird patch ios --no-codesign --allow-asset-diffs
+        run: printf 'y\ny\ny\n' | shorebird patch ios --no-codesign --allow-asset-diffs --allow-podfile-lock-diffs
         working-directory: android
         env:
           SHOREBIRD_TOKEN: ${{ secrets.SHOREBIRD_TOKEN }}
