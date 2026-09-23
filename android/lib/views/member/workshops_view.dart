@@ -48,7 +48,7 @@ class _WorkshopsViewState extends State<WorkshopsView> {
       }
       if (mounted) {
         setState(() {
-          _events = list.isNotEmpty ? list : _defaultEvents;
+          _events = list;
           _isLoading = false;
         });
       }
