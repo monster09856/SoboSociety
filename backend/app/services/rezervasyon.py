@@ -12,7 +12,7 @@ from app.services.hatalar import (
     DersBaslamis, DersDolu, DersIptalEdilmis, KayitBulunamadi,
     YetersizKredi, ZatenRezerve,
 )
-from app.services.kredi import aktif_paket_sec, bakiye, hareket_ekle
+from app.services.kredi import aktif_paket_sec, bakiye, bakiye_detay, hareket_ekle
 
 
 async def rezerve_et(
@@ -77,8 +77,15 @@ async def rezerve_et(
     if mevcut.scalar_one_or_none() is not None:
         raise ZatenRezerve("Bu derse zaten kayıtlısın")
 
-    if await bakiye(db, member_id) < 1:
-        raise YetersizKredi("Ders paketinde yeterli hak yok")
+    tot, grup_b, bireysel_b = await bakiye_detay(db, member_id)
+    is_bireysel_session = (oturum.kontenjan == 1) or any(k in (tip.ad.lower() if tip else "") for k in ["bireysel", "özel", "birebir", "1-on-1"])
+
+    if is_bireysel_session:
+        if bireysel_b < 1 and tot < 1:
+            raise YetersizKredi("Bireysel seans paketinizde yeterli ders hakkı bulunmamaktadır.")
+    else:
+        if grup_b < 1 and tot < 1:
+            raise YetersizKredi("Grup dersi paketinizde yeterli ders hakkı bulunmamaktadır.")
 
     # Kontenjanı atomik olarak artır. Etkilenen satır 0 ise ders dolmuştur.
     # SELECT FOR UPDATE değil: bu tek round-trip ve deadlock üretmiyor.
@@ -128,7 +135,7 @@ async def rezerve_et(
     # satırların hangi pakete ait olduğu geriye dönük kurtarılamaz.
     # `None` olabilir: admin düzeltmesiyle kredi verilmiş ama paketi
     # olmayan üye geçerli bir durumdur.
-    paket = await aktif_paket_sec(db, member_id=member_id, bugun=now.date())
+    paket = await aktif_paket_sec(db, member_id=member_id, bugun=now.date(), is_bireysel=is_bireysel_session)
 
     await hareket_ekle(
         db,

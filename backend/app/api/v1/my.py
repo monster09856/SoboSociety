@@ -5,7 +5,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_member, get_db
-from app.models.kredi import MemberPackage, Package
+from app.models.kredi import CreditLedger, MemberPackage, Package
 from app.models.rezervasyon import Booking, BookingDurumu
 from app.models.uyelik import Member, MemberMeasurementHistory
 from app.schemas.member import (
@@ -15,7 +15,7 @@ from app.schemas.member import (
     MemberStatsResponse,
     MemberSummaryResponse,
 )
-from app.services.kredi import bakiye
+from app.services.kredi import bakiye, bakiye_detay
 
 router = APIRouter(prefix="/my", tags=["my"])
 
@@ -26,7 +26,7 @@ async def get_my_summary(
     current_member: Member = Depends(get_current_member),
 ):
     """Giriş yapmış üyenin bakiye, paket ve rezervasyon özetini döndürür."""
-    kredi_bakiye = await bakiye(db, current_member.id)
+    kredi_bakiye, grup_bakiye, bireysel_bakiye = await bakiye_detay(db, current_member.id)
     now = datetime.now(timezone.utc)
     today = date.today()
 
@@ -52,6 +52,13 @@ async def get_my_summary(
         bitis_str = mp.bitis.strftime("%d.%m.%Y") if mp.bitis else ""
         days_left = (mp.bitis - today).days if mp.bitis else 0
         is_active = (mp.baslangic <= today < mp.bitis) if (mp.baslangic and mp.bitis) else False
+        is_b = any(k in pkg_name.lower() for k in ["bireysel", "özel", "birebir", "1-on-1"])
+
+        l_res = await db.execute(
+            select(func.coalesce(func.sum(CreditLedger.miktar), 0))
+            .where(CreditLedger.member_package_id == mp.id)
+        )
+        mp_rem = max(0, int(l_res.scalar_one() or 0))
 
         paket_listesi.append(
             MemberPackageSummary(
@@ -61,6 +68,8 @@ async def get_my_summary(
                 bitis_tarihi=bitis_str,
                 kalan_gun=max(0, days_left),
                 toplam_ders=ders_sayisi,
+                kalan_ders=mp_rem,
+                kategori="Bireysel" if is_b else "Grup",
                 aktif=is_active,
             )
         )
@@ -113,6 +122,8 @@ async def get_my_summary(
         kullanici_adi=current_member.kullanici_adi,
         telefon=current_member.telefon or "",
         bakiye=kredi_bakiye,
+        grup_bakiye=grup_bakiye,
+        bireysel_bakiye=bireysel_bakiye,
         aktif_paket_adi=aktif_pkg_ad,
         paket_bitis_tarihi=pkg_bitis_str,
         kalan_gun_sayisi=kalan_gun,

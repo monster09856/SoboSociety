@@ -14,6 +14,8 @@ interface MemberDetail {
   kullanici_adi?: string | null
   telefon?: string | null
   bakiye: number
+  grup_bakiye?: number
+  bireysel_bakiye?: number
   borc_bakiye?: number
   aktif: boolean
   is_admin: boolean
@@ -41,6 +43,8 @@ interface MemberDetail {
     bitis_tarihi: string
     kalan_gun: number
     toplam_ders: number
+    kalan_ders?: number
+    kategori?: string
     aktif: boolean
   }[]
   tanimlanan_paketler?: string[]
@@ -682,7 +686,14 @@ export default function AdminMembersPage() {
                                 <div className="font-bold text-ink text-xs flex items-center gap-1.5 truncate">
                                   <CheckCircle2 className="w-3.5 h-3.5 text-sage shrink-0" />
                                   <span className="truncate">{pkg.ad}</span>
-                                  <span className="text-[10px] text-mocha font-extrabold shrink-0">({pkg.toplam_ders} Derslik Paket)</span>
+                                  {pkg.kategori && (
+                                    <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded border shrink-0 ${pkg.kategori === 'Bireysel' ? 'bg-amber-100 text-amber-900 border-amber-300' : 'bg-emerald-100 text-emerald-900 border-emerald-300'}`}>
+                                      {pkg.kategori === 'Bireysel' ? '👤 Bireysel' : '👥 Grup'}
+                                    </span>
+                                  )}
+                                  <span className="text-[10px] text-mocha font-extrabold shrink-0">
+                                    ({pkg.kalan_ders !== undefined ? `${pkg.kalan_ders}/${pkg.toplam_ders} Ders` : `${pkg.toplam_ders} Ders`})
+                                  </span>
                                 </div>
                                 <div className="text-[10px] text-secondary font-medium pl-5 flex flex-wrap items-center gap-x-2 gap-y-0.5">
                                   {pkg.baslangic_tarihi && <span>Başlangıç: {pkg.baslangic_tarihi}</span>}
@@ -789,6 +800,9 @@ export default function AdminMembersPage() {
                     {(() => {
                       const rezerveCount = m.rezerve_ders_detaylari?.length ?? m.aktif_rezervasyonlar?.length ?? 0
                       const toplamBakiye = m.bakiye + rezerveCount
+                      const hasMultipleCategories = (m.grup_bakiye ?? 0) > 0 && (m.bireysel_bakiye ?? 0) > 0
+                      const hasBireyselOnly = (m.bireysel_bakiye ?? 0) > 0 && (m.grup_bakiye ?? 0) === 0
+
                       return (
                         <div className="p-3 rounded-xl bg-ivory border border-line space-y-2">
                           <div className="flex items-center justify-between">
@@ -797,6 +811,26 @@ export default function AdminMembersPage() {
                               {toplamBakiye} Derslik Bakiye
                             </span>
                           </div>
+
+                          {/* İki farklı kategori varsa veya bireysel ise ayrı kutucuklar */}
+                          {hasMultipleCategories ? (
+                            <div className="grid grid-cols-2 gap-2 pt-1 border-t border-line/60">
+                              <div className="p-2 rounded-lg bg-emerald-50/90 border border-emerald-200">
+                                <span className="text-[10px] text-emerald-800 font-bold block">👥 Grup Dersleri</span>
+                                <span className="text-sm font-extrabold text-emerald-950">{m.grup_bakiye ?? 0} Ders</span>
+                              </div>
+                              <div className="p-2 rounded-lg bg-amber-50/90 border border-amber-200">
+                                <span className="text-[10px] text-amber-800 font-bold block">👤 Bireysel Seans</span>
+                                <span className="text-sm font-extrabold text-amber-950">{m.bireysel_bakiye ?? 0} Seans</span>
+                              </div>
+                            </div>
+                          ) : hasBireyselOnly ? (
+                            <div className="p-2 rounded-lg bg-amber-50/90 border border-amber-200">
+                              <span className="text-[10px] text-amber-800 font-bold block">👤 Bireysel Özel Seans Paketi</span>
+                              <span className="text-sm font-extrabold text-amber-950">{m.bireysel_bakiye} Seans</span>
+                            </div>
+                          ) : null}
+
                           <div className="grid grid-cols-2 gap-2 pt-1 border-t border-line/60">
                             <div className="p-2 rounded-lg bg-white/90 border border-line/50">
                               <span className="text-[10px] text-secondary font-semibold block">Rezerveye Açık (Boş)</span>

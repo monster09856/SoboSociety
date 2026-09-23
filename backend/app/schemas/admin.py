@@ -139,6 +139,8 @@ class MemberPackageDetail(BaseModel):
     bitis_tarihi: str
     kalan_gun: int
     toplam_ders: int
+    kalan_ders: int = 0
+    kategori: str = "Grup"  # "Grup" veya "Bireysel"
     aktif: bool
 
     model_config = ConfigDict(from_attributes=True)
@@ -160,6 +162,8 @@ class MemberAdminDetailResponse(BaseModel):
     kullanici_adi: str | None = None
     telefon: str | None = None
     bakiye: int
+    grup_bakiye: int = 0
+    bireysel_bakiye: int = 0
     borc_bakiye: float = 0.0
     aktif: bool
     is_admin: bool

@@ -21,34 +21,77 @@ async def bakiye(db: AsyncSession, member_id: int) -> int:
     return int(sonuc.scalar_one())
 
 
+async def bakiye_detay(db: AsyncSession, member_id: int) -> tuple[int, int, int]:
+    """Üyenin toplam, grup ve bireysel ders bakiyesini döndürür: (toplam, grup, bireysel)."""
+    tot = await bakiye(db, member_id)
+
+    stmt = (
+        select(MemberPackage, Package)
+        .outerjoin(Package, MemberPackage.package_id == Package.id)
+        .where(MemberPackage.member_id == member_id)
+    )
+    res = await db.execute(stmt)
+    rows = res.all()
+
+    grup = 0
+    bireysel = 0
+    assigned_total = 0
+
+    for mp, p in rows:
+        p_name = getattr(mp, "ozel_paket_adi", None) or (p.ad if p else "")
+        is_b = any(k in p_name.lower() for k in ["bireysel", "özel", "birebir", "1-on-1"])
+
+        l_res = await db.execute(
+            select(func.coalesce(func.sum(CreditLedger.miktar), 0))
+            .where(CreditLedger.member_package_id == mp.id)
+        )
+        rem = int(l_res.scalar_one() or 0)
+        assigned_total += rem
+        if is_b:
+            bireysel += rem
+        else:
+            grup += rem
+
+    # Pakete bağlanmamış doğrudan admin hareketleri varsa
+    diff = tot - assigned_total
+    if diff != 0:
+        if bireysel > 0 and grup == 0:
+            bireysel += diff
+        else:
+            grup += diff
+
+    return tot, max(0, grup), max(0, bireysel)
+
+
 async def aktif_paket_sec(
-    db: AsyncSession, *, member_id: int, bugun: date
+    db: AsyncSession, *, member_id: int, bugun: date, is_bireysel: bool | None = None
 ) -> MemberPackage | None:
     """Krediyi düşmek için kullanılacak paketi seçer.
-
-    Kural: geçerlilik süresi devam eden paketler arasından **en erken biten**
-    seçilir. Sebebi üyenin lehine: süresi dolmak üzere olan paket önce
-    tüketilirse yanma riski azalır.
-
-    Ledger satırlarının hangi pakete ait olduğu yazılmazsa "bu paketten kaç
-    ders kaldı" sorusu sonradan cevaplanamaz — ve geçmiş satırların atfı
-    geriye dönük kurtarılamaz.
-
-    `bitis` "geçersiz olduğu İLK gün"dür (bkz. `MemberPackage.bitis`), bu
-    yüzden karşılaştırma `>= bugun` değil `> bugun` olmalıdır: `bitis`
-    gününde paket artık geçerli değildir.
+    Eğer is_bireysel belirtilmişse ilgili kategoriye (Bireysel / Grup) ait paketi önceliklendirir.
     """
-    sonuc = await db.execute(
-        select(MemberPackage)
+    stmt = (
+        select(MemberPackage, Package)
+        .outerjoin(Package, MemberPackage.package_id == Package.id)
         .where(
             MemberPackage.member_id == member_id,
             MemberPackage.baslangic <= bugun,
             MemberPackage.bitis > bugun,
         )
         .order_by(MemberPackage.bitis)
-        .limit(1)
     )
-    return sonuc.scalar_one_or_none()
+    res = await db.execute(stmt)
+    rows = res.all()
+    if not rows:
+        return None
+
+    if is_bireysel is not None:
+        for mp, p in rows:
+            p_name = getattr(mp, "ozel_paket_adi", None) or (p.ad if p else "")
+            is_pkg_bireysel = any(k in p_name.lower() for k in ["bireysel", "özel", "birebir", "1-on-1"])
+            if is_pkg_bireysel == is_bireysel:
+                return mp
+
+    return rows[0][0]
 
 
 async def hareket_ekle(

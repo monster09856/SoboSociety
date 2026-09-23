@@ -5760,6 +5760,8 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
                     final String username = m['kullanici_adi'] != null ? '@${m['kullanici_adi']}' : '';
                     final String phone = m['telefon'] ?? 'Telefon Yok';
                   final int bakiye = m['bakiye'] ?? 0;
+                  final int grupBakiye = (m['grup_bakiye'] is num) ? (m['grup_bakiye'] as num).toInt() : 0;
+                  final int bireyselBakiye = (m['bireysel_bakiye'] is num) ? (m['bireysel_bakiye'] as num).toInt() : 0;
                   final String activePkgName = m['aktif_paket_adi'] ?? 'Aktif Paket Yok';
                   final bool isAdminMember = m['is_admin'] == true;
                   final List<dynamic> aktifPaketler = (m['aktif_paketler'] is List) ? (m['aktif_paketler'] as List) : <dynamic>[];
@@ -5881,18 +5883,46 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
                             Column(
                               crossAxisAlignment: CrossAxisAlignment.end,
                               children: [
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
-                                  decoration: BoxDecoration(
-                                    color: SoboTheme.sand,
-                                    borderRadius: BorderRadius.circular(10),
-                                    border: Border.all(color: SoboTheme.line),
+                                if (grupBakiye > 0 && bireyselBakiye > 0) ...[
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFF1F8F5),
+                                      borderRadius: BorderRadius.circular(8),
+                                      border: Border.all(color: const Color(0xFFA5D6A7)),
+                                    ),
+                                    child: Text(
+                                      '👥 Grup: $grupBakiye Ders',
+                                      style: SoboTheme.fontSans(fontSize: 10, fontWeight: FontWeight.bold, color: const Color(0xFF2E7D32)),
+                                    ),
                                   ),
-                                  child: Text(
-                                    'Kalan: $bakiye Ders',
-                                    style: SoboTheme.fontSans(fontSize: 11.5, fontWeight: FontWeight.bold, color: SoboTheme.espresso),
+                                  const SizedBox(height: 3),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFFFFBF0),
+                                      borderRadius: BorderRadius.circular(8),
+                                      border: Border.all(color: const Color(0xFFFFD54F)),
+                                    ),
+                                    child: Text(
+                                      '👤 Bireysel: $bireyselBakiye Seans',
+                                      style: SoboTheme.fontSans(fontSize: 10, fontWeight: FontWeight.bold, color: const Color(0xFFE65100)),
+                                    ),
                                   ),
-                                ),
+                                ] else ...[
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                                    decoration: BoxDecoration(
+                                      color: SoboTheme.sand,
+                                      borderRadius: BorderRadius.circular(10),
+                                      border: Border.all(color: SoboTheme.line),
+                                    ),
+                                    child: Text(
+                                      bireyselBakiye > 0 ? 'Bireysel: $bireyselBakiye Seans' : 'Kalan: $bakiye Ders',
+                                      style: SoboTheme.fontSans(fontSize: 11.5, fontWeight: FontWeight.bold, color: SoboTheme.espresso),
+                                    ),
+                                  ),
+                                ],
                                 if (reservations.isNotEmpty) ...[
                                   const SizedBox(height: 3),
                                   Container(
@@ -5992,8 +6022,28 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
                                                     ),
                                                   ),
                                                   const SizedBox(width: 4),
+                                                  if (pkg['kategori'] != null)
+                                                    Container(
+                                                      margin: const EdgeInsets.only(right: 4),
+                                                      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                                                      decoration: BoxDecoration(
+                                                        color: pkg['kategori'] == 'Bireysel' ? const Color(0xFFFFF8E1) : const Color(0xFFE8F5E9),
+                                                        borderRadius: BorderRadius.circular(4),
+                                                        border: Border.all(
+                                                          color: pkg['kategori'] == 'Bireysel' ? const Color(0xFFFFD54F) : const Color(0xFFA5D6A7),
+                                                        ),
+                                                      ),
+                                                      child: Text(
+                                                        pkg['kategori'] == 'Bireysel' ? '👤 Bireysel' : '👥 Grup',
+                                                        style: TextStyle(
+                                                          fontSize: 9,
+                                                          fontWeight: FontWeight.bold,
+                                                          color: pkg['kategori'] == 'Bireysel' ? const Color(0xFFE65100) : const Color(0xFF2E7D32),
+                                                        ),
+                                                      ),
+                                                    ),
                                                   Text(
-                                                    '(Toplam ${pkg['toplam_ders']} Derslik Paket)',
+                                                    '(${pkg['kalan_ders'] != null ? '${pkg['kalan_ders']}/${pkg['toplam_ders']} Ders' : 'Toplam ${pkg['toplam_ders']} Ders'})',
                                                     style: SoboTheme.fontSans(fontSize: 10, fontWeight: FontWeight.bold, color: SoboTheme.mocha),
                                                   ),
                                                 ],

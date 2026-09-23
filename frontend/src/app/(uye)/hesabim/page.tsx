@@ -27,6 +27,8 @@ import {
   X,
   KeyRound,
   CreditCard,
+  Users,
+  User,
 } from 'lucide-react'
 
 export default function HesabimPage() {
@@ -350,24 +352,125 @@ export default function HesabimPage() {
               </span>
             </div>
 
-            {/* Aktif Paket & Bakiye Kartı */}
+            {/* Aktif Paket & Kategori Bazlı Bakiye Kutucukları */}
             <div className="pt-4 border-t border-line/80 space-y-3">
               <div className="flex items-center justify-between text-xs font-bold text-secondary uppercase tracking-wider">
                 <span className="flex items-center gap-1.5">
                   <Package className="w-4 h-4 text-mocha" />
-                  Aktif Paket Durumu
+                  Ders Hakları & Paket Durumu
                 </span>
-                <span className="text-sage font-extrabold">Geçerli Paket</span>
+                <span className="text-sage font-extrabold">
+                  {summary.bakiye > 0 ? `${summary.bakiye} Toplam Hak` : 'Paket Yok'}
+                </span>
               </div>
 
-              <div className="bg-ivory/80 rounded-xl p-3.5 border border-line flex items-center justify-between">
-                <CreditBadge credits={summary.bakiye} />
-                <Link href="/rezervasyon">
-                  <Button size="sm" className="text-xs font-bold bg-espresso hover:bg-espresso-dark text-ivory border-none shadow-xs rounded-xl px-4">
-                    Ders Seç
-                  </Button>
-                </Link>
-              </div>
+              {/* İki Farklı Paket (Grup & Bireysel) Durumu */}
+              {(summary.bireysel_bakiye ?? 0) > 0 && (summary.grup_bakiye ?? 0) > 0 ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {/* Grup Dersi Kutucuğu */}
+                  <div className="bg-ivory/90 rounded-2xl p-4 border border-line shadow-xs space-y-2 flex flex-col justify-between">
+                    <div>
+                      <div className="flex items-center justify-between">
+                        <span className="inline-flex items-center gap-1 text-[11px] font-extrabold uppercase tracking-wide text-forest bg-sage/15 px-2.5 py-0.5 rounded-full">
+                          <Users className="w-3 h-3 text-forest" />
+                          Grup Dersleri
+                        </span>
+                        <span className="text-xs text-secondary font-medium">Barre / Yoga</span>
+                      </div>
+                      <div className="mt-2.5 flex items-baseline gap-1.5">
+                        <span className="text-3xl font-serif font-bold text-ink">
+                          {summary.grup_bakiye}
+                        </span>
+                        <span className="text-xs text-secondary font-bold">Ders Hakkı</span>
+                      </div>
+                    </div>
+                    <Link href="/rezervasyon" className="mt-2 block">
+                      <Button size="sm" className="w-full text-xs font-bold bg-espresso hover:bg-espresso-dark text-ivory border-none shadow-xs rounded-xl py-2">
+                        Grup Dersi Seç
+                      </Button>
+                    </Link>
+                  </div>
+
+                  {/* Bireysel Seans Kutucuğu */}
+                  <div className="bg-amber-50/60 rounded-2xl p-4 border border-amber-200/80 shadow-xs space-y-2 flex flex-col justify-between">
+                    <div>
+                      <div className="flex items-center justify-between">
+                        <span className="inline-flex items-center gap-1 text-[11px] font-extrabold uppercase tracking-wide text-amber-900 bg-amber-200/70 px-2.5 py-0.5 rounded-full">
+                          <User className="w-3 h-3 text-amber-800" />
+                          Bireysel Seans
+                        </span>
+                        <span className="text-xs text-amber-800 font-medium">1-on-1 Reformer</span>
+                      </div>
+                      <div className="mt-2.5 flex items-baseline gap-1.5">
+                        <span className="text-3xl font-serif font-bold text-amber-950">
+                          {summary.bireysel_bakiye}
+                        </span>
+                        <span className="text-xs text-amber-900 font-bold">Seans Hakkı</span>
+                      </div>
+                    </div>
+                    <div className="mt-2 text-[11px] text-amber-800/90 font-medium text-center py-1.5 bg-amber-100/60 rounded-xl">
+                      Eğitmen Eşliğinde Özel Seans ✨
+                    </div>
+                  </div>
+                </div>
+              ) : (summary.bireysel_bakiye ?? 0) > 0 ? (
+                /* Sadece Bireysel Paketi Olan Üye */
+                <div className="bg-amber-50/70 rounded-2xl p-4 border border-amber-200 shadow-xs flex items-center justify-between">
+                  <div className="space-y-1">
+                    <span className="inline-flex items-center gap-1 text-[11px] font-extrabold uppercase tracking-wide text-amber-900 bg-amber-200 px-2.5 py-0.5 rounded-full">
+                      <User className="w-3 h-3 text-amber-800" />
+                      Bireysel Özel Seans
+                    </span>
+                    <div className="flex items-baseline gap-1.5 pt-1">
+                      <span className="text-2xl font-serif font-bold text-amber-950">
+                        {summary.bireysel_bakiye}
+                      </span>
+                      <span className="text-xs text-amber-900 font-bold">Kalan Özel Seans</span>
+                    </div>
+                  </div>
+                  <span className="text-xs text-amber-800 font-semibold">1-on-1 Reformer ✨</span>
+                </div>
+              ) : (
+                /* Standart Grup Paketi veya Tek Paket */
+                <div className="bg-ivory/80 rounded-2xl p-3.5 border border-line flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <CreditBadge credits={summary.bakiye} />
+                    {summary.aktif_paket_adi && (
+                      <span className="text-xs text-secondary font-medium hidden sm:inline">
+                        {summary.aktif_paket_adi}
+                      </span>
+                    )}
+                  </div>
+                  <Link href="/rezervasyon">
+                    <Button size="sm" className="text-xs font-bold bg-espresso hover:bg-espresso-dark text-ivory border-none shadow-xs rounded-xl px-4">
+                      Ders Seç
+                    </Button>
+                  </Link>
+                </div>
+              )}
+
+              {/* Tanımlı Paketlerin Listesi ve Bitiş Tarihleri */}
+              {summary.paketler && summary.paketler.length > 0 && (
+                <div className="space-y-1.5 pt-1">
+                  {summary.paketler.map((pkg) => (
+                    <div
+                      key={pkg.id}
+                      className="px-3 py-2 rounded-xl bg-sand-light/60 border border-line/60 flex items-center justify-between text-xs"
+                    >
+                      <div className="flex items-center gap-2">
+                        <span className={`w-2 h-2 rounded-full ${pkg.aktif ? 'bg-sage' : 'bg-secondary/40'}`} />
+                        <span className="font-semibold text-ink">{pkg.ad}</span>
+                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-sand border border-line text-secondary">
+                          {pkg.kategori || 'Grup'}
+                        </span>
+                      </div>
+                      <div className="text-secondary text-[11px] font-medium">
+                        Kalan: <strong className="text-espresso">{pkg.kalan_ders ?? pkg.toplam_ders} ders</strong> • Bitiş: {pkg.bitis_tarihi || '-'} ({pkg.kalan_gun} gün)
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* Borç / Bekleyen Ödeme Durumu Kartı */}

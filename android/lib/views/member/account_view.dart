@@ -952,9 +952,11 @@ class _AccountViewState extends State<AccountView> {
                                 borderRadius: BorderRadius.circular(10),
                               ),
                               child: Text(
-                                (_summary?.aktifPaketAdi != null && _summary!.aktifPaketAdi!.isNotEmpty)
-                                    ? '${_summary!.aktifPaketAdi} • ${_summary?.bakiye ?? 0} Ders'
-                                    : 'Kalan: ${_summary?.bakiye ?? 0} Ders',
+                                ((_summary?.grupBakiye ?? 0) > 0 && (_summary?.bireyselBakiye ?? 0) > 0)
+                                    ? '👥 ${_summary?.grupBakiye} Grup • 👤 ${_summary?.bireyselBakiye} Bireysel'
+                                    : (_summary?.aktifPaketAdi != null && _summary!.aktifPaketAdi!.isNotEmpty)
+                                        ? '${_summary!.aktifPaketAdi} • ${_summary?.bakiye ?? 0} Ders'
+                                        : 'Kalan: ${_summary?.bakiye ?? 0} Ders',
                                 style: SoboTheme.fontSans(fontSize: 11, fontWeight: FontWeight.bold, color: SoboTheme.espresso),
                               ),
                             ),
@@ -1126,15 +1128,18 @@ class _AccountViewState extends State<AccountView> {
                               Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                                 decoration: BoxDecoration(
-                                  color: const Color(0xFFE8F5E9),
+                                  color: pkg.kategori == 'Bireysel' ? const Color(0xFFFFF8E1) : const Color(0xFFE8F5E9),
                                   borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(
+                                    color: pkg.kategori == 'Bireysel' ? const Color(0xFFFFD54F) : const Color(0xFFA5D6A7),
+                                  ),
                                 ),
                                 child: Text(
-                                  '${pkg.toplamDers} Ders',
+                                  '${pkg.kategori == 'Bireysel' ? '👤 Bireysel' : '👥 Grup'} • ${pkg.kalanDers > 0 ? pkg.kalanDers : pkg.toplamDers} Ders',
                                   style: SoboTheme.fontSans(
                                     fontSize: 11,
                                     fontWeight: FontWeight.bold,
-                                    color: const Color(0xFF2E7D32),
+                                    color: pkg.kategori == 'Bireysel' ? const Color(0xFFE65100) : const Color(0xFF2E7D32),
                                   ),
                                 ),
                               ),
@@ -1159,20 +1164,104 @@ class _AccountViewState extends State<AccountView> {
                         ],
                       ),
                     )),
-                    Container(
-                      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 14),
-                      decoration: BoxDecoration(
-                        color: SoboTheme.sand,
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    if ((_summary?.grupBakiye ?? 0) > 0 && (_summary?.bireyselBakiye ?? 0) > 0) ...[
+                      Row(
                         children: [
-                          Text('Toplam Kalan Ders Hakkı', style: SoboTheme.fontSans(fontSize: 11.5, fontWeight: FontWeight.bold, color: SoboTheme.espresso)),
-                          Text('${_summary?.bakiye ?? 0} Ders', style: SoboTheme.fontSerif(fontSize: 17, fontWeight: FontWeight.bold, color: SoboTheme.espresso)),
+                          Expanded(
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFF1F8F5),
+                                borderRadius: BorderRadius.circular(14),
+                                border: Border.all(color: const Color(0xFFA5D6A7)),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      const Icon(Icons.groups_rounded, size: 14, color: Color(0xFF2E7D32)),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        'GRUP DERSİ',
+                                        style: SoboTheme.fontSans(fontSize: 9.5, fontWeight: FontWeight.bold, color: const Color(0xFF2E7D32)),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 6),
+                                  Text(
+                                    '${_summary?.grupBakiye ?? 0} Ders',
+                                    style: SoboTheme.fontSerif(fontSize: 17, fontWeight: FontWeight.bold, color: SoboTheme.espresso),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    'Barre / Mat Pilates',
+                                    style: SoboTheme.fontSans(fontSize: 8.5, color: SoboTheme.secondary),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFFFFBF0),
+                                borderRadius: BorderRadius.circular(14),
+                                border: Border.all(color: const Color(0xFFFFD54F)),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      const Icon(Icons.person_rounded, size: 14, color: Color(0xFFE65100)),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        'BİREYSEL SEANS',
+                                        style: SoboTheme.fontSans(fontSize: 9.5, fontWeight: FontWeight.bold, color: const Color(0xFFE65100)),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 6),
+                                  Text(
+                                    '${_summary?.bireyselBakiye ?? 0} Seans',
+                                    style: SoboTheme.fontSerif(fontSize: 17, fontWeight: FontWeight.bold, color: SoboTheme.espresso),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    '1-on-1 Reformer / Özel',
+                                    style: SoboTheme.fontSans(fontSize: 8.5, color: SoboTheme.secondary),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
                         ],
                       ),
-                    ),
+                    ] else ...[
+                      Container(
+                        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 14),
+                        decoration: BoxDecoration(
+                          color: SoboTheme.sand,
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              (_summary?.bireyselBakiye ?? 0) > 0 ? 'Bireysel Özel Seans Bakiyesi' : 'Toplam Kalan Ders Hakkı',
+                              style: SoboTheme.fontSans(fontSize: 11.5, fontWeight: FontWeight.bold, color: SoboTheme.espresso),
+                            ),
+                            Text(
+                              '${_summary?.bakiye ?? 0} Ders',
+                              style: SoboTheme.fontSerif(fontSize: 17, fontWeight: FontWeight.bold, color: SoboTheme.espresso),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ] else if (_summary?.aktifPaketAdi != null && _summary!.aktifPaketAdi!.isNotEmpty) ...[
                     Text(
                       _summary!.aktifPaketAdi!,

@@ -33,7 +33,7 @@ from app.schemas.admin import (
 )
 from app.schemas.member import BookingResponse
 from app.services.bildirim import bildirim_gonder
-from app.services.kredi import paket_tanimla, hareket_ekle
+from app.services.kredi import bakiye, bakiye_detay, paket_tanimla, hareket_ekle
 from app.services.program_uretimi import STUDYO_TZ, to_local_str, uret
 from app.services.rezervasyon import rezerve_et
 from app.services.telefon import normalize_telefon
@@ -908,7 +908,7 @@ from app.schemas.admin import (
 )
 
 async def _build_member_detail_response(db: AsyncSession, m: Member) -> MemberAdminDetailResponse:
-    current_bakiye = await bakiye(db, m.id)
+    current_bakiye, grup_bakiye, bireysel_bakiye = await bakiye_detay(db, m.id)
     is_adm = (m.telefon in ayarlar.admin_telefons) or (m.kullanici_adi == "admin")
     
     mp_res = await db.execute(
@@ -935,6 +935,13 @@ async def _build_member_detail_response(db: AsyncSession, m: Member) -> MemberAd
         bitis_str = mp.bitis.strftime('%d.%m.%Y') if mp.bitis else ""
         days_left = (mp.bitis - today).days if mp.bitis else 0
         is_active = (today < mp.bitis) if mp.bitis else False
+        is_b = any(k in pkg_name.lower() for k in ["bireysel", "özel", "birebir", "1-on-1"])
+
+        l_res = await db.execute(
+            select(func.coalesce(func.sum(CreditLedger.miktar), 0))
+            .where(CreditLedger.member_package_id == mp.id)
+        )
+        mp_rem = max(0, int(l_res.scalar_one() or 0))
 
         pkg_history.append(f"{pkg_name} ({ders_sayisi} Ders / Bitiş: {bitis_str})")
         if is_active:
@@ -946,6 +953,8 @@ async def _build_member_detail_response(db: AsyncSession, m: Member) -> MemberAd
                     bitis_tarihi=bitis_str,
                     kalan_gun=max(0, days_left),
                     toplam_ders=ders_sayisi,
+                    kalan_ders=mp_rem,
+                    kategori="Bireysel" if is_b else "Grup",
                     aktif=True,
                 )
             )
@@ -1002,6 +1011,8 @@ async def _build_member_detail_response(db: AsyncSession, m: Member) -> MemberAd
         kullanici_adi=m.kullanici_adi,
         telefon=m.telefon,
         bakiye=current_bakiye,
+        grup_bakiye=grup_bakiye,
+        bireysel_bakiye=bireysel_bakiye,
         borc_bakiye=float(m.borc_bakiye or 0.0),
         aktif=m.aktif,
         is_admin=is_adm,
@@ -2173,6 +2184,7 @@ async def send_member_debt_reminder_endpoint(
         member_id=m.id,
         baslik="Ödeme Hatırlatması 💳",
         mesaj=msg,
-        fcm_data={"type": "payment_reminder", "borc": str(borc)},
+        tip="ODEME",
     )
+    await db.commit()
     return {"mesaj": f"{m.ad} üyesine ödeme hatırlatma bildirimi başarıyla iletildi! 🔔"}

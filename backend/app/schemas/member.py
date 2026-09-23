@@ -85,6 +85,8 @@ class MemberPackageSummary(BaseModel):
     bitis_tarihi: str
     kalan_gun: int
     toplam_ders: int
+    kalan_ders: int = 0
+    kategori: str = "Grup"  # "Grup" veya "Bireysel"
     aktif: bool
 
     model_config = ConfigDict(from_attributes=True)
@@ -96,6 +98,8 @@ class MemberSummaryResponse(BaseModel):
     kullanici_adi: str | None = None
     telefon: str | None = None
     bakiye: int
+    grup_bakiye: int = 0
+    bireysel_bakiye: int = 0
     aktif_paket_adi: str | None = None
     paket_bitis_tarihi: str | None = None
     kalan_gun_sayisi: int | None = None

@@ -43,6 +43,9 @@ class MemberPackageItem {
   final int toplamDers;
   final bool aktif;
 
+  final int kalanDers;
+  final String kategori;
+
   MemberPackageItem({
     required this.id,
     required this.ad,
@@ -50,6 +53,8 @@ class MemberPackageItem {
     required this.bitisTarihi,
     required this.kalanGun,
     required this.toplamDers,
+    this.kalanDers = 0,
+    this.kategori = 'Grup',
     required this.aktif,
   });
 
@@ -61,6 +66,8 @@ class MemberPackageItem {
       bitisTarihi: json['bitis_tarihi'] as String? ?? '',
       kalanGun: json['kalan_gun'] as int? ?? 0,
       toplamDers: json['toplam_ders'] as int? ?? 0,
+      kalanDers: json['kalan_ders'] as int? ?? 0,
+      kategori: json['kategori'] as String? ?? 'Grup',
       aktif: json['aktif'] as bool? ?? false,
     );
   }
@@ -72,6 +79,8 @@ class MemberSummaryResponse {
   final String? kullaniciAdi;
   final String telefon;
   final int bakiye;
+  final int grupBakiye;
+  final int bireyselBakiye;
   final double borcBakiye;
   final String? aktifPaketAdi;
   final String? paketBitisTarihi;
@@ -88,6 +97,8 @@ class MemberSummaryResponse {
     this.kullaniciAdi,
     required this.telefon,
     required this.bakiye,
+    this.grupBakiye = 0,
+    this.bireyselBakiye = 0,
     this.borcBakiye = 0.0,
     this.aktifPaketAdi,
     this.paketBitisTarihi,
@@ -127,6 +138,8 @@ class MemberSummaryResponse {
       kullaniciAdi: json['kullanici_adi'] as String?,
       telefon: json['telefon'] as String? ?? '',
       bakiye: json['bakiye'] as int? ?? 0,
+      grupBakiye: json['grup_bakiye'] as int? ?? 0,
+      bireyselBakiye: json['bireysel_bakiye'] as int? ?? 0,
       borcBakiye: (json['borc_bakiye'] as num?)?.toDouble() ?? 0.0,
       aktifPaketAdi: json['aktif_paket_adi'] as String?,
       paketBitisTarihi: json['paket_bitis_tarihi'] as String?,

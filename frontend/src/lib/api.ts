@@ -279,19 +279,33 @@ export interface WaitlistResponse {
   session?: ClassSessionResponse | null
 }
 
+export interface MemberPackageSummaryItem {
+  id: number
+  ad: string
+  baslangic_tarihi: string
+  bitis_tarihi: string
+  kalan_gun: number
+  toplam_ders: number
+  kalan_ders: number
+  kategori: string
+  aktif: boolean
+}
+
 export interface MemberSummaryResponse {
   id: number
   ad: string
   kullanici_adi?: string | null
   telefon: string
   bakiye: number
+  grup_bakiye?: number
+  bireysel_bakiye?: number
   borc_bakiye?: number
   sabit_ders_saatleri?: string | null
   aktif_paket_adi?: string | null
   paket_bitis_tarihi?: string | null
   kalan_gun_sayisi?: number | null
   toplam_ders_adedi?: number | null
-  paketler?: any[]
+  paketler?: MemberPackageSummaryItem[]
   aktif_rezervasyonlar: BookingResponse[]
   gecmis_rezervasyonlar: BookingResponse[]
 }
@@ -643,6 +657,8 @@ export const adminApi = {
         kullanici_adi?: string | null
         telefon?: string | null
         bakiye: number
+        grup_bakiye?: number
+        bireysel_bakiye?: number
         borc_bakiye?: number
         aktif: boolean
         is_admin: boolean
