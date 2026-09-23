@@ -3,6 +3,7 @@ import { Hero } from '@/components/site/hero'
 import { LiveSchedule } from '@/components/site/live-schedule'
 import { Workshops } from '@/components/site/workshops'
 import { Packages } from '@/components/site/packages'
+import { AppDownload } from '@/components/site/app-download'
 import { Footer } from '@/components/site/footer'
 import { AIConciergeModal } from '@/components/site/ai-concierge-modal'
 
@@ -18,6 +19,7 @@ export default function Home() {
         <LiveSchedule />
         <Workshops />
         <Packages />
+        <AppDownload />
       </main>
       <Footer />
       <AIConciergeModal />

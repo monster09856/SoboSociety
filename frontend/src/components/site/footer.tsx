@@ -50,6 +50,11 @@ export function Footer() {
                   Üye Girişi / Rezervasyon
                 </Link>
               </li>
+              <li>
+                <a href="#uygulama" className="hover:text-espresso transition-colors font-medium text-espresso">
+                  Mobil Uygulama İndir (Android APK)
+                </a>
+              </li>
             </ul>
           </div>
 

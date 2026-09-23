@@ -30,6 +30,7 @@ export function Navigation() {
     { href: '#canli-program', label: 'Canlı Program' },
     ...(hasWorkshops ? [{ href: '#workshoplar', label: 'Workshop & Etkinlikler' }] : []),
     { href: '#paketler', label: 'Paketler' },
+    { href: '#uygulama', label: 'Uygulama İndir' },
   ]
 
   return (
