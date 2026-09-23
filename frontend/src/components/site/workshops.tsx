@@ -137,8 +137,19 @@ export function Workshops() {
         </div>
 
         {/* Grid of Event Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-14">
-          {events.map((ev) => {
+        {events.length === 0 ? (
+          <div className="bg-ivory border border-line rounded-3xl p-10 text-center max-w-xl mx-auto mb-14 shadow-sobo">
+            <Calendar className="w-10 h-10 text-mocha/60 mx-auto mb-3" />
+            <h3 className="font-serif text-lg font-bold text-ink mb-1">
+              Yakında Yeni Etkinlikler Planlanacak
+            </h3>
+            <p className="text-secondary text-xs leading-relaxed">
+              Şu an için aktif bir workshop veya atölye bulunmamaktadır. Yaklaşan yeni etkinliklerimiz duyurulduğunda burada yer alacaktır.
+            </p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-14">
+            {events.map((ev) => {
             const Icon = getCategoryIcon(ev.turu)
             const kalan = Math.max(0, ev.kontenjan - ev.dolu_sayi)
             const dolulukYuzde = ev.kontenjan > 0 ? Math.min(100, Math.round((ev.dolu_sayi / ev.kontenjan) * 100)) : 0
@@ -269,6 +280,7 @@ export function Workshops() {
             )
           })}
         </div>
+        )}
 
         {/* Note banner */}
         <div className="bg-sand/80 rounded-2xl p-6 border border-line max-w-3xl mx-auto text-center space-y-2">

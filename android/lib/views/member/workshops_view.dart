@@ -55,48 +55,14 @@ class _WorkshopsViewState extends State<WorkshopsView> {
     } catch (_) {
       if (mounted) {
         setState(() {
-          _events = _defaultEvents;
+          _events = <StudioEventItem>[];
           _isLoading = false;
         });
       }
     }
   }
 
-  final List<StudioEventItem> _defaultEvents = [
-    StudioEventItem(
-      id: 1,
-      baslik: 'Belgrad Ormanı Doğa Yürüyüşü & Kahve Buluşması',
-      turu: 'Doğa Yürüyüşü',
-      tarihSaat: DateTime.now().add(const Duration(days: 3)).toIso8601String(),
-      aciklama: 'Temiz havada yürüyüş, nefes egzersizleri ve ardından tüm Sobo topluluğu ile kahve sohbeti.',
-      kontenjan: 20,
-      doluSayi: 12,
-      ucret: 'Topluluk Etkinliği',
-      aktif: true,
-    ),
-    StudioEventItem(
-      id: 2,
-      baslik: 'Ses Çanağı & Derin Meditasyon (Sound Bath)',
-      turu: 'Sound Bath',
-      tarihSaat: DateTime.now().add(const Duration(days: 5)).toIso8601String(),
-      aciklama: 'Tibet ses çanaklarının frekansları eşliğinde derin zihinsel ve bedensel dinlenme seansı.',
-      kontenjan: 12,
-      doluSayi: 8,
-      ucret: 'Özel Atölye',
-      aktif: true,
-    ),
-    StudioEventItem(
-      id: 3,
-      baslik: 'Postür, Omurga & Mobilite Masterclass',
-      turu: 'Masterclass',
-      tarihSaat: DateTime.now().add(const Duration(days: 7)).toIso8601String(),
-      aciklama: 'Masa başı çalışanlar için özel omurga sağlığı, duruş bozukluklarını düzeltici teknikler ve mobilite çalışması.',
-      kontenjan: 10,
-      doluSayi: 6,
-      ucret: 'Masterclass',
-      aktif: true,
-    ),
-  ];
+
 
   Future<void> _handleRSVP(StudioEventItem event) async {
     try {
@@ -963,6 +929,36 @@ class _WorkshopsViewState extends State<WorkshopsView> {
                   const SizedBox(height: 12),
 
                   // Event Cards
+                  if (_events.isEmpty)
+                    Container(
+                      padding: const EdgeInsets.symmetric(vertical: 36, horizontal: 20),
+                      margin: const EdgeInsets.only(bottom: 16),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(22),
+                        border: Border.all(color: SoboTheme.line),
+                      ),
+                      child: Center(
+                        child: Column(
+                          children: [
+                            Icon(Icons.event_busy_rounded, size: 40, color: SoboTheme.secondary.withOpacity(0.4)),
+                            const SizedBox(height: 12),
+                            Text(
+                              'Şu an planlanmış aktif bir workshop bulunmamaktadır.',
+                              style: SoboTheme.fontSans(fontSize: 13, fontWeight: FontWeight.w600, color: SoboTheme.ink),
+                              textAlign: TextAlign.center,
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Yeni etkinlikler eklendiğinde buradan inceleyebilirsiniz.',
+                              style: SoboTheme.fontSans(fontSize: 11.5, color: SoboTheme.secondary),
+                              textAlign: TextAlign.center,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+
                   ..._events.map((ev) {
                     final bool isFull = ev.kontenjan > 0 && ev.doluSayi >= ev.kontenjan;
                     final int kalan = (ev.kontenjan - ev.doluSayi).clamp(0, ev.kontenjan);
