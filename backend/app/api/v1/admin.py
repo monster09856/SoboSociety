@@ -4,7 +4,7 @@ import logging
 import re
 
 from fastapi import APIRouter, Depends, Query
-from sqlalchemy import select, delete, update
+from sqlalchemy import select, delete, update, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_db, get_current_admin
