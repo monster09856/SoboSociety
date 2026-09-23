@@ -4,10 +4,12 @@ import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { Menu, X, Calendar, User } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { api } from '@/lib/api'
 
 export function Navigation() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [scrolled, setScrolled] = useState(false)
+  const [hasWorkshops, setHasWorkshops] = useState(false)
 
   useEffect(() => {
     const handleScroll = () => {
@@ -18,12 +20,15 @@ export function Navigation() {
       }
     }
     window.addEventListener('scroll', handleScroll)
+    api.events.list().then((list) => {
+      if (list && list.length > 0) setHasWorkshops(true)
+    }).catch(() => {})
     return () => window.removeEventListener('scroll', handleScroll)
   }, [])
 
   const navLinks = [
     { href: '#canli-program', label: 'Canlı Program' },
-    { href: '#workshoplar', label: 'Workshop & Etkinlikler' },
+    ...(hasWorkshops ? [{ href: '#workshoplar', label: 'Workshop & Etkinlikler' }] : []),
     { href: '#paketler', label: 'Paketler' },
   ]
 

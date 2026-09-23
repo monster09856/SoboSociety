@@ -756,23 +756,21 @@ export default function HesabimPage() {
           )}
         </div>
 
-        {/* Workshop & Etkinlik Kayıtlarım Section */}
-        <div className="space-y-3 pt-2">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Sparkles className="w-4 h-4 text-mocha" />
-              <h3 className="font-serif text-lg font-bold text-ink tracking-wide">
-                Workshop & Etkinlik Kayıtlarım
-              </h3>
-            </div>
-            {myWorkshops.length > 0 && (
+        {/* Workshop & Etkinlik Kayıtlarım Section (Sadece aktif kayıt varsa göster) */}
+        {myWorkshops && myWorkshops.length > 0 && (
+          <div className="space-y-3 pt-2">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-mocha" />
+                <h3 className="font-serif text-lg font-bold text-ink tracking-wide">
+                  Workshop & Etkinlik Kayıtlarım
+                </h3>
+              </div>
               <span className="text-xs font-bold text-sage bg-sage/15 px-2.5 py-0.5 rounded-full border border-sage/30">
                 {myWorkshops.length} Kayıt
               </span>
-            )}
-          </div>
+            </div>
 
-          {myWorkshops && myWorkshops.length > 0 ? (
             <div className="space-y-3">
               {myWorkshops.map((ev) => (
                 <div
@@ -818,15 +816,8 @@ export default function HesabimPage() {
                 </div>
               ))}
             </div>
-          ) : (
-            <div className="p-4 rounded-2xl bg-sand/40 border border-dashed border-line text-center text-xs text-secondary font-medium flex flex-col items-center gap-2">
-              <span>Kayıtlı bir workshop veya atölye etkinliğiniz bulunmamaktadır.</span>
-              <a href="/#workshoplar" className="text-espresso font-bold underline hover:text-mocha">
-                Workshop & Etkinlikleri İncele →
-              </a>
-            </div>
-          )}
-        </div>
+          </div>
+        )}
 
         {/* Geçmiş Katılım Kayıtları Section */}
         <div className="space-y-3 pt-2">

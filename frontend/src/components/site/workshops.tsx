@@ -117,6 +117,10 @@ export function Workshops() {
     return Calendar
   }
 
+  if (events.length === 0) {
+    return null
+  }
+
   return (
     <section id="workshoplar" className="py-24 bg-sand-light/60 relative border-b border-line/60 overflow-hidden">
       {/* Background Decorative Blur Element */}

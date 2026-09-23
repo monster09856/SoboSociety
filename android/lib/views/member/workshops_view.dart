@@ -858,108 +858,116 @@ class _WorkshopsViewState extends State<WorkshopsView> {
           : RefreshIndicator(
               onRefresh: _loadEvents,
               color: SoboTheme.espresso,
-              child: ListView(
-                padding: const EdgeInsets.all(20),
-                children: [
-                  // Banner Header Card
-                  Container(
-                    padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      color: SoboTheme.sandLight,
-                      borderRadius: BorderRadius.circular(24),
-                      border: Border.all(color: SoboTheme.line),
-                      boxShadow: [
-                        BoxShadow(
-                          color: SoboTheme.espresso.withOpacity(0.04),
-                          blurRadius: 12,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
+              child: _events.isEmpty
+                  ? Center(
+                      child: SingleChildScrollView(
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 60),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            const Icon(Icons.auto_awesome, color: SoboTheme.mocha, size: 22),
-                            const SizedBox(width: 8),
+                            Container(
+                              padding: const EdgeInsets.all(22),
+                              decoration: const BoxDecoration(
+                                color: SoboTheme.sand,
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(Icons.event_busy_rounded, size: 48, color: SoboTheme.mocha),
+                            ),
+                            const SizedBox(height: 20),
                             Text(
-                              'SOBO SOCIETY TOPLULUĞU ✨',
+                              'Aktif Workshop Bulunmuyor',
                               style: SoboTheme.fontSerif(
-                                fontSize: 13,
+                                fontSize: 18,
                                 fontWeight: FontWeight.bold,
-                                letterSpacing: 1.5,
-                                color: SoboTheme.espresso,
+                                color: SoboTheme.ink,
                               ),
                             ),
+                            const SizedBox(height: 8),
+                            Text(
+                              'Şu an stüdyomuzda planlanmış aktif bir workshop veya etkinlik bulunmamaktadır. Yeni etkinlikler eklendiğinde buradan inceleyebilirsiniz.',
+                              style: SoboTheme.fontSans(
+                                fontSize: 12.5,
+                                color: SoboTheme.secondary,
+                                height: 1.4,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
                           ],
                         ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'Özel Atölyeler & Topluluk Etkinlikleri',
-                          style: SoboTheme.fontSerif(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                            color: SoboTheme.ink,
+                      ),
+                    )
+                  : ListView(
+                      padding: const EdgeInsets.all(20),
+                      children: [
+                        // Banner Header Card
+                        Container(
+                          padding: const EdgeInsets.all(20),
+                          decoration: BoxDecoration(
+                            color: SoboTheme.sandLight,
+                            borderRadius: BorderRadius.circular(24),
+                            border: Border.all(color: SoboTheme.line),
+                            boxShadow: [
+                              BoxShadow(
+                                color: SoboTheme.espresso.withOpacity(0.04),
+                                blurRadius: 12,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  const Icon(Icons.auto_awesome, color: SoboTheme.mocha, size: 22),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    'SOBO SOCIETY TOPLULUĞU ✨',
+                                    style: SoboTheme.fontSerif(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.bold,
+                                      letterSpacing: 1.5,
+                                      color: SoboTheme.espresso,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                'Özel Atölyeler & Topluluk Etkinlikleri',
+                                style: SoboTheme.fontSerif(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.bold,
+                                  color: SoboTheme.ink,
+                                ),
+                              ),
+                              const SizedBox(height: 6),
+                              Text(
+                                'Sobo Society özel atölye, masterclass ve topluluk etkinliklerine hemen kaydolun.',
+                                style: SoboTheme.fontSans(
+                                  fontSize: 12,
+                                  color: SoboTheme.secondary,
+                                  height: 1.35,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
-                        const SizedBox(height: 6),
+                        const SizedBox(height: 20),
+
                         Text(
-                          'Doğa yürüyüşleri, mat & kahve buluşmaları, ses çanağı meditasyonu ve postür masterclass seanslarına hemen kaydolun.',
+                          'YAKLAŞAN ETKİNLİKLER',
                           style: SoboTheme.fontSans(
-                            fontSize: 12,
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 1.2,
                             color: SoboTheme.secondary,
-                            height: 1.35,
                           ),
                         ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 20),
+                        const SizedBox(height: 12),
 
-                  Text(
-                    'YAKLAŞAN ETKİNLİKLER',
-                    style: SoboTheme.fontSans(
-                      fontSize: 11,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 1.2,
-                      color: SoboTheme.secondary,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-
-                  // Event Cards
-                  if (_events.isEmpty)
-                    Container(
-                      padding: const EdgeInsets.symmetric(vertical: 36, horizontal: 20),
-                      margin: const EdgeInsets.only(bottom: 16),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(22),
-                        border: Border.all(color: SoboTheme.line),
-                      ),
-                      child: Center(
-                        child: Column(
-                          children: [
-                            Icon(Icons.event_busy_rounded, size: 40, color: SoboTheme.secondary.withOpacity(0.4)),
-                            const SizedBox(height: 12),
-                            Text(
-                              'Şu an planlanmış aktif bir workshop bulunmamaktadır.',
-                              style: SoboTheme.fontSans(fontSize: 13, fontWeight: FontWeight.w600, color: SoboTheme.ink),
-                              textAlign: TextAlign.center,
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              'Yeni etkinlikler eklendiğinde buradan inceleyebilirsiniz.',
-                              style: SoboTheme.fontSans(fontSize: 11.5, color: SoboTheme.secondary),
-                              textAlign: TextAlign.center,
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-
-                  ..._events.map((ev) {
+                        ..._events.map((ev) {
                     final bool isFull = ev.kontenjan > 0 && ev.doluSayi >= ev.kontenjan;
                     final int kalan = (ev.kontenjan - ev.doluSayi).clamp(0, ev.kontenjan);
 

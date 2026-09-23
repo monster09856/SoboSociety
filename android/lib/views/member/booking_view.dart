@@ -1492,8 +1492,10 @@ class _BookingViewState extends State<BookingView> {
               const SizedBox(height: 18),
 
               // Society Lounge & Workshops Carousel
-              _buildWorkshopCarousel(),
-              const SizedBox(height: 20),
+              if (_studioEvents.isNotEmpty) ...[
+                _buildWorkshopCarousel(),
+                const SizedBox(height: 20),
+              ],
 
 
               // Search Bar
