@@ -354,36 +354,8 @@ class _BookingViewState extends State<BookingView> {
   }
 
   Widget _buildWorkshopCarousel() {
-    final List<StudioEventItem> displayEvents = _studioEvents.isNotEmpty
-        ? _studioEvents
-        : [
-            StudioEventItem(
-              id: 1,
-              baslik: 'Breathwork & Sound Healing Workshop',
-              turu: 'WORKSHOP',
-              tarihSaat: DateTime.now().add(const Duration(days: 3)).toIso8601String(),
-              aciklama: 'Derin nefes teknikleri, ses çanakları ve meditasyon rehberliği eşliğinde ruhsal tazelenme seansı.',
-              kontenjan: 12,
-              doluSayi: 5,
-              ucret: 'Tek Katılım / Üyelere Özel',
-              tekKatilimAcik: true,
-              tekKatilimUcretTl: 650.0,
-              aktif: true,
-            ),
-            StudioEventItem(
-              id: 2,
-              baslik: 'Sobo Posture & Alignment Masterclass',
-              turu: 'MASTERCLASS',
-              tarihSaat: DateTime.now().add(const Duration(days: 6)).toIso8601String(),
-              aciklama: 'Omurga sağlığı, postür analizi ve bireysel mat hareket dizilimleri masterclass atölyesi.',
-              kontenjan: 10,
-              doluSayi: 8,
-              ucret: 'Tek Katılım / Üyelere Özel',
-              tekKatilimAcik: true,
-              tekKatilimUcretTl: 750.0,
-              aktif: true,
-            ),
-          ];
+    if (_studioEvents.isEmpty) return const SizedBox.shrink();
+    final List<StudioEventItem> displayEvents = _studioEvents;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
