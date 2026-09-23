@@ -50,6 +50,24 @@ async def sobo_hata_handler(request: Request, exc: SoboHata):
     )
 
 
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    import traceback
+    import logging
+    logger = logging.getLogger("uvicorn.error")
+    logger.error(f"[SERVER EXCEPTION] {request.method} {request.url.path} -> {exc}\n{traceback.format_exc()}")
+
+    err_str = str(exc).strip() if str(exc).strip() else "İşlem sırasında beklenmedik bir sunucu hatası oluştu."
+    return JSONResponse(
+        status_code=500,
+        content={
+            "detail": err_str,
+            "detay": err_str,
+            "hata": exc.__class__.__name__,
+        },
+    )
+
+
 app.include_router(api_v1_router)
 
 

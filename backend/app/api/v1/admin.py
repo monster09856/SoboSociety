@@ -913,7 +913,7 @@ async def _build_member_detail_response(db: AsyncSession, m: Member) -> MemberAd
     
     mp_res = await db.execute(
         select(MemberPackage, Package)
-        .join(Package, MemberPackage.package_id == Package.id)
+        .outerjoin(Package, MemberPackage.package_id == Package.id)
         .where(MemberPackage.member_id == m.id)
         .order_by(MemberPackage.id.desc())
     )
@@ -978,7 +978,7 @@ async def _build_member_detail_response(db: AsyncSession, m: Member) -> MemberAd
     res_bookings = await db.execute(
         select(Booking, ClassSession, ClassType, Instructor)
         .join(ClassSession, Booking.session_id == ClassSession.id)
-        .join(ClassType, ClassSession.class_type_id == ClassType.id)
+        .outerjoin(ClassType, ClassSession.class_type_id == ClassType.id)
         .outerjoin(Instructor, ClassSession.instructor_id == Instructor.id)
         .where(
             Booking.member_id == m.id,
@@ -1231,6 +1231,7 @@ async def delete_admin_member(
         await db.execute(delete(WaitlistEntry).where(WaitlistEntry.member_id == member_id))
         await db.execute(delete(Booking).where(Booking.member_id == member_id))
         await db.execute(delete(MemberPackage).where(MemberPackage.member_id == member_id))
+        await db.execute(delete(EventRSVP).where(EventRSVP.member_id == member_id))
 
         member_name = m.ad
         await db.delete(m)
@@ -2055,6 +2056,21 @@ async def auto_book_fixed_schedule(
         instructor = (await db.execute(select(Instructor).where(Instructor.ad.ilike("%eda%")))).scalars().first()
         if not instructor:
             instructor = (await db.execute(select(Instructor).order_by(Instructor.id))).scalars().first()
+
+    if not room:
+        room = Room(ad="Stüdyo Odası", kapasite=10)
+        db.add(room)
+        await db.flush()
+
+    if not class_type:
+        class_type = ClassType(ad="Özel Reformer" if is_bireysel else "Reformer Pilates", kontenjan=kontenjan, sure_dk=50)
+        db.add(class_type)
+        await db.flush()
+
+    if not instructor:
+        instructor = Instructor(ad="Eda Hoca")
+        db.add(instructor)
+        await db.flush()
 
     # Tarih adaylarını üret
     start_date = date.today()
