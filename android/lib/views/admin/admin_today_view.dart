@@ -2138,32 +2138,106 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
       return;
     }
 
+    final List<dynamic> pkgs = (m['aktif_paketler'] is List) ? (m['aktif_paketler'] as List) : <dynamic>[];
+    int? selectedPkgId = pkgs.isNotEmpty ? (pkgs.first['id'] as int?) : null;
+
     final bool? confirm = await showDialog<bool>(
       context: context,
       builder: (BuildContext dialogCtx) {
-        return AlertDialog(
-          backgroundColor: SoboTheme.ivory,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: Text('1 Ders Düşülsün mü?', style: SoboTheme.fontSerif(fontSize: 18, fontWeight: FontWeight.bold, color: SoboTheme.espresso)),
-          content: Text(
-            '${m['ad']} isimli üyenin derse geldiği işlenecek ve boşta kalan paket bakiyesinden 1 ders düşülecektir.\n\nMevcut Boş Bakiye: $currentBakiye Ders\nYeni Boş Bakiye: ${currentBakiye - 1} Ders\n\n💡 Not: Üyenin zaten rezerve edilmiş seansı varsa derse geldiğinde tekrar ders düşmenize gerek yoktur. Bu buton randevusuz / ekstra katılımlar içindir.',
-            style: SoboTheme.fontSans(fontSize: 13, color: SoboTheme.ink, height: 1.4),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(dialogCtx, false),
-              child: Text('Vazgeç', style: SoboTheme.fontSans(color: SoboTheme.secondary, fontWeight: FontWeight.bold)),
-            ),
-            ElevatedButton(
-              onPressed: () => Navigator.pop(dialogCtx, true),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: SoboTheme.forest,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        return StatefulBuilder(
+          builder: (ctx, setDialogState) {
+            return AlertDialog(
+              backgroundColor: SoboTheme.ivory,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              title: Text('1 Ders Düşülsün mü?', style: SoboTheme.fontSerif(fontSize: 18, fontWeight: FontWeight.bold, color: SoboTheme.espresso)),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '${m['ad']} isimli üyenin derse geldiği işlenecektir.',
+                      style: SoboTheme.fontSans(fontSize: 13, color: SoboTheme.ink, height: 1.4),
+                    ),
+                    const SizedBox(height: 12),
+                    if (pkgs.length > 1) ...[
+                      Text(
+                        'Hangi paketten 1 ders düşülsün?',
+                        style: SoboTheme.fontSans(fontSize: 12, fontWeight: FontWeight.bold, color: SoboTheme.espresso),
+                      ),
+                      const SizedBox(height: 6),
+                      ...pkgs.map((pkg) {
+                        final int pId = (pkg['id'] ?? 0) as int;
+                        final String pName = pkg['ad']?.toString() ?? 'Paket';
+                        final String pKat = pkg['kategori']?.toString() ?? '';
+                        final int pKalan = (pkg['kalan_ders'] ?? 0) as int;
+                        return InkWell(
+                          onTap: () {
+                            setDialogState(() {
+                              selectedPkgId = pId;
+                            });
+                          },
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 4),
+                            child: Row(
+                              children: [
+                                Radio<int>(
+                                  value: pId,
+                                  groupValue: selectedPkgId,
+                                  activeColor: SoboTheme.forest,
+                                  onChanged: (val) {
+                                    setDialogState(() {
+                                      selectedPkgId = val;
+                                    });
+                                  },
+                                ),
+                                Expanded(
+                                  child: Text(
+                                    '$pName ($pKat • $pKalan Ders Kaldı)',
+                                    style: SoboTheme.fontSans(
+                                      fontSize: 12,
+                                      fontWeight: selectedPkgId == pId ? FontWeight.bold : FontWeight.w500,
+                                      color: selectedPkgId == pId ? SoboTheme.forest : SoboTheme.ink,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      }),
+                      const SizedBox(height: 8),
+                    ] else ...[
+                      Text(
+                        'Mevcut Boş Bakiye: $currentBakiye Ders\nYeni Boş Bakiye: ${currentBakiye - 1} Ders',
+                        style: SoboTheme.fontSans(fontSize: 12, color: SoboTheme.secondary, height: 1.4),
+                      ),
+                      const SizedBox(height: 8),
+                    ],
+                    Text(
+                      '💡 Not: Üyenin rezerve edilmiş seansı varsa derse geldiğinde tekrar ders düşmenize gerek yoktur. Bu buton ekstra / randevusuz katılımlar içindir.',
+                      style: SoboTheme.fontSans(fontSize: 11, color: SoboTheme.muted, height: 1.3),
+                    ),
+                  ],
+                ),
               ),
-              child: Text('GELDİ / DERS DÜŞ', style: SoboTheme.fontSans(fontWeight: FontWeight.bold)),
-            ),
-          ],
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(dialogCtx, false),
+                  child: Text('Vazgeç', style: SoboTheme.fontSans(color: SoboTheme.secondary, fontWeight: FontWeight.bold)),
+                ),
+                ElevatedButton(
+                  onPressed: () => Navigator.pop(dialogCtx, true),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: SoboTheme.forest,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
+                  child: Text('GELDİ / DERS DÜŞ', style: SoboTheme.fontSans(fontWeight: FontWeight.bold)),
+                ),
+              ],
+            );
+          },
         );
       },
     );
@@ -2171,7 +2245,10 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
     if (confirm != true) return;
 
     try {
-      final dynamic res = await ApiClient.post('/admin/members/${m['id']}/deduct-lesson', <String, dynamic>{});
+      final String endpoint = selectedPkgId != null
+          ? '/admin/members/${m['id']}/deduct-lesson?member_package_id=$selectedPkgId'
+          : '/admin/members/${m['id']}/deduct-lesson';
+      final dynamic res = await ApiClient.post(endpoint, <String, dynamic>{});
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -3348,7 +3425,10 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
         ? pkg['ad'] as String
         : (m['aktif_paket_adi'] as String? ?? "Ders Paketi");
 
-    final TextEditingController remainingLessonsCtrl = TextEditingController(text: (m['bakiye'] ?? 0).toString());
+    final int initialKalan = (pkg != null && pkg['kalan_ders'] != null)
+        ? (pkg['kalan_ders'] as int)
+        : ((m['bakiye'] ?? 0) as int);
+    final TextEditingController remainingLessonsCtrl = TextEditingController(text: initialKalan.toString());
     final TextEditingController sabitDersCtrl = TextEditingController(
       text: (pkg != null && pkg['sabit_ders_saatleri'] != null && pkg['sabit_ders_saatleri'].toString().trim().isNotEmpty)
           ? pkg['sabit_ders_saatleri'].toString()

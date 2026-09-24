@@ -289,7 +289,7 @@ export default function AdminMembersPage() {
   const openEditPackageModal = (m: MemberDetail, pkg: any) => {
     setEditingPkgMember(m)
     setEditingPkg(pkg)
-    setPkgEditKalanDers(pkg.toplam_ders || m.bakiye || 0)
+    setPkgEditKalanDers(pkg.kalan_ders !== undefined ? pkg.kalan_ders : (pkg.toplam_ders || m.bakiye || 0))
     setPkgEditSabitDers(m.sabit_ders_saatleri || '')
     setPkgEditEkGun(null)
     const startIso = toIsoDate(pkg.baslangic_tarihi || m.paket_baslangic_tarihi)

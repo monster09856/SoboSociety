@@ -404,20 +404,22 @@ async def cancel_member_package_endpoint(
     # 1. Paketin bitiş tarihini bugüne çekerek paketi sonlandır
     mp.bitis = date.today()
 
-    # 2. Üyenin bakiyesinden sadece bu paketin ders hakkını düş
-    from app.models.kredi import Package
-    p = await db.get(Package, mp.package_id)
-    pkg_credits = getattr(mp, "ders_adedi", p.ders_adedi if p else 0)
-    current_b = await bakiye(db, member_id)
-    deduct_amount = min(current_b, pkg_credits) if current_b > 0 else 0
+    # 2. Üyenin bakiyesinden sadece bu paketin kalan ders hakkını düş
+    l_res = await db.execute(
+        select(func.coalesce(func.sum(CreditLedger.miktar), 0))
+        .where(CreditLedger.member_package_id == member_package_id)
+    )
+    rem_pkg = max(0, int(l_res.scalar_one() or 0))
 
-    if deduct_amount > 0:
+    if rem_pkg > 0:
+        from app.models.kredi import Package
+        p = await db.get(Package, mp.package_id)
         pkg_name = getattr(mp, "ozel_paket_adi", None) or (p.ad if p else "Paket")
         await hareket_ekle(
             db,
             member_id=member_id,
             tip=LedgerTipi.ADMIN_ADJUST,
-            miktar=-deduct_amount,
+            miktar=-rem_pkg,
             sebep=f"'{pkg_name}' paketi yönetici tarafından iptal edildi.",
             member_package_id=member_package_id,
         )
@@ -453,15 +455,20 @@ async def update_member_package_endpoint(
         mp.bitis = base_date + timedelta(days=body.ek_gun)
 
     if body.kalan_ders is not None:
-        cur_b = await bakiye(db, member_id)
-        fark = body.kalan_ders - cur_b
+        l_res = await db.execute(
+            select(func.coalesce(func.sum(CreditLedger.miktar), 0))
+            .where(CreditLedger.member_package_id == member_package_id)
+        )
+        cur_pkg_b = int(l_res.scalar_one() or 0)
+        fark = body.kalan_ders - cur_pkg_b
         if fark != 0:
+            pkg_title = getattr(mp, "ozel_paket_adi", None) or "Paket"
             await hareket_ekle(
                 db,
                 member_id=member_id,
                 tip=LedgerTipi.ADMIN_ADJUST,
                 miktar=fark,
-                sebep=f"Admin tarafından kalan ders {cur_b} -> {body.kalan_ders} olarak güncellendi.",
+                sebep=f"Admin tarafından '{pkg_title}' kalan ders {cur_pkg_b} -> {body.kalan_ders} olarak güncellendi.",
                 member_package_id=member_package_id,
             )
 
@@ -1125,12 +1132,15 @@ async def update_admin_member(
         current_bakiye = await bakiye(db, member_id)
         fark = body.bakiye_override - current_bakiye
         if fark != 0:
+            from app.services.kredi import aktif_paket_sec
+            active_pkg = await aktif_paket_sec(db, member_id=member_id, bugun=date.today())
             await hareket_ekle(
                 db,
                 member_id=member_id,
                 tip=LedgerTipi.ADMIN_ADJUST,
                 miktar=fark,
                 sebep=f"Admin tarafından bakiye {current_bakiye} -> {body.bakiye_override} olarak manuel güncellendi.",
+                member_package_id=active_pkg.id if active_pkg else None,
             )
 
     await db.commit()
@@ -1142,6 +1152,7 @@ async def update_admin_member(
 @router.post("/members/{member_id}/deduct-lesson", response_model=MemberAdminDetailResponse)
 async def deduct_admin_member_lesson(
     member_id: int,
+    member_package_id: int | None = None,
     db: AsyncSession = Depends(get_db),
     current_admin: Member = Depends(get_current_admin),
 ):
@@ -1155,8 +1166,14 @@ async def deduct_admin_member_lesson(
         raise HTTPException(status_code=400, detail=f"{m.ad} üyesinin tanımlı ders bakiyesi bulunmuyor (Bakiye: 0).")
 
     # Krediyi aktif paketten düş
-    from app.services.kredi import aktif_paket_sec
-    paket = await aktif_paket_sec(db, member_id=member_id, bugun=datetime.now().date())
+    paket = None
+    if member_package_id is not None:
+        p_cand = await db.get(MemberPackage, member_package_id)
+        if p_cand and p_cand.member_id == member_id:
+            paket = p_cand
+    if not paket:
+        from app.services.kredi import aktif_paket_sec
+        paket = await aktif_paket_sec(db, member_id=member_id, bugun=datetime.now().date())
 
     await hareket_ekle(
         db,
