@@ -248,16 +248,51 @@ class _AccountViewState extends State<AccountView> {
                               children: [
                                 if (item['kilo'] != null && item['kilo'].toString().isNotEmpty)
                                   _buildHistoryMetricChip('Kilo', '${item['kilo']} kg', Icons.fitness_center_rounded),
+                                if (item['boy'] != null && item['boy'].toString().isNotEmpty)
+                                  _buildHistoryMetricChip('Boy', '${item['boy']} cm', Icons.height_rounded),
                                 if (item['bel'] != null && item['bel'].toString().isNotEmpty)
                                   _buildHistoryMetricChip('Bel', '${item['bel']} cm', Icons.straighten_rounded),
                                 if (item['kalca'] != null && item['kalca'].toString().isNotEmpty)
                                   _buildHistoryMetricChip('Kalça', '${item['kalca']} cm', Icons.straighten_rounded),
                                 if (item['sag_bacak'] != null && item['sag_bacak'].toString().isNotEmpty)
                                   _buildHistoryMetricChip('Sağ Bacak', '${item['sag_bacak']} cm', Icons.accessibility_new_rounded),
+                                if (item['sol_bacak'] != null && item['sol_bacak'].toString().isNotEmpty)
+                                  _buildHistoryMetricChip('Sol Bacak', '${item['sol_bacak']} cm', Icons.accessibility_new_rounded),
+                                if (item['sag_ic_bacak'] != null && item['sag_ic_bacak'].toString().isNotEmpty)
+                                  _buildHistoryMetricChip('Sağ İç Bacak', '${item['sag_ic_bacak']} cm', Icons.straighten_rounded),
+                                if (item['sol_ic_bacak'] != null && item['sol_ic_bacak'].toString().isNotEmpty)
+                                  _buildHistoryMetricChip('Sol İç Bacak', '${item['sol_ic_bacak']} cm', Icons.straighten_rounded),
                                 if (item['sag_kol'] != null && item['sag_kol'].toString().isNotEmpty)
-                                  _buildHistoryMetricChip('Kol', '${item['sag_kol']} cm', Icons.fitness_center_rounded),
+                                  _buildHistoryMetricChip('Sağ Kol', '${item['sag_kol']} cm', Icons.fitness_center_rounded),
+                                if (item['sol_kol'] != null && item['sol_kol'].toString().isNotEmpty)
+                                  _buildHistoryMetricChip('Sol Kol', '${item['sol_kol']} cm', Icons.fitness_center_rounded),
                               ],
                             ),
+                            if (item['notlar'] != null && item['notlar'].toString().trim().isNotEmpty) ...[
+                              const SizedBox(height: 8),
+                              Container(
+                                width: double.infinity,
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                decoration: BoxDecoration(
+                                  color: SoboTheme.ivory,
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(color: SoboTheme.line.withOpacity(0.6)),
+                                ),
+                                child: Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const Icon(Icons.sticky_note_2_outlined, size: 13, color: SoboTheme.mocha),
+                                    const SizedBox(width: 6),
+                                    Expanded(
+                                      child: Text(
+                                        item['notlar'].toString(),
+                                        style: SoboTheme.fontSans(fontSize: 10.5, fontStyle: FontStyle.italic, color: SoboTheme.secondary),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
                           ],
                         ),
                       );

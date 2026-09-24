@@ -904,7 +904,7 @@ async def update_admin_credentials_endpoint(
 from app.models import (
     Booking, BookingDurumu, BookingKaynagi, ClassSession, Member, WaitlistEntry, 
     CreditLedger, LedgerTipi, MemberPackage, DeviceToken, Notification,
-    ClassType, Instructor, StudioEvent, Package, Room, SessionDurumu,
+    ClassType, Instructor, StudioEvent, Package, Room, SessionDurumu, MemberMeasurementHistory,
 )
 from app.services.kredi import bakiye, hareket_ekle
 from app.schemas.admin import (
@@ -913,6 +913,7 @@ from app.schemas.admin import (
     AutoBookFixedScheduleRequest, AutoBookFixedScheduleResponse,
     ReservedBookingDetail,
 )
+from app.schemas.member import MeasurementCreateRequest, MeasurementHistoryResponse
 
 async def _build_member_detail_response(db: AsyncSession, m: Member) -> MemberAdminDetailResponse:
     current_bakiye, grup_bakiye, bireysel_bakiye = await bakiye_detay(db, m.id)
@@ -1012,6 +1013,11 @@ async def _build_member_detail_response(db: AsyncSession, m: Member) -> MemberAd
             )
         )
 
+    cnt_res = await db.execute(
+        select(func.count(MemberMeasurementHistory.id)).where(MemberMeasurementHistory.member_id == m.id)
+    )
+    olcum_sayisi = cnt_res.scalar_one_or_none() or 0
+
     return MemberAdminDetailResponse(
         id=m.id,
         ad=m.ad,
@@ -1036,6 +1042,7 @@ async def _build_member_detail_response(db: AsyncSession, m: Member) -> MemberAd
         kilo=m.kilo,
         saglik_notu=m.saglik_notu,
         sabit_ders_saatleri=m.sabit_ders_saatleri,
+        olcum_sayisi=olcum_sayisi,
         aktif_member_package_id=aktif_mp_id,
         aktif_paket_adi=aktif_pkg_ad,
         paket_baslangic_tarihi=pkg_baslangic_str,
@@ -1147,6 +1154,140 @@ async def update_admin_member(
     await db.refresh(m)
 
     return await _build_member_detail_response(db, m)
+
+
+@router.get("/members/{member_id}/measurements", response_model=list[MeasurementHistoryResponse])
+async def list_admin_member_measurements(
+    member_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_admin: Member = Depends(get_current_admin),
+):
+    """Admin için üyenin tüm tarihli vücut ölçüm geçmişini listeler."""
+    m = await db.get(Member, member_id)
+    if not m:
+        raise HTTPException(status_code=404, detail="Üye bulunamadı.")
+
+    stmt = (
+        select(MemberMeasurementHistory)
+        .where(MemberMeasurementHistory.member_id == member_id)
+        .order_by(MemberMeasurementHistory.tarih.desc())
+    )
+    res = await db.execute(stmt)
+    records = res.scalars().all()
+    return [MeasurementHistoryResponse.model_validate(r) for r in records]
+
+
+@router.post("/members/{member_id}/measurements", response_model=MeasurementHistoryResponse)
+async def create_admin_member_measurement(
+    member_id: int,
+    body: MeasurementCreateRequest,
+    db: AsyncSession = Depends(get_db),
+    current_admin: Member = Depends(get_current_admin),
+):
+    """Admin üye için yeni tarihli bir vücut ölçümü ekler ve üyenin güncel ölçülerini günceller."""
+    m = await db.get(Member, member_id)
+    if not m:
+        raise HTTPException(status_code=404, detail="Üye bulunamadı.")
+
+    # Update Member model with latest values if provided
+    if body.bel is not None: m.bel = body.bel.strip() if isinstance(body.bel, str) else body.bel
+    if body.kalca is not None: m.kalca = body.kalca.strip() if isinstance(body.kalca, str) else body.kalca
+    if body.kilo is not None: m.kilo = body.kilo.strip() if isinstance(body.kilo, str) else body.kilo
+    if body.boy is not None: m.boy = body.boy.strip() if isinstance(body.boy, str) else body.boy
+    if body.sag_bacak is not None: m.sag_bacak = body.sag_bacak.strip() if isinstance(body.sag_bacak, str) else body.sag_bacak
+    if body.sol_bacak is not None: m.sol_bacak = body.sol_bacak.strip() if isinstance(body.sol_bacak, str) else body.sol_bacak
+    if body.sag_ic_bacak is not None: m.sag_ic_bacak = body.sag_ic_bacak.strip() if isinstance(body.sag_ic_bacak, str) else body.sag_ic_bacak
+    if body.sol_ic_bacak is not None: m.sol_ic_bacak = body.sol_ic_bacak.strip() if isinstance(body.sol_ic_bacak, str) else body.sol_ic_bacak
+    if body.sag_kol is not None: m.sag_kol = body.sag_kol.strip() if isinstance(body.sag_kol, str) else body.sag_kol
+    if body.sol_kol is not None: m.sol_kol = body.sol_kol.strip() if isinstance(body.sol_kol, str) else body.sol_kol
+    if body.saglik_notu is not None: m.saglik_notu = body.saglik_notu.strip() if isinstance(body.saglik_notu, str) else body.saglik_notu
+
+    measurement_date = body.tarih or datetime.now(timezone.utc)
+
+    history = MemberMeasurementHistory(
+        member_id=member_id,
+        tarih=measurement_date,
+        bel=body.bel if body.bel is not None else m.bel,
+        kalca=body.kalca if body.kalca is not None else m.kalca,
+        kilo=body.kilo if body.kilo is not None else m.kilo,
+        boy=body.boy if body.boy is not None else m.boy,
+        sag_bacak=body.sag_bacak if body.sag_bacak is not None else m.sag_bacak,
+        sol_bacak=body.sol_bacak if body.sol_bacak is not None else m.sol_bacak,
+        sag_ic_bacak=body.sag_ic_bacak if body.sag_ic_bacak is not None else m.sag_ic_bacak,
+        sol_ic_bacak=body.sol_ic_bacak if body.sol_ic_bacak is not None else m.sol_ic_bacak,
+        sag_kol=body.sag_kol if body.sag_kol is not None else m.sag_kol,
+        sol_kol=body.sol_kol if body.sol_kol is not None else m.sol_kol,
+        notlar=body.notlar,
+    )
+    db.add(history)
+
+    # Üyeye bildirim gönder
+    try:
+        tarih_str = measurement_date.strftime("%d.%m.%Y")
+        await bildirim_gonder(
+            db,
+            member_id=member_id,
+            baslik="📏 Yeni Vücut Ölçümünüz Eklendi!",
+            mesaj=f"Eğitmeniniz {tarih_str} tarihli vücut ölçümlerinizi sisteme kaydetti. Gelişim geçmişinizden inceleyebilirsiniz ✨",
+            tip="OLCUM_GUNCELLEME",
+        )
+    except Exception as e:
+        logger.warning(f"Ölçüm bildirimi gönderilirken hata: {e}")
+
+    await db.commit()
+    await db.refresh(history)
+    return MeasurementHistoryResponse.model_validate(history)
+
+
+@router.delete("/members/{member_id}/measurements/{measurement_id}")
+async def delete_admin_member_measurement(
+    member_id: int,
+    measurement_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_admin: Member = Depends(get_current_admin),
+):
+    """Admin üyenin hatalı/yanlış girilen bir ölçüm kaydını siler."""
+    rec = await db.get(MemberMeasurementHistory, measurement_id)
+    if not rec or rec.member_id != member_id:
+        raise HTTPException(status_code=404, detail="Ölçüm kaydı bulunamadı.")
+
+    await db.delete(rec)
+    await db.commit()
+
+    # En sonuncu geçerli ölçümle üye profilini güncelle
+    latest_stmt = (
+        select(MemberMeasurementHistory)
+        .where(MemberMeasurementHistory.member_id == member_id)
+        .order_by(MemberMeasurementHistory.tarih.desc())
+        .limit(1)
+    )
+    latest_res = await db.execute(latest_stmt)
+    latest = latest_res.scalar_one_or_none()
+    m = await db.get(Member, member_id)
+    if m:
+        if latest:
+            m.bel = latest.bel
+            m.kalca = latest.kalca
+            m.boy = latest.boy
+            m.kilo = latest.kilo
+            m.sag_bacak = latest.sag_bacak
+            m.sol_bacak = latest.sol_bacak
+            m.sag_ic_bacak = latest.sag_ic_bacak
+            m.sol_ic_bacak = latest.sol_ic_bacak
+            m.sag_kol = latest.sag_kol
+            m.sol_kol = latest.sol_kol
+        else:
+            m.bel = None
+            m.kalca = None
+            m.sag_bacak = None
+            m.sol_bacak = None
+            m.sag_ic_bacak = None
+            m.sol_ic_bacak = None
+            m.sag_kol = None
+            m.sol_kol = None
+        await db.commit()
+
+    return {"mesaj": "Ölçüm kaydı başarıyla silindi."}
 
 
 @router.post("/members/{member_id}/deduct-lesson", response_model=MemberAdminDetailResponse)

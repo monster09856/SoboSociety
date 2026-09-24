@@ -71,6 +71,9 @@ class MemberMeasurementHistory(ZamanDamgali, Base):
     boy: Mapped[str | None] = mapped_column(String(40), default=None)
     sag_bacak: Mapped[str | None] = mapped_column(String(40), default=None)
     sol_bacak: Mapped[str | None] = mapped_column(String(40), default=None)
+    sag_ic_bacak: Mapped[str | None] = mapped_column(String(40), default=None)
+    sol_ic_bacak: Mapped[str | None] = mapped_column(String(40), default=None)
     sag_kol: Mapped[str | None] = mapped_column(String(40), default=None)
     sol_kol: Mapped[str | None] = mapped_column(String(40), default=None)
+    notlar: Mapped[str | None] = mapped_column(Text, default=None)
 

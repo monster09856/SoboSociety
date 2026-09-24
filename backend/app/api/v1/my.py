@@ -215,22 +215,28 @@ async def update_my_measurements(
     if body.boy is not None: current_member.boy = body.boy
     if body.sag_bacak is not None: current_member.sag_bacak = body.sag_bacak
     if body.sol_bacak is not None: current_member.sol_bacak = body.sol_bacak
+    if body.sag_ic_bacak is not None: current_member.sag_ic_bacak = body.sag_ic_bacak
+    if body.sol_ic_bacak is not None: current_member.sol_ic_bacak = body.sol_ic_bacak
     if body.sag_kol is not None: current_member.sag_kol = body.sag_kol
     if body.sol_kol is not None: current_member.sol_kol = body.sol_kol
     if body.saglik_notu is not None: current_member.saglik_notu = body.saglik_notu
 
     # Create history entry
+    measurement_date = body.tarih or datetime.now(timezone.utc)
     history = MemberMeasurementHistory(
         member_id=current_member.id,
-        tarih=datetime.now(timezone.utc),
+        tarih=measurement_date,
         bel=current_member.bel,
         kalca=current_member.kalca,
         kilo=current_member.kilo,
         boy=current_member.boy,
         sag_bacak=current_member.sag_bacak,
         sol_bacak=current_member.sol_bacak,
+        sag_ic_bacak=current_member.sag_ic_bacak,
+        sol_ic_bacak=current_member.sol_ic_bacak,
         sag_kol=current_member.sag_kol,
         sol_kol=current_member.sol_kol,
+        notlar=body.notlar,
     )
     db.add(history)
 

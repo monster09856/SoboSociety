@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { api, MemberSummaryResponse, ApiError, MemberMeResponse } from '@/lib/api'
+import { api, MemberSummaryResponse, ApiError, MemberMeResponse, MeasurementHistoryItem } from '@/lib/api'
 import { getToken, logout } from '@/lib/auth'
 import { CreditBadge } from '@/components/uye/credit-badge'
 import { Button } from '@/components/ui/button'
@@ -29,6 +29,7 @@ import {
   CreditCard,
   Users,
   User,
+  TrendingDown,
 } from 'lucide-react'
 
 export default function HesabimPage() {
@@ -44,6 +45,7 @@ export default function HesabimPage() {
 
   // Body Measurements Form State
   const [savingMeasurements, setSavingMeasurements] = useState(false)
+  const [measHistory, setMeasHistory] = useState<MeasurementHistoryItem[]>([])
   const [bel, setBel] = useState('')
   const [kalca, setKalca] = useState('')
   const [sagIcBacak, setSagIcBacak] = useState('')
@@ -75,14 +77,16 @@ export default function HesabimPage() {
     }
 
     try {
-      const [sumData, meData, workshopsData] = await Promise.all([
+      const [sumData, meData, workshopsData, historyData] = await Promise.all([
         api.my.getSummary(),
         api.auth.getMe(),
         api.events.myRsvps().catch(() => []),
+        api.my.getMeasurementHistory().catch(() => []),
       ])
       setSummary(sumData)
       setMe(meData)
       setMyWorkshops(workshopsData || [])
+      setMeasHistory(historyData || [])
 
       // Prefill measurement fields
       setBel(meData.bel || '')
@@ -119,7 +123,7 @@ export default function HesabimPage() {
     setSuccessMsg(null)
 
     try {
-      const updated = await api.auth.updateMe({
+      await api.my.saveMeasurements({
         bel,
         kalca,
         sag_ic_bacak: sagIcBacak,
@@ -130,10 +134,15 @@ export default function HesabimPage() {
         sol_kol: solKol,
         boy,
         kilo,
-        saglik_notu: saglikNotu,
+        notlar: saglikNotu,
       })
-      setMe(updated)
-      setSuccessMsg('Vücut ölçüleriniz ve form bilgileriniz başarıyla güncellendi!')
+      const [meUpdated, historyUpdated] = await Promise.all([
+        api.auth.getMe(),
+        api.my.getMeasurementHistory().catch(() => []),
+      ])
+      setMe(meUpdated)
+      setMeasHistory(historyUpdated)
+      setSuccessMsg('Vücut ölçüleriniz ve gelişim kaydınız başarıyla kaydedildi!')
     } catch (err: any) {
       setErrorMsg(err?.message || 'Ölçüler güncellenirken hata oluştu.')
     } finally {
@@ -680,6 +689,144 @@ export default function HesabimPage() {
               <span>Ölçülerimi Kaydet</span>
             </Button>
           </form>
+
+          {/* Ölçüm Geçmişi & Gelişim Takibi */}
+          <div className="pt-5 border-t border-line/80 space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-ink uppercase tracking-wider flex items-center gap-1.5">
+                <TrendingDown className="w-4 h-4 text-mocha" />
+                Gelişim & Ölçüm Geçmişim
+              </span>
+              <span className="text-[11px] font-bold text-secondary">
+                {measHistory.length} Kayıt
+              </span>
+            </div>
+
+            {measHistory.length === 0 ? (
+              <div className="p-3.5 rounded-xl bg-ivory/60 border border-line/60 text-center text-xs text-secondary">
+                Henüz kayıtlı ölçüm geçmişiniz bulunmamaktadır.
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {measHistory.map((item, idx) => {
+                  const prevItem = idx < measHistory.length - 1 ? measHistory[idx + 1] : null
+
+                  const getDiff = (current?: string | null, prev?: string | null) => {
+                    if (!current || !prev) return null
+                    const c = parseFloat(current.replace(',', '.'))
+                    const p = parseFloat(prev.replace(',', '.'))
+                    if (isNaN(c) || isNaN(p)) return null
+                    const diff = c - p
+                    if (diff === 0) return null
+                    return {
+                      diff: diff.toFixed(1).replace('.0', ''),
+                      reduced: diff < 0,
+                    }
+                  }
+
+                  const belDiff = getDiff(item.bel, prevItem?.bel)
+                  const kalcaDiff = getDiff(item.kalca, prevItem?.kalca)
+                  const kiloDiff = getDiff(item.kilo, prevItem?.kilo)
+
+                  const itemDate = new Date(item.tarih).toLocaleDateString('tr-TR', {
+                    day: 'numeric',
+                    month: 'long',
+                    year: 'numeric',
+                  })
+
+                  return (
+                    <div
+                      key={item.id}
+                      className="p-3.5 rounded-xl bg-ivory border border-line shadow-xs space-y-2.5"
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold text-espresso bg-sand px-2.5 py-0.5 rounded-full border border-line">
+                          {itemDate}
+                        </span>
+                        {idx === 0 && (
+                          <span className="text-[10px] font-extrabold text-sage bg-sage/15 px-2 py-0.5 rounded-md border border-sage/30 uppercase">
+                            En Güncel
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs">
+                        {item.bel && (
+                          <div className="p-2 rounded-lg bg-sand/60 border border-line/60 flex items-center justify-between">
+                            <span className="text-secondary text-[11px]">Bel:</span>
+                            <div className="flex items-center gap-1">
+                              <strong className="text-ink">{item.bel}</strong>
+                              {belDiff && (
+                                <span className={`text-[10px] font-bold ${belDiff.reduced ? 'text-sage' : 'text-clay'}`}>
+                                  {belDiff.reduced ? '↓' : '↑'}{belDiff.diff}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                        {item.kalca && (
+                          <div className="p-2 rounded-lg bg-sand/60 border border-line/60 flex items-center justify-between">
+                            <span className="text-secondary text-[11px]">Kalça:</span>
+                            <div className="flex items-center gap-1">
+                              <strong className="text-ink">{item.kalca}</strong>
+                              {kalcaDiff && (
+                                <span className={`text-[10px] font-bold ${kalcaDiff.reduced ? 'text-sage' : 'text-clay'}`}>
+                                  {kalcaDiff.reduced ? '↓' : '↑'}{kalcaDiff.diff}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                        {item.kilo && (
+                          <div className="p-2 rounded-lg bg-sand/60 border border-line/60 flex items-center justify-between">
+                            <span className="text-secondary text-[11px]">Kilo:</span>
+                            <div className="flex items-center gap-1">
+                              <strong className="text-ink">{item.kilo}</strong>
+                              {kiloDiff && (
+                                <span className={`text-[10px] font-bold ${kiloDiff.reduced ? 'text-sage' : 'text-clay'}`}>
+                                  {kiloDiff.reduced ? '↓' : '↑'}{kiloDiff.diff}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                        {item.boy && (
+                          <div className="p-2 rounded-lg bg-sand/60 border border-line/60 flex items-center justify-between">
+                            <span className="text-secondary text-[11px]">Boy:</span>
+                            <strong className="text-ink">{item.boy}</strong>
+                          </div>
+                        )}
+                        {(item.sag_bacak || item.sol_bacak) && (
+                          <div className="p-2 rounded-lg bg-sand/60 border border-line/60 flex items-center justify-between">
+                            <span className="text-secondary text-[11px]">Bacak (S/S):</span>
+                            <strong className="text-ink">{item.sag_bacak || '-'}/{item.sol_bacak || '-'}</strong>
+                          </div>
+                        )}
+                        {(item.sag_ic_bacak || item.sol_ic_bacak) && (
+                          <div className="p-2 rounded-lg bg-sand/60 border border-line/60 flex items-center justify-between">
+                            <span className="text-secondary text-[11px]">İç Bacak:</span>
+                            <strong className="text-ink">{item.sag_ic_bacak || '-'}/{item.sol_ic_bacak || '-'}</strong>
+                          </div>
+                        )}
+                        {(item.sag_kol || item.sol_kol) && (
+                          <div className="p-2 rounded-lg bg-sand/60 border border-line/60 flex items-center justify-between">
+                            <span className="text-secondary text-[11px]">Kol (S/S):</span>
+                            <strong className="text-ink">{item.sag_kol || '-'}/{item.sol_kol || '-'}</strong>
+                          </div>
+                        )}
+                      </div>
+
+                      {item.notlar && (
+                        <p className="text-[11px] text-secondary italic bg-sand/40 p-2 rounded-lg border border-line/40">
+                          &ldquo;{item.notlar}&rdquo;
+                        </p>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Aktif Rezervasyonlar Section */}

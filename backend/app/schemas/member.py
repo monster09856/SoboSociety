@@ -142,15 +142,19 @@ class StudioEventCreateRequest(BaseModel):
 
 
 class MeasurementCreateRequest(BaseModel):
+    tarih: datetime | None = None
     bel: str | None = None
     kalca: str | None = None
     kilo: str | None = None
     boy: str | None = None
     sag_bacak: str | None = None
     sol_bacak: str | None = None
+    sag_ic_bacak: str | None = None
+    sol_ic_bacak: str | None = None
     sag_kol: str | None = None
     sol_kol: str | None = None
     saglik_notu: str | None = None
+    notlar: str | None = None
 
 
 class MeasurementHistoryResponse(BaseModel):
@@ -162,8 +166,11 @@ class MeasurementHistoryResponse(BaseModel):
     boy: str | None = None
     sag_bacak: str | None = None
     sol_bacak: str | None = None
+    sag_ic_bacak: str | None = None
+    sol_ic_bacak: str | None = None
     sag_kol: str | None = None
     sol_kol: str | None = None
+    notlar: str | None = None
 
     model_config = ConfigDict(from_attributes=True)
 

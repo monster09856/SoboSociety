@@ -2380,6 +2380,20 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
     }
   }
 
+  void _showMemberMeasurementHistoryModal(dynamic m) {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return _MemberMeasurementHistorySheet(
+          member: m,
+          onUpdated: () => _loadMembers(_searchMemberCtrl.text),
+        );
+      },
+    );
+  }
+
   void _showMemberEditModal(dynamic m) {
     final TextEditingController nameCtrl = TextEditingController(text: m['ad'] ?? '');
     final TextEditingController phoneCtrl = TextEditingController(text: m['telefon'] ?? '');
@@ -2519,7 +2533,41 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
                       ),
                     ),
                     const SizedBox(height: 12),
-                    Text('VÜCUT ÖLÇÜLERİ & SAĞLIK NOTU', style: SoboTheme.fontSans(fontSize: 11, fontWeight: FontWeight.bold, color: SoboTheme.espresso)),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text('VÜCUT ÖLÇÜLERİ & SAĞLIK NOTU', style: SoboTheme.fontSans(fontSize: 11, fontWeight: FontWeight.bold, color: SoboTheme.espresso)),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    InkWell(
+                      onTap: () {
+                        Navigator.pop(context);
+                        _showMemberMeasurementHistoryModal(m);
+                      },
+                      borderRadius: BorderRadius.circular(10),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF7F4EE),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: SoboTheme.forest.withOpacity(0.35)),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.straighten_rounded, size: 16, color: SoboTheme.forest),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                'Tarihli Ölçüm Sıralaması & Geçmişi Aç',
+                                style: SoboTheme.fontSans(fontSize: 11.5, fontWeight: FontWeight.bold, color: SoboTheme.forest),
+                              ),
+                            ),
+                            const Icon(Icons.arrow_forward_ios_rounded, size: 10, color: SoboTheme.forest),
+                          ],
+                        ),
+                      ),
+                    ),
                     const SizedBox(height: 8),
                     Row(
                       children: [
@@ -6372,36 +6420,73 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
                           ),
                         ],
 
-                        // Vücut Ölçüleri Özeti (Varsa)
-                        if (hasMeasures) ...[
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                        // Vücut Ölçüleri Özeti (Tıklanabilir Geçmiş & Düzenleme)
+                        InkWell(
+                          onTap: () => _showMemberMeasurementHistoryModal(m),
+                          borderRadius: BorderRadius.circular(10),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
                             margin: const EdgeInsets.only(bottom: 8),
                             decoration: BoxDecoration(
-                              color: SoboTheme.ivory,
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border.all(color: SoboTheme.line.withOpacity(0.5)),
+                              color: hasMeasures ? const Color(0xFFF7F4EE) : SoboTheme.ivory,
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(
+                                color: hasMeasures ? SoboTheme.forest.withOpacity(0.35) : SoboTheme.line.withOpacity(0.6),
+                              ),
                             ),
                             child: Row(
                               children: [
-                                const Icon(Icons.straighten_rounded, size: 12, color: SoboTheme.mocha),
-                                const SizedBox(width: 6),
+                                Icon(
+                                  Icons.straighten_rounded,
+                                  size: 13,
+                                  color: hasMeasures ? SoboTheme.forest : SoboTheme.mocha,
+                                ),
+                                const SizedBox(width: 7),
                                 Expanded(
                                   child: Text(
-                                    <String>[
-                                      if (m['kilo'] != null && m['kilo'].toString().trim().isNotEmpty) '${m['kilo']} kg',
-                                      if (m['boy'] != null && m['boy'].toString().trim().isNotEmpty) '${m['boy']} cm',
-                                      if (m['bel'] != null && m['bel'].toString().trim().isNotEmpty) 'Bel: ${m['bel']}',
-                                      if (m['kalca'] != null && m['kalca'].toString().trim().isNotEmpty) 'Kalça: ${m['kalca']}',
-                                    ].join(' • '),
-                                    style: SoboTheme.fontSans(fontSize: 10, color: SoboTheme.secondary, fontWeight: FontWeight.w500),
+                                    hasMeasures
+                                        ? <String>[
+                                            if (m['kilo'] != null && m['kilo'].toString().trim().isNotEmpty) '${m['kilo']} kg',
+                                            if (m['boy'] != null && m['boy'].toString().trim().isNotEmpty) '${m['boy']} cm',
+                                            if (m['bel'] != null && m['bel'].toString().trim().isNotEmpty) 'Bel: ${m['bel']}',
+                                            if (m['kalca'] != null && m['kalca'].toString().trim().isNotEmpty) 'Kalça: ${m['kalca']}',
+                                          ].join(' • ')
+                                        : 'Vücut Ölçüsü & Gelişim Geçmişi Ekle',
+                                    style: SoboTheme.fontSans(
+                                      fontSize: 10.5,
+                                      color: hasMeasures ? SoboTheme.espresso : SoboTheme.secondary,
+                                      fontWeight: hasMeasures ? FontWeight.w600 : FontWeight.w500,
+                                    ),
                                     overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                                const SizedBox(width: 6),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: SoboTheme.forest.withOpacity(0.12),
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Text(
+                                        'Ölçümler',
+                                        style: SoboTheme.fontSans(
+                                          fontSize: 9.5,
+                                          fontWeight: FontWeight.bold,
+                                          color: SoboTheme.forest,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 2),
+                                      const Icon(Icons.arrow_forward_ios_rounded, size: 8, color: SoboTheme.forest),
+                                    ],
                                   ),
                                 ),
                               ],
                             ),
                           ),
-                        ],
+                        ),
 
                         // Borç Bakiyesi (Varsa)
                         if ((m['borc_bakiye'] as num?)?.toDouble() != null && ((m['borc_bakiye'] as num?)?.toDouble() ?? 0.0) > 0) ...[ 
@@ -6597,9 +6682,23 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
                           children: [
                             Expanded(
                               child: OutlinedButton.icon(
+                                onPressed: () => _showMemberMeasurementHistoryModal(m),
+                                icon: const Icon(Icons.straighten_rounded, size: 13, color: SoboTheme.forest),
+                                label: const Text('Ölçüm Geçmişi', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: SoboTheme.forest)),
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: SoboTheme.forest,
+                                  side: BorderSide(color: SoboTheme.forest.withOpacity(0.4)),
+                                  padding: const EdgeInsets.symmetric(vertical: 8),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            Expanded(
+                              child: OutlinedButton.icon(
                                 onPressed: () => _showMemberEditModal(m),
                                 icon: const Icon(Icons.edit_note_rounded, size: 14),
-                                label: const Text('Ölçü/Müdahale', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                                label: const Text('Üye Bilgisi', style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.bold)),
                                 style: OutlinedButton.styleFrom(
                                   foregroundColor: SoboTheme.espresso,
                                   padding: const EdgeInsets.symmetric(vertical: 8),
@@ -6607,12 +6706,12 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
                                 ),
                               ),
                             ),
-                            const SizedBox(width: 8),
+                            const SizedBox(width: 6),
                             Expanded(
                               child: OutlinedButton.icon(
                                 onPressed: () => _showSinglePushModal(m),
                                 icon: const Icon(Icons.send_rounded, size: 13, color: SoboTheme.espresso),
-                                label: const Text('Bildirim', style: TextStyle(fontSize: 11, color: SoboTheme.espresso, fontWeight: FontWeight.bold)),
+                                label: const Text('Bildirim', style: TextStyle(fontSize: 10.5, color: SoboTheme.espresso, fontWeight: FontWeight.bold)),
                                 style: OutlinedButton.styleFrom(
                                   foregroundColor: SoboTheme.espresso,
                                   padding: const EdgeInsets.symmetric(vertical: 8),
@@ -7248,3 +7347,698 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
     );
   }
 }
+
+class _MemberMeasurementHistorySheet extends StatefulWidget {
+  final dynamic member;
+  final VoidCallback onUpdated;
+
+  const _MemberMeasurementHistorySheet({
+    required this.member,
+    required this.onUpdated,
+  });
+
+  @override
+  State<_MemberMeasurementHistorySheet> createState() => _MemberMeasurementHistorySheetState();
+}
+
+class _MemberMeasurementHistorySheetState extends State<_MemberMeasurementHistorySheet> {
+  bool _isLoading = true;
+  bool _isAdding = false;
+  bool _isSaving = false;
+  List<dynamic> _history = <dynamic>[];
+
+  DateTime _selectedDate = DateTime.now();
+  final TextEditingController _belCtrl = TextEditingController();
+  final TextEditingController _kalcaCtrl = TextEditingController();
+  final TextEditingController _boyCtrl = TextEditingController();
+  final TextEditingController _kiloCtrl = TextEditingController();
+  final TextEditingController _sagBacakCtrl = TextEditingController();
+  final TextEditingController _solBacakCtrl = TextEditingController();
+  final TextEditingController _sagIcBacakCtrl = TextEditingController();
+  final TextEditingController _solIcBacakCtrl = TextEditingController();
+  final TextEditingController _sagKolCtrl = TextEditingController();
+  final TextEditingController _solKolCtrl = TextEditingController();
+  final TextEditingController _notlarCtrl = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    _belCtrl.text = widget.member['bel']?.toString() ?? '';
+    _kalcaCtrl.text = widget.member['kalca']?.toString() ?? '';
+    _boyCtrl.text = widget.member['boy']?.toString() ?? '';
+    _kiloCtrl.text = widget.member['kilo']?.toString() ?? '';
+    _sagBacakCtrl.text = widget.member['sag_bacak']?.toString() ?? '';
+    _solBacakCtrl.text = widget.member['sol_bacak']?.toString() ?? '';
+    _sagIcBacakCtrl.text = widget.member['sag_ic_bacak']?.toString() ?? '';
+    _solIcBacakCtrl.text = widget.member['sol_ic_bacak']?.toString() ?? '';
+    _sagKolCtrl.text = widget.member['sag_kol']?.toString() ?? '';
+    _solKolCtrl.text = widget.member['sol_kol']?.toString() ?? '';
+    _fetchHistory();
+  }
+
+  @override
+  void dispose() {
+    _belCtrl.dispose();
+    _kalcaCtrl.dispose();
+    _boyCtrl.dispose();
+    _kiloCtrl.dispose();
+    _sagBacakCtrl.dispose();
+    _solBacakCtrl.dispose();
+    _sagIcBacakCtrl.dispose();
+    _solIcBacakCtrl.dispose();
+    _sagKolCtrl.dispose();
+    _solKolCtrl.dispose();
+    _notlarCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _fetchHistory() async {
+    try {
+      final dynamic res = await ApiClient.get('/admin/members/${widget.member['id']}/measurements');
+      if (mounted) {
+        setState(() {
+          _history = (res is List) ? res : <dynamic>[];
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  Future<void> _pickDate() async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: _selectedDate,
+      firstDate: DateTime(2022),
+      lastDate: DateTime(2030),
+      builder: (BuildContext context, Widget? child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: const ColorScheme.light(
+              primary: SoboTheme.forest,
+              onPrimary: Colors.white,
+              onSurface: SoboTheme.ink,
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+    if (picked != null && picked != _selectedDate) {
+      setState(() => _selectedDate = picked);
+    }
+  }
+
+  Future<void> _saveMeasurement() async {
+    setState(() => _isSaving = true);
+    try {
+      final Map<String, dynamic> payload = <String, dynamic>{
+        'tarih': _selectedDate.toUtc().toIso8601String(),
+        'bel': _belCtrl.text.trim(),
+        'kalca': _kalcaCtrl.text.trim(),
+        'boy': _boyCtrl.text.trim(),
+        'kilo': _kiloCtrl.text.trim(),
+        'sag_bacak': _sagBacakCtrl.text.trim(),
+        'sol_bacak': _solBacakCtrl.text.trim(),
+        'sag_ic_bacak': _sagIcBacakCtrl.text.trim(),
+        'sol_ic_bacak': _solIcBacakCtrl.text.trim(),
+        'sag_kol': _sagKolCtrl.text.trim(),
+        'sol_kol': _solKolCtrl.text.trim(),
+        'notlar': _notlarCtrl.text.trim(),
+      };
+      await ApiClient.post('/admin/members/${widget.member['id']}/measurements', payload);
+      widget.onUpdated();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Yeni tarihli vücut ölçümü başarıyla kaydedildi! ✨'),
+            backgroundColor: SoboTheme.sage,
+          ),
+        );
+        setState(() {
+          _isAdding = false;
+          _isSaving = false;
+        });
+        _fetchHistory();
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isSaving = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Hata: ${e.toString().replaceAll('Exception: ', '')}'),
+            backgroundColor: SoboTheme.clay,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _deleteMeasurement(int id) async {
+    final bool? confirm = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext ctx) => AlertDialog(
+        backgroundColor: SoboTheme.ivory,
+        title: Text('Ölçüm Kaydını Sil', style: SoboTheme.fontSerif(fontWeight: FontWeight.bold)),
+        content: Text('Bu tarihli ölçüm kaydını silmek istediğinizden emin misiniz?', style: SoboTheme.fontSans()),
+        actions: <Widget>[
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Vazgeç', style: TextStyle(color: SoboTheme.secondary))),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(backgroundColor: SoboTheme.clay),
+            child: const Text('Sil', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+    if (confirm != true) return;
+
+    try {
+      await ApiClient.delete('/admin/members/${widget.member['id']}/measurements/$id');
+      widget.onUpdated();
+      _fetchHistory();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Ölçüm kaydı silindi.'), backgroundColor: SoboTheme.mocha),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Silme hatası: ${e.toString().replaceAll('Exception: ', '')}'), backgroundColor: SoboTheme.clay),
+        );
+      }
+    }
+  }
+
+  String _formatTurkishDate(dynamic dtStr) {
+    if (dtStr == null) return '';
+    try {
+      final DateTime dt = (dtStr is DateTime) ? dtStr : DateTime.parse(dtStr.toString()).toLocal();
+      const List<String> months = <String>['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
+      return '${dt.day} ${months[(dt.month - 1) % 12]} ${dt.year}';
+    } catch (_) {
+      return dtStr.toString();
+    }
+  }
+
+  double? _parseNum(dynamic val) {
+    if (val == null) return null;
+    final String s = val.toString().replaceAll(',', '.').replaceAll(RegExp(r'[^0-9.]'), '').trim();
+    return double.tryParse(s);
+  }
+
+  Widget _buildDiffBadge(dynamic currentVal, dynamic prevVal) {
+    final double? curr = _parseNum(currentVal);
+    final double? prev = _parseNum(prevVal);
+    if (curr == null || prev == null) return const SizedBox.shrink();
+    final double diff = curr - prev;
+    if (diff == 0) return const SizedBox.shrink();
+
+    final bool isGood = diff < 0;
+    final String text = '${diff > 0 ? '+' : ''}${diff.toStringAsFixed(1).replaceAll('.0', '')} cm';
+
+    return Container(
+      margin: const EdgeInsets.only(left: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+      decoration: BoxDecoration(
+        color: (isGood ? SoboTheme.forest : Colors.amber.shade800).withOpacity(0.12),
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Text(
+        text,
+        style: SoboTheme.fontSans(
+          fontSize: 9.5,
+          fontWeight: FontWeight.bold,
+          color: isGood ? SoboTheme.forest : Colors.amber.shade900,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildField(String label, TextEditingController ctrl, [String hint = '']) {
+    return TextField(
+      controller: ctrl,
+      decoration: InputDecoration(
+        labelText: label,
+        hintText: hint,
+        filled: true,
+        fillColor: Colors.white,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: SoboTheme.line)),
+        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: SoboTheme.line.withOpacity(0.6))),
+        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: SoboTheme.forest, width: 1.5)),
+      ),
+    );
+  }
+
+  Widget _buildMetricChip(String label, String value, IconData icon, [Widget? diffBadge]) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: SoboTheme.sandLight,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: SoboTheme.line),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          Icon(icon, size: 12, color: SoboTheme.mocha),
+          const SizedBox(width: 5),
+          Text('$label: ', style: SoboTheme.fontSans(fontSize: 11, color: SoboTheme.secondary)),
+          Text(value, style: SoboTheme.fontSans(fontSize: 11, fontWeight: FontWeight.bold, color: SoboTheme.espresso)),
+          if (diffBadge != null) diffBadge,
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final String memberName = widget.member['ad']?.toString() ?? 'Üye';
+
+    return Container(
+      height: MediaQuery.of(context).size.height * 0.88,
+      decoration: const BoxDecoration(
+        color: SoboTheme.ivory,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      child: Column(
+        children: <Widget>[
+          // Drag handle
+          Center(
+            child: Container(
+              margin: const EdgeInsets.only(top: 12, bottom: 8),
+              width: 44,
+              height: 4,
+              decoration: BoxDecoration(color: SoboTheme.line, borderRadius: BorderRadius.circular(10)),
+            ),
+          ),
+
+          // Header
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: <Widget>[
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      Row(
+                        children: <Widget>[
+                          const Icon(Icons.straighten_rounded, color: SoboTheme.forest, size: 20),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              '$memberName • Ölçüm Geçmişi',
+                              style: SoboTheme.fontSerif(fontSize: 17, fontWeight: FontWeight.bold, color: SoboTheme.espresso),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'Tarih bazlı vücut ölçü ve gelişim sıralaması',
+                        style: SoboTheme.fontSans(fontSize: 11.5, color: SoboTheme.secondary),
+                      ),
+                    ],
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.close_rounded, color: SoboTheme.secondary),
+                  onPressed: () => Navigator.pop(context),
+                ),
+              ],
+            ),
+          ),
+
+          // Action bar: summary & + Yeni Ölçüm Ekle button
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+            color: SoboTheme.sand.withOpacity(0.4),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: <Widget>[
+                Text(
+                  '${_history.length} Ölçüm Kaydı Mevcut',
+                  style: SoboTheme.fontSans(fontSize: 12, fontWeight: FontWeight.bold, color: SoboTheme.espresso),
+                ),
+                ElevatedButton.icon(
+                  onPressed: () => setState(() => _isAdding = !_isAdding),
+                  icon: Icon(_isAdding ? Icons.close_rounded : Icons.add_rounded, size: 16),
+                  label: Text(_isAdding ? 'Vazgeç' : '+ Yeni Ölçüm Ekle', style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold)),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: _isAdding ? SoboTheme.clay : SoboTheme.forest,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // Main scrollable content
+          Expanded(
+            child: SingleChildScrollView(
+              padding: EdgeInsets.only(
+                left: 16,
+                right: 16,
+                top: 12,
+                bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  // Add Measurement Form
+                  if (_isAdding) ...<Widget>[
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      margin: const EdgeInsets.only(bottom: 16),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(18),
+                        border: Border.all(color: SoboTheme.forest.withOpacity(0.4), width: 1.5),
+                        boxShadow: <BoxShadow>[
+                          BoxShadow(color: SoboTheme.forest.withOpacity(0.08), blurRadius: 10, offset: const Offset(0, 4)),
+                        ],
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: <Widget>[
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: <Widget>[
+                              Text('YENİ TARİHLİ ÖLÇÜM GİRİŞİ', style: SoboTheme.fontSans(fontSize: 11, fontWeight: FontWeight.bold, color: SoboTheme.forest)),
+                              const Icon(Icons.edit_calendar_rounded, size: 16, color: SoboTheme.forest),
+                            ],
+                          ),
+                          const SizedBox(height: 10),
+
+                          // Date picker button
+                          InkWell(
+                            onTap: _pickDate,
+                            borderRadius: BorderRadius.circular(10),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFF7F4EE),
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(color: SoboTheme.forest.withOpacity(0.3)),
+                              ),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: <Widget>[
+                                  Row(
+                                    children: <Widget>[
+                                      const Icon(Icons.calendar_month_rounded, size: 16, color: SoboTheme.forest),
+                                      const SizedBox(width: 8),
+                                      Text(
+                                        'Ölçüm Tarihi: ${_formatTurkishDate(_selectedDate)}',
+                                        style: SoboTheme.fontSans(fontSize: 12.5, fontWeight: FontWeight.bold, color: SoboTheme.ink),
+                                      ),
+                                    ],
+                                  ),
+                                  Text(
+                                    'Değiştir ➔',
+                                    style: SoboTheme.fontSans(fontSize: 11, fontWeight: FontWeight.bold, color: SoboTheme.forest),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+
+                          // Inputs
+                          Row(
+                            children: <Widget>[
+                              Expanded(child: _buildField('Bel (cm)', _belCtrl)),
+                              const SizedBox(width: 10),
+                              Expanded(child: _buildField('Kalça (cm)', _kalcaCtrl)),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          Row(
+                            children: <Widget>[
+                              Expanded(child: _buildField('Kilo (kg)', _kiloCtrl)),
+                              const SizedBox(width: 10),
+                              Expanded(child: _buildField('Boy (cm)', _boyCtrl)),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          Row(
+                            children: <Widget>[
+                              Expanded(child: _buildField('Sağ Bacak (cm)', _sagBacakCtrl)),
+                              const SizedBox(width: 10),
+                              Expanded(child: _buildField('Sol Bacak (cm)', _solBacakCtrl)),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          Row(
+                            children: <Widget>[
+                              Expanded(child: _buildField('Sağ İç Bacak (cm)', _sagIcBacakCtrl)),
+                              const SizedBox(width: 10),
+                              Expanded(child: _buildField('Sol İç Bacak (cm)', _solIcBacakCtrl)),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          Row(
+                            children: <Widget>[
+                              Expanded(child: _buildField('Sağ Kol (cm)', _sagKolCtrl)),
+                              const SizedBox(width: 10),
+                              Expanded(child: _buildField('Sol Kol (cm)', _solKolCtrl)),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          _buildField('Ölçüm Notu / Açıklama', _notlarCtrl, 'Örn: 1. Ay Kontrolü, Reformer 10. Seans sonrası vb.'),
+                          const SizedBox(height: 12),
+
+                          SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton.icon(
+                              onPressed: _isSaving ? null : _saveMeasurement,
+                              icon: _isSaving
+                                  ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                                  : const Icon(Icons.check_rounded, size: 18),
+                              label: Text(
+                                _isSaving ? 'Kaydediliyor...' : 'Ölçümü ${_formatTurkishDate(_selectedDate)} Tarihiyle Kaydet ✨',
+                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                              ),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: SoboTheme.forest,
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(vertical: 12),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+
+                  // History Timeline List
+                  if (_isLoading)
+                    const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 40),
+                      child: Center(child: CircularProgressIndicator(color: SoboTheme.espresso)),
+                    )
+                  else if (_history.isEmpty)
+                    Container(
+                      padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 20),
+                      alignment: Alignment.center,
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: <Widget>[
+                          const Icon(Icons.straighten_rounded, size: 48, color: SoboTheme.muted),
+                          const SizedBox(height: 14),
+                          Text(
+                            'Henüz kayıtlı ölçüm geçmişi yok.',
+                            style: SoboTheme.fontSans(fontSize: 13.5, fontWeight: FontWeight.bold, color: SoboTheme.espresso),
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            'Yukarıdaki "+ Yeni Ölçüm Ekle" butonuna basarak ilk ölçüm kaydını tarih belirterek ekleyebilirsiniz.',
+                            textAlign: TextAlign.center,
+                            style: SoboTheme.fontSans(fontSize: 11.5, color: SoboTheme.secondary, height: 1.3),
+                          ),
+                        ],
+                      ),
+                    )
+                  else ...<Widget>[
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 10, top: 4),
+                      child: Row(
+                        children: <Widget>[
+                          const Icon(Icons.history_rounded, size: 15, color: SoboTheme.forest),
+                          const SizedBox(width: 6),
+                          Text(
+                            'TARİH BAZLI GELİŞİM LİSTESİ',
+                            style: SoboTheme.fontSans(fontSize: 11, fontWeight: FontWeight.bold, color: SoboTheme.forest),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    ListView.separated(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemCount: _history.length,
+                      separatorBuilder: (_, __) => const SizedBox(height: 12),
+                      itemBuilder: (BuildContext context, int index) {
+                        final dynamic item = _history[index];
+                        final dynamic olderItem = (index + 1 < _history.length) ? _history[index + 1] : null;
+
+                        final String dateStr = _formatTurkishDate(item['tarih']);
+                        final int orderNumber = _history.length - index;
+                        final bool isFirst = (index == _history.length - 1);
+
+                        return Container(
+                          padding: const EdgeInsets.all(14),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(color: index == 0 ? SoboTheme.forest.withOpacity(0.4) : SoboTheme.line),
+                            boxShadow: <BoxShadow>[
+                              BoxShadow(color: SoboTheme.espresso.withOpacity(0.03), blurRadius: 8, offset: const Offset(0, 2)),
+                            ],
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: <Widget>[
+                              // Card Top Header
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: <Widget>[
+                                  Row(
+                                    children: <Widget>[
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                        decoration: BoxDecoration(
+                                          color: isFirst ? SoboTheme.sand : SoboTheme.forest.withOpacity(0.12),
+                                          borderRadius: BorderRadius.circular(8),
+                                        ),
+                                        child: Text(
+                                          isFirst ? '1. Ölçüm (Başlangıç)' : '$orderNumber. Ölçüm',
+                                          style: SoboTheme.fontSans(
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.bold,
+                                            color: isFirst ? SoboTheme.espresso : SoboTheme.forest,
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Row(
+                                        children: <Widget>[
+                                          const Icon(Icons.calendar_today_rounded, size: 12, color: SoboTheme.mocha),
+                                          const SizedBox(width: 4),
+                                          Text(
+                                            dateStr,
+                                            style: SoboTheme.fontSans(fontSize: 12, fontWeight: FontWeight.bold, color: SoboTheme.ink),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                  IconButton(
+                                    icon: const Icon(Icons.delete_outline_rounded, size: 16, color: SoboTheme.clay),
+                                    onPressed: () => _deleteMeasurement(item['id'] as int),
+                                    tooltip: 'Ölçümü Sil',
+                                    visualDensity: VisualDensity.compact,
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+                              const Divider(color: SoboTheme.line, height: 1),
+                              const SizedBox(height: 10),
+
+                              // Measurements Wrap Chips
+                              Wrap(
+                                spacing: 6,
+                                runSpacing: 6,
+                                children: <Widget>[
+                                  if (item['bel'] != null && item['bel'].toString().isNotEmpty)
+                                    _buildMetricChip(
+                                      'Bel',
+                                      '${item['bel']} cm',
+                                      Icons.straighten_rounded,
+                                      _buildDiffBadge(item['bel'], olderItem?['bel']),
+                                    ),
+                                  if (item['kalca'] != null && item['kalca'].toString().isNotEmpty)
+                                    _buildMetricChip(
+                                      'Kalça',
+                                      '${item['kalca']} cm',
+                                      Icons.straighten_rounded,
+                                      _buildDiffBadge(item['kalca'], olderItem?['kalca']),
+                                    ),
+                                  if (item['kilo'] != null && item['kilo'].toString().isNotEmpty)
+                                    _buildMetricChip(
+                                      'Kilo',
+                                      '${item['kilo']} kg',
+                                      Icons.monitor_weight_outlined,
+                                      _buildDiffBadge(item['kilo'], olderItem?['kilo']),
+                                    ),
+                                  if (item['boy'] != null && item['boy'].toString().isNotEmpty)
+                                    _buildMetricChip('Boy', '${item['boy']} cm', Icons.height_rounded),
+                                  if (item['sag_bacak'] != null && item['sag_bacak'].toString().isNotEmpty)
+                                    _buildMetricChip('Sağ Bacak', '${item['sag_bacak']} cm', Icons.accessibility_new_rounded),
+                                  if (item['sol_bacak'] != null && item['sol_bacak'].toString().isNotEmpty)
+                                    _buildMetricChip('Sol Bacak', '${item['sol_bacak']} cm', Icons.accessibility_new_rounded),
+                                  if (item['sag_ic_bacak'] != null && item['sag_ic_bacak'].toString().isNotEmpty)
+                                    _buildMetricChip('Sağ İç Bacak', '${item['sag_ic_bacak']} cm', Icons.straighten_rounded),
+                                  if (item['sol_ic_bacak'] != null && item['sol_ic_bacak'].toString().isNotEmpty)
+                                    _buildMetricChip('Sol İç Bacak', '${item['sol_ic_bacak']} cm', Icons.straighten_rounded),
+                                  if (item['sag_kol'] != null && item['sag_kol'].toString().isNotEmpty)
+                                    _buildMetricChip('Sağ Kol', '${item['sag_kol']} cm', Icons.fitness_center_rounded),
+                                  if (item['sol_kol'] != null && item['sol_kol'].toString().isNotEmpty)
+                                    _buildMetricChip('Sol Kol', '${item['sol_kol']} cm', Icons.fitness_center_rounded),
+                                ],
+                              ),
+
+                              // Notlar
+                              if (item['notlar'] != null && item['notlar'].toString().trim().isNotEmpty) ...<Widget>[
+                                const SizedBox(height: 8),
+                                Container(
+                                  width: double.infinity,
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                  decoration: BoxDecoration(
+                                    color: SoboTheme.ivory,
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(color: SoboTheme.line.withOpacity(0.6)),
+                                  ),
+                                  child: Row(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: <Widget>[
+                                      const Icon(Icons.sticky_note_2_outlined, size: 13, color: SoboTheme.mocha),
+                                      const SizedBox(width: 6),
+                                      Expanded(
+                                        child: Text(
+                                          item['notlar'].toString(),
+                                          style: SoboTheme.fontSans(fontSize: 10.5, fontStyle: FontStyle.italic, color: SoboTheme.secondary),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                        );
+                      },
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+

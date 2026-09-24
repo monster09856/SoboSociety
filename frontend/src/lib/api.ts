@@ -219,6 +219,22 @@ export interface MemberMeResponse {
   saglik_notu?: string | null
 }
 
+export interface MeasurementHistoryItem {
+  id: number
+  tarih: string
+  bel?: string | null
+  kalca?: string | null
+  kilo?: string | null
+  boy?: string | null
+  sag_bacak?: string | null
+  sol_bacak?: string | null
+  sag_ic_bacak?: string | null
+  sol_ic_bacak?: string | null
+  sag_kol?: string | null
+  sol_kol?: string | null
+  notlar?: string | null
+}
+
 // Session & Booking DTO Types
 export interface ClassTypeResponse {
   id: number
@@ -438,6 +454,12 @@ export const api = {
   },
   my: {
     getSummary: () => apiFetch<MemberSummaryResponse>('/my/summary'),
+    getMeasurementHistory: () => apiFetch<MeasurementHistoryItem[]>('/my/measurements/history'),
+    saveMeasurements: (data: Partial<MeasurementHistoryItem>) =>
+      apiFetch<{ mesaj: string }>('/my/measurements', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
   },
   packages: {
     list: () => apiFetch<PackageResponse[]>('/packages'),
@@ -731,6 +753,17 @@ export const adminApi = {
   sendDebtReminder: (memberId: number) =>
     apiFetch<{ mesaj: string }>(`/admin/members/${memberId}/send-debt-reminder`, {
       method: 'POST',
+    }),
+  getMemberMeasurements: (memberId: number) =>
+    apiFetch<MeasurementHistoryItem[]>(`/admin/members/${memberId}/measurements`),
+  createMemberMeasurement: (memberId: number, data: Partial<MeasurementHistoryItem>) =>
+    apiFetch<MeasurementHistoryItem>(`/admin/members/${memberId}/measurements`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  deleteMemberMeasurement: (memberId: number, measurementId: number) =>
+    apiFetch<{ mesaj: string }>(`/admin/members/${memberId}/measurements/${measurementId}`, {
+      method: 'DELETE',
     }),
   updateMemberPackage: (
     memberId: number,

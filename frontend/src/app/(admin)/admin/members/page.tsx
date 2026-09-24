@@ -6,7 +6,7 @@ import { buyukHarf } from '@/lib/utils'
 import { AdminNav } from '@/components/admin/admin-nav'
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
-import { Users, Search, Plus, CreditCard, Send, Edit2, ShieldAlert, CheckCircle2, Loader2, Sparkles, UserCheck, AtSign, Phone, Ruler, X, Package, Trash2, UserX, Clock, XCircle, Calendar, KeyRound, Bell } from 'lucide-react'
+import { Users, Search, Plus, CreditCard, Send, Edit2, ShieldAlert, CheckCircle2, Loader2, Sparkles, UserCheck, AtSign, Phone, Ruler, X, Package, Trash2, UserX, Clock, XCircle, Calendar, KeyRound, Bell, History, ChevronRight } from 'lucide-react'
 
 interface MemberDetail {
   id: number
@@ -132,6 +132,25 @@ export default function AdminMembersPage() {
   const [notifTitle, setNotifTitle] = useState('')
   const [notifBody, setNotifBody] = useState('')
   const [sendingNotif, setSendingNotif] = useState(false)
+
+  // Measurement History Modal State
+  const [measuringMember, setMeasuringMember] = useState<MemberDetail | null>(null)
+  const [measurements, setMeasurements] = useState<any[]>([])
+  const [loadingMeasurements, setLoadingMeasurements] = useState(false)
+  const [measAdding, setMeasAdding] = useState(false)
+  const [measSaving, setMeasSaving] = useState(false)
+  const [measDate, setMeasDate] = useState('')
+  const [measBel, setMeasBel] = useState('')
+  const [measKalca, setMeasKalca] = useState('')
+  const [measBoy, setMeasBoy] = useState('')
+  const [measKilo, setMeasKilo] = useState('')
+  const [measSagBacak, setMeasSagBacak] = useState('')
+  const [measSolBacak, setMeasSolBacak] = useState('')
+  const [measSagIcBacak, setMeasSagIcBacak] = useState('')
+  const [measSolIcBacak, setMeasSolIcBacak] = useState('')
+  const [measSagKol, setMeasSagKol] = useState('')
+  const [measSolKol, setMeasSolKol] = useState('')
+  const [measNotlar, setMeasNotlar] = useState('')
 
   // Assign Package Modal State
   const [pkgMember, setPkgMember] = useState<MemberDetail | null>(null)
@@ -284,6 +303,80 @@ export default function AdminMembersPage() {
     setEditSaglikNotu(m.saglik_notu || '')
     setEditSabitDersSaatleri(m.sabit_ders_saatleri || '')
     setEditPassword('')
+  }
+
+  const openMeasurementModal = async (m: MemberDetail) => {
+    setMeasuringMember(m)
+    setMeasAdding(false)
+    setMeasDate(formatDateToInput(new Date()))
+    setMeasBel(m.bel || '')
+    setMeasKalca(m.kalca || '')
+    setMeasBoy(m.boy || '')
+    setMeasKilo(m.kilo || '')
+    setMeasSagBacak(m.sag_bacak || '')
+    setMeasSolBacak(m.sol_bacak || '')
+    setMeasSagIcBacak(m.sag_ic_bacak || '')
+    setMeasSolIcBacak(m.sol_ic_bacak || '')
+    setMeasSagKol(m.sag_kol || '')
+    setMeasSolKol(m.sol_kol || '')
+    setMeasNotlar('')
+    setLoadingMeasurements(true)
+    try {
+      const res = await admin.getMemberMeasurements(m.id)
+      setMeasurements(res || [])
+    } catch (_) {
+      setMeasurements([])
+    } finally {
+      setLoadingMeasurements(false)
+    }
+  }
+
+  const handleSaveMeasurement = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!measuringMember) return
+    setMeasSaving(true)
+    setError(null)
+    setSuccess(null)
+    try {
+      const payload = {
+        tarih: measDate ? new Date(measDate).toISOString() : new Date().toISOString(),
+        bel: measBel,
+        kalca: measKalca,
+        boy: measBoy,
+        kilo: measKilo,
+        sag_bacak: measSagBacak,
+        sol_bacak: measSolBacak,
+        sag_ic_bacak: measSagIcBacak,
+        sol_ic_bacak: measSolIcBacak,
+        sag_kol: measSagKol,
+        sol_kol: measSolKol,
+        notlar: measNotlar,
+      }
+      await admin.createMemberMeasurement(measuringMember.id, payload)
+      setSuccess(`${measuringMember.ad} için yeni tarihli ölçüm başarıyla kaydedildi! ✨`)
+      setMeasAdding(false)
+      loadMembers(search)
+      const res = await admin.getMemberMeasurements(measuringMember.id)
+      setMeasurements(res || [])
+    } catch (err: any) {
+      setError(err?.message || 'Ölçüm kaydedilirken hata oluştu.')
+    } finally {
+      setMeasSaving(false)
+    }
+  }
+
+  const handleDeleteMeasurement = async (measId: number) => {
+    if (!measuringMember) return
+    if (!confirm('Bu ölçüm kaydını silmek istediğinizden emin misiniz?')) return
+    try {
+      await admin.deleteMemberMeasurement(measuringMember.id, measId)
+      setSuccess('Ölçüm kaydı silindi.')
+      loadMembers(search)
+      const res = await admin.getMemberMeasurements(measuringMember.id)
+      setMeasurements(res || [])
+    } catch (err: any) {
+      setError(err?.message || 'Ölçüm silinirken hata oluştu.')
+    }
   }
 
   const openEditPackageModal = (m: MemberDetail, pkg: any) => {
@@ -932,14 +1025,19 @@ export default function AdminMembersPage() {
                       )}
                     </div>
 
-                    {/* Vücut Ölçüleri Özet Rozeti */}
-                    <div className="p-3 rounded-xl bg-ivory/60 border border-line space-y-1 text-[11px]">
+                    {/* Vücut Ölçüleri Özet Rozeti (Tıklanabilir Geçmiş) */}
+                    <div 
+                      onClick={() => openMeasurementModal(m)}
+                      className="p-3 rounded-xl bg-ivory/80 hover:bg-sand/60 border border-line hover:border-forest/40 space-y-1 text-[11px] transition-all cursor-pointer group shadow-2xs"
+                      title="Vücut Ölçüleri & Tarih Bazlı Gelişim Sıralamasını Aç"
+                    >
                       <div className="flex items-center justify-between text-secondary font-bold border-b border-line/50 pb-1">
-                        <span className="flex items-center gap-1 text-espresso">
-                          <Ruler className="w-3 h-3" /> Ölçü Özeti
+                        <span className="flex items-center gap-1.5 text-espresso group-hover:text-forest transition-colors">
+                          <Ruler className="w-3.5 h-3.5 text-forest" />
+                          <span>Ölçü Geçmişi & Sıralama</span>
                         </span>
-                        <span className="text-[10px] text-mocha font-semibold">
-                          {m.kilo ? `${m.kilo} kg` : ''} {m.boy ? `• ${m.boy} cm` : ''}
+                        <span className="text-[10px] text-forest font-bold flex items-center gap-0.5">
+                          Geçmişi Gör <ChevronRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
                         </span>
                       </div>
                       <div className="grid grid-cols-2 gap-x-2 gap-y-0.5 text-secondary font-medium pt-1">
@@ -951,14 +1049,23 @@ export default function AdminMembersPage() {
                     </div>
 
                     {/* Actions */}
-                    <div className="grid grid-cols-4 gap-1.5 pt-1">
+                    <div className="grid grid-cols-5 gap-1.5 pt-1">
+                      <button
+                        onClick={() => openMeasurementModal(m)}
+                        className="p-1.5 rounded-xl bg-forest/5 hover:bg-forest/15 border border-forest/30 text-forest text-[10px] font-bold flex flex-col items-center gap-1 transition-all cursor-pointer"
+                        title="Vücut Ölçüm Geçmişi & Tarihli Ölçüm Ekle"
+                      >
+                        <Ruler className="w-3.5 h-3.5 text-forest" />
+                        <span className="truncate w-full text-center">Ölçümler</span>
+                      </button>
+
                       <button
                         onClick={() => openEditModal(m)}
                         className="p-1.5 rounded-xl bg-ivory border border-line hover:border-espresso text-ink hover:text-espresso text-[10px] font-bold flex flex-col items-center gap-1 transition-all cursor-pointer"
                         title="Tüm Bilgileri Gör / Düzenle"
                       >
                         <Edit2 className="w-3.5 h-3.5 text-mocha" />
-                        <span className="truncate w-full text-center">Ölçü/Müdahale</span>
+                        <span className="truncate w-full text-center">Bilgiler</span>
                       </button>
 
                       <button
@@ -1083,10 +1190,24 @@ export default function AdminMembersPage() {
 
                   {/* Vücut Ölçüleri Grid */}
                   <div className="p-4 rounded-xl bg-ivory/70 border border-line space-y-3">
-                    <h4 className="text-xs font-bold uppercase tracking-wider text-espresso flex items-center gap-1.5 border-b border-line pb-2">
-                      <Ruler className="w-4 h-4 text-mocha" />
-                      <span>Vücut Ölçüleri & Form Bilgileri</span>
-                    </h4>
+                    <div className="flex items-center justify-between border-b border-line pb-2">
+                      <h4 className="text-xs font-bold uppercase tracking-wider text-espresso flex items-center gap-1.5">
+                        <Ruler className="w-4 h-4 text-forest" />
+                        <span>Vücut Ölçüleri & Form Bilgileri</span>
+                      </h4>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const m = editingMember
+                          setEditingMember(null)
+                          if (m) openMeasurementModal(m)
+                        }}
+                        className="text-[11px] font-bold text-forest hover:text-forest-dark flex items-center gap-1 cursor-pointer bg-forest/10 hover:bg-forest/20 px-2.5 py-1 rounded-lg transition-all"
+                      >
+                        <History className="w-3.5 h-3.5" />
+                        <span>Tarihli Sıralamayı Aç ➔</span>
+                      </button>
+                    </div>
 
                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 pt-1">
                       <div>
@@ -1804,6 +1925,275 @@ export default function AdminMembersPage() {
                       </button>
                     </div>
                   </form>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
+        {/* Measurement History & New Entry Modal */}
+        {measuringMember && (
+          <div className="fixed inset-0 z-50 bg-ink/60 backdrop-blur-xs overflow-y-auto p-4 sm:p-6 flex items-center justify-center min-h-screen">
+            <Card className="max-w-xl w-full max-h-[90vh] flex flex-col my-auto bg-sand border border-line rounded-2xl shadow-xl animate-in fade-in zoom-in-95 duration-150 overflow-hidden">
+              <CardHeader className="border-b border-line pb-4 relative shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setMeasuringMember(null)}
+                  className="absolute top-4 right-4 text-secondary hover:text-ink p-1 rounded-full hover:bg-sand cursor-pointer"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+                <CardTitle className="font-serif text-lg font-bold text-ink flex items-center gap-2">
+                  <Ruler className="w-5 h-5 text-forest" />
+                  <span>{measuringMember.ad} • Ölçüm Geçmişi</span>
+                </CardTitle>
+                <CardDescription className="text-xs text-secondary">
+                  Tarih bazlı vücut ölçüm kayıtları ve gelişim sıralaması
+                </CardDescription>
+              </CardHeader>
+
+              <div className="px-6 py-2.5 bg-ivory/80 border-b border-line flex items-center justify-between">
+                <span className="text-xs font-bold text-espresso">
+                  {measurements.length} Ölçüm Kaydı Mevcut
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setMeasAdding(!measAdding)}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                    measAdding
+                      ? 'bg-clay/10 text-clay hover:bg-clay/20'
+                      : 'bg-forest text-white hover:bg-forest-dark'
+                  }`}
+                >
+                  {measAdding ? <X className="w-3.5 h-3.5" /> : <Plus className="w-3.5 h-3.5" />}
+                  <span>{measAdding ? 'Formu Kapat' : '+ Yeni Ölçüm Ekle'}</span>
+                </button>
+              </div>
+
+              <CardContent className="pt-4 space-y-4 overflow-y-auto flex-1">
+                {/* Add Measurement Form */}
+                {measAdding && (
+                  <form onSubmit={handleSaveMeasurement} className="p-4 rounded-xl bg-white border border-forest/30 shadow-xs space-y-3 animate-in fade-in duration-200">
+                    <div className="flex items-center justify-between border-b border-line pb-2">
+                      <span className="text-xs font-bold text-forest uppercase tracking-wider flex items-center gap-1.5">
+                        <Calendar className="w-4 h-4 text-forest" /> Yeni Tarihli Ölçüm Girişi
+                      </span>
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-bold text-secondary uppercase mb-1">
+                        Ölçüm Tarihi (Örn: 24 Eylül, 24 Ekim)
+                      </label>
+                      <Input
+                        type="date"
+                        value={measDate}
+                        onChange={(e) => setMeasDate(e.target.value)}
+                        className="bg-ivory border-line text-xs font-bold rounded-xl h-10"
+                        required
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                      <div>
+                        <label className="block text-[10px] font-bold text-secondary uppercase mb-0.5">Bel (cm)</label>
+                        <Input placeholder="68" value={measBel} onChange={(e) => setMeasBel(e.target.value)} className="bg-ivory border-line text-xs rounded-lg h-8.5" />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-bold text-secondary uppercase mb-0.5">Kalça (cm)</label>
+                        <Input placeholder="94" value={measKalca} onChange={(e) => setMeasKalca(e.target.value)} className="bg-ivory border-line text-xs rounded-lg h-8.5" />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-bold text-secondary uppercase mb-0.5">Kilo (kg)</label>
+                        <Input placeholder="56" value={measKilo} onChange={(e) => setMeasKilo(e.target.value)} className="bg-ivory border-line text-xs rounded-lg h-8.5" />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-bold text-secondary uppercase mb-0.5">Boy (cm)</label>
+                        <Input placeholder="168" value={measBoy} onChange={(e) => setMeasBoy(e.target.value)} className="bg-ivory border-line text-xs rounded-lg h-8.5" />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-bold text-secondary uppercase mb-0.5">Sağ Bacak</label>
+                        <Input placeholder="54" value={measSagBacak} onChange={(e) => setMeasSagBacak(e.target.value)} className="bg-ivory border-line text-xs rounded-lg h-8.5" />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-bold text-secondary uppercase mb-0.5">Sol Bacak</label>
+                        <Input placeholder="54" value={measSolBacak} onChange={(e) => setMeasSolBacak(e.target.value)} className="bg-ivory border-line text-xs rounded-lg h-8.5" />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-bold text-secondary uppercase mb-0.5">Sağ İç Bacak</label>
+                        <Input placeholder="52" value={measSagIcBacak} onChange={(e) => setMeasSagIcBacak(e.target.value)} className="bg-ivory border-line text-xs rounded-lg h-8.5" />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-bold text-secondary uppercase mb-0.5">Sol İç Bacak</label>
+                        <Input placeholder="52" value={measSolIcBacak} onChange={(e) => setMeasSolIcBacak(e.target.value)} className="bg-ivory border-line text-xs rounded-lg h-8.5" />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-bold text-secondary uppercase mb-0.5">Sağ Kol</label>
+                        <Input placeholder="27" value={measSagKol} onChange={(e) => setMeasSagKol(e.target.value)} className="bg-ivory border-line text-xs rounded-lg h-8.5" />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-bold text-secondary uppercase mb-0.5">Sol Kol</label>
+                        <Input placeholder="27" value={measSolKol} onChange={(e) => setMeasSolKol(e.target.value)} className="bg-ivory border-line text-xs rounded-lg h-8.5" />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-[10px] font-bold text-secondary uppercase mb-0.5">Ölçüm Notu / Açıklama</label>
+                      <Input placeholder="Örn: 1. Ay Kontrolü, Reformer 12. seans sonrası" value={measNotlar} onChange={(e) => setMeasNotlar(e.target.value)} className="bg-ivory border-line text-xs rounded-lg h-8.5" />
+                    </div>
+
+                    <div className="flex justify-end gap-2 pt-1">
+                      <button
+                        type="button"
+                        onClick={() => setMeasAdding(false)}
+                        className="px-3 py-1.5 rounded-lg text-xs font-bold text-secondary hover:text-ink cursor-pointer"
+                      >
+                        Vazgeç
+                      </button>
+                      <button
+                        type="submit"
+                        disabled={measSaving}
+                        className="px-4 py-2 rounded-xl text-xs font-bold bg-forest text-white hover:bg-forest-dark transition-all cursor-pointer flex items-center gap-1.5 shadow-xs"
+                      >
+                        {measSaving && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                        <span>Ölçümü Kaydet ✨</span>
+                      </button>
+                    </div>
+                  </form>
+                )}
+
+                {/* Measurements List */}
+                {loadingMeasurements ? (
+                  <div className="py-12 flex items-center justify-center">
+                    <Loader2 className="w-6 h-6 animate-spin text-espresso" />
+                  </div>
+                ) : measurements.length === 0 ? (
+                  <div className="py-10 text-center space-y-2">
+                    <Ruler className="w-8 h-8 text-muted mx-auto" />
+                    <p className="text-xs font-bold text-secondary">Kayıtlı ölçüm geçmişi bulunmuyor.</p>
+                    <p className="text-[11px] text-muted max-w-xs mx-auto">Yukarıdaki "+ Yeni Ölçüm Ekle" butonuna basarak tarihli ilk ölçümü kaydedebilirsiniz.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {measurements.map((m, idx) => {
+                      const older = measurements[idx + 1]
+                      const currBel = parseFloat((m.bel || '').replace(',', '.'))
+                      const prevBel = older ? parseFloat((older.bel || '').replace(',', '.')) : null
+                      const diffBel = (!isNaN(currBel) && prevBel !== null && !isNaN(prevBel)) ? currBel - prevBel : null
+
+                      const currKalca = parseFloat((m.kalca || '').replace(',', '.'))
+                      const prevKalca = older ? parseFloat((older.kalca || '').replace(',', '.')) : null
+                      const diffKalca = (!isNaN(currKalca) && prevKalca !== null && !isNaN(prevKalca)) ? currKalca - prevKalca : null
+
+                      const d = new Date(m.tarih)
+                      const months = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık']
+                      const dateFormatted = `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`
+                      const orderNum = measurements.length - idx
+
+                      return (
+                        <div key={m.id} className="p-3.5 rounded-xl bg-white border border-line shadow-2xs space-y-2">
+                          <div className="flex items-center justify-between border-b border-line/60 pb-2">
+                            <div className="flex items-center gap-2">
+                              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${
+                                idx === measurements.length - 1 ? 'bg-sand text-espresso' : 'bg-forest/10 text-forest'
+                              }`}>
+                                {idx === measurements.length - 1 ? '1. Ölçüm (Başlangıç)' : `${orderNum}. Ölçüm`}
+                              </span>
+                              <span className="text-xs font-bold text-ink flex items-center gap-1">
+                                <Calendar className="w-3 h-3 text-mocha" /> {dateFormatted}
+                              </span>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteMeasurement(m.id)}
+                              className="text-muted hover:text-clay p-1 rounded transition-colors cursor-pointer"
+                              title="Ölçüm kaydını sil"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+
+                          <div className="flex flex-wrap gap-1.5 text-[11px]">
+                            {m.bel && (
+                              <span className="px-2 py-1 rounded-md bg-sand/40 border border-line flex items-center gap-1">
+                                <span className="text-secondary font-medium">Bel:</span>
+                                <strong className="text-ink">{m.bel} cm</strong>
+                                {diffBel !== null && diffBel !== 0 && (
+                                  <span className={`text-[9.5px] font-bold px-1 rounded ${diffBel < 0 ? 'bg-forest/15 text-forest' : 'bg-amber-100 text-amber-900'}`}>
+                                    {diffBel > 0 ? `+${diffBel.toFixed(1)}` : diffBel.toFixed(1)} cm
+                                  </span>
+                                )}
+                              </span>
+                            )}
+                            {m.kalca && (
+                              <span className="px-2 py-1 rounded-md bg-sand/40 border border-line flex items-center gap-1">
+                                <span className="text-secondary font-medium">Kalça:</span>
+                                <strong className="text-ink">{m.kalca} cm</strong>
+                                {diffKalca !== null && diffKalca !== 0 && (
+                                  <span className={`text-[9.5px] font-bold px-1 rounded ${diffKalca < 0 ? 'bg-forest/15 text-forest' : 'bg-amber-100 text-amber-900'}`}>
+                                    {diffKalca > 0 ? `+${diffKalca.toFixed(1)}` : diffKalca.toFixed(1)} cm
+                                  </span>
+                                )}
+                              </span>
+                            )}
+                            {m.kilo && (
+                              <span className="px-2 py-1 rounded-md bg-sand/40 border border-line">
+                                <span className="text-secondary font-medium">Kilo: </span>
+                                <strong className="text-ink">{m.kilo} kg</strong>
+                              </span>
+                            )}
+                            {m.boy && (
+                              <span className="px-2 py-1 rounded-md bg-sand/40 border border-line">
+                                <span className="text-secondary font-medium">Boy: </span>
+                                <strong className="text-ink">{m.boy} cm</strong>
+                              </span>
+                            )}
+                            {m.sag_bacak && (
+                              <span className="px-2 py-1 rounded-md bg-sand/40 border border-line">
+                                <span className="text-secondary font-medium">Sağ Bacak: </span>
+                                <strong className="text-ink">{m.sag_bacak} cm</strong>
+                              </span>
+                            )}
+                            {m.sol_bacak && (
+                              <span className="px-2 py-1 rounded-md bg-sand/40 border border-line">
+                                <span className="text-secondary font-medium">Sol Bacak: </span>
+                                <strong className="text-ink">{m.sol_bacak} cm</strong>
+                              </span>
+                            )}
+                            {m.sag_ic_bacak && (
+                              <span className="px-2 py-1 rounded-md bg-sand/40 border border-line">
+                                <span className="text-secondary font-medium">Sağ İç Bacak: </span>
+                                <strong className="text-ink">{m.sag_ic_bacak} cm</strong>
+                              </span>
+                            )}
+                            {m.sol_ic_bacak && (
+                              <span className="px-2 py-1 rounded-md bg-sand/40 border border-line">
+                                <span className="text-secondary font-medium">Sol İç Bacak: </span>
+                                <strong className="text-ink">{m.sol_ic_bacak} cm</strong>
+                              </span>
+                            )}
+                            {m.sag_kol && (
+                              <span className="px-2 py-1 rounded-md bg-sand/40 border border-line">
+                                <span className="text-secondary font-medium">Sağ Kol: </span>
+                                <strong className="text-ink">{m.sag_kol} cm</strong>
+                              </span>
+                            )}
+                            {m.sol_kol && (
+                              <span className="px-2 py-1 rounded-md bg-sand/40 border border-line">
+                                <span className="text-secondary font-medium">Sol Kol: </span>
+                                <strong className="text-ink">{m.sol_kol} cm</strong>
+                              </span>
+                            )}
+                          </div>
+
+                          {m.notlar && (
+                            <div className="p-2 rounded-lg bg-sand/30 border border-line/60 text-[11px] text-secondary italic">
+                              📝 {m.notlar}
+                            </div>
+                          )}
+                        </div>
+                      )
+                    })}
+                  </div>
                 )}
               </CardContent>
             </Card>

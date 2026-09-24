@@ -182,6 +182,7 @@ class MemberAdminDetailResponse(BaseModel):
     kilo: str | None = None
     saglik_notu: str | None = None
     sabit_ders_saatleri: str | None = None
+    olcum_sayisi: int = 0
 
     # Aktif Paket Bilgileri & Paket Geçmişi & Aktif Ders Rezervasyonları
     aktif_member_package_id: int | None = None
