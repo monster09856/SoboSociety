@@ -20,7 +20,6 @@ class _BookingViewState extends State<BookingView> {
   List<PackageDTO> _packages = <PackageDTO>[];
   List<StudioEventItem> _studioEvents = <StudioEventItem>[];
   MemberSummaryResponse? _summary;
-  MemberStatsResponse? _userStats;
   bool _isLoading = true;
 
   String _searchQuery = '';
@@ -48,15 +47,11 @@ class _BookingViewState extends State<BookingView> {
       final dynamic summaryRes = await ApiClient.get('/my/summary');
       dynamic packagesRes;
       dynamic eventsRes;
-      dynamic statsRes;
       try {
         packagesRes = await ApiClient.get('/packages');
       } catch (_) {}
       try {
         eventsRes = await ApiClient.get('/events');
-      } catch (_) {}
-      try {
-        statsRes = await ApiClient.get('/my/stats');
       } catch (_) {}
 
       final List<ClassSessionDTO> sessionList = <ClassSessionDTO>[];
@@ -81,7 +76,6 @@ class _BookingViewState extends State<BookingView> {
       }
 
       final MemberSummaryResponse summaryData = MemberSummaryResponse.fromJson(summaryRes);
-      final MemberStatsResponse? statsData = statsRes != null ? MemberStatsResponse.fromJson(statsRes) : null;
 
       if (mounted) {
         setState(() {
@@ -89,7 +83,6 @@ class _BookingViewState extends State<BookingView> {
           _packages = packageList;
           _studioEvents = eventList;
           _summary = summaryData;
-          _userStats = statsData;
           _isLoading = false;
           _applyFilters();
         });
@@ -244,113 +237,6 @@ class _BookingViewState extends State<BookingView> {
         );
       }
     }
-  }
-
-  Widget _buildStreakAndStatsCard() {
-    final int streakWeeks = _userStats?.currentStreakWeeks ?? 1;
-    final int monthAttended = _userStats?.completedThisMonth ?? 1;
-    final List<String> badges = _userStats?.badges.isNotEmpty == true
-        ? _userStats!.badges
-        : <String>['İlk Seans Kulübü', 'Barre & Pilates Müdavimi', 'SOBO 10 Seans Rozeti 🔥'];
-
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: SoboTheme.sandLight,
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: SoboTheme.line),
-        boxShadow: [
-          BoxShadow(color: SoboTheme.espresso.withOpacity(0.04), blurRadius: 12, offset: const Offset(0, 4)),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: SoboTheme.clay.withOpacity(0.15),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(Icons.local_fire_department_rounded, color: SoboTheme.clay, size: 20),
-                  ),
-                  const SizedBox(width: 10),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'AKTİFLİK SERİSİ',
-                        style: SoboTheme.fontSans(fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1.2, color: SoboTheme.secondary),
-                      ),
-                      Text(
-                        '$streakWeeks Hafta Kesintisiz 🔥',
-                        style: SoboTheme.fontSerif(fontSize: 16, fontWeight: FontWeight.bold, color: SoboTheme.ink),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(
-                  color: SoboTheme.espresso,
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: Text(
-                  'Bu Ay: $monthAttended Ders',
-                  style: SoboTheme.fontSans(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.white),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 14),
-          // Monthly Progress Bar towards 8 classes goal
-          ClipRRect(
-            borderRadius: BorderRadius.circular(10),
-            child: LinearProgressIndicator(
-              value: (monthAttended / 8.0).clamp(0.1, 1.0),
-              minHeight: 7,
-              backgroundColor: SoboTheme.line,
-              valueColor: const AlwaysStoppedAnimation<Color>(SoboTheme.espresso),
-            ),
-          ),
-          const SizedBox(height: 12),
-          // Badges Carousel
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
-              children: badges.map((badgeStr) {
-                return Container(
-                  margin: const EdgeInsets.only(right: 8),
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: SoboTheme.line),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(Icons.stars_rounded, size: 14, color: SoboTheme.mocha),
-                      const SizedBox(width: 4),
-                      Text(
-                        badgeStr,
-                        style: SoboTheme.fontSans(fontSize: 11, fontWeight: FontWeight.bold, color: SoboTheme.espresso),
-                      ),
-                    ],
-                  ),
-                );
-              }).toList(),
-            ),
-          ),
-        ],
-      ),
-    );
   }
 
   Widget _buildWorkshopCarousel() {
@@ -1484,12 +1370,7 @@ class _BookingViewState extends State<BookingView> {
                     ],
                   ),
                 ),
-                const SizedBox(height: 16),
               ],
-
-              // Streak & Badges Progress Card
-              _buildStreakAndStatsCard(),
-              const SizedBox(height: 18),
 
               // Society Lounge & Workshops Carousel
               if (_studioEvents.isNotEmpty) ...[
