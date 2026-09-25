@@ -447,6 +447,17 @@ class _MyBookingsViewState extends State<MyBookingsView> with SingleTickerProvid
                                       color: SoboTheme.espresso,
                                     ),
                                   ),
+                                  if (activeBookings.isNotEmpty) ...[
+                                    const SizedBox(height: 3),
+                                    Text(
+                                      '${activeBookings.length} Rezerve • Toplam ${bakiye + activeBookings.length} Ders',
+                                      style: SoboTheme.fontSans(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.bold,
+                                        color: SoboTheme.mocha,
+                                      ),
+                                    ),
+                                  ],
                                   if (_summary?.paketBitisTarihi != null && _summary!.paketBitisTarihi!.isNotEmpty) ...[
                                     const SizedBox(height: 2),
                                     Text(
@@ -678,7 +689,11 @@ class _MyBookingsViewState extends State<MyBookingsView> with SingleTickerProvid
                                         borderRadius: BorderRadius.circular(10),
                                       ),
                                       child: Text(
-                                        canCancel ? 'Derse ${hoursLeft.toStringAsFixed(0)} Saat Var' : 'Yaklaşan Ders',
+                                        canCancel
+                                            ? (hoursLeft >= 24
+                                                ? 'Derse ${(hoursLeft / 24).round()} Gün Var'
+                                                : 'Derse ${hoursLeft.round()} Saat Var')
+                                            : 'Yaklaşan Ders',
                                         style: SoboTheme.fontSans(
                                           fontSize: 10.5,
                                           fontWeight: FontWeight.bold,

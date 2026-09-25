@@ -1290,8 +1290,10 @@ class _AccountViewState extends State<AccountView> {
                               style: SoboTheme.fontSans(fontSize: 11.5, fontWeight: FontWeight.bold, color: SoboTheme.espresso),
                             ),
                             Text(
-                              '${_summary?.bakiye ?? 0} Ders',
-                              style: SoboTheme.fontSerif(fontSize: 17, fontWeight: FontWeight.bold, color: SoboTheme.espresso),
+                              (_summary?.aktifRezervasyonlar.isNotEmpty == true)
+                                  ? '${_summary?.bakiye ?? 0} Boş (${_summary!.aktifRezervasyonlar.length} Rezerve)'
+                                  : '${_summary?.bakiye ?? 0} Ders',
+                              style: SoboTheme.fontSerif(fontSize: 15, fontWeight: FontWeight.bold, color: SoboTheme.espresso),
                             ),
                           ],
                         ),
@@ -1326,8 +1328,10 @@ class _AccountViewState extends State<AccountView> {
                                 ),
                                 const SizedBox(height: 4),
                                 Text(
-                                  '${_summary?.bakiye ?? 0} Ders',
-                                  style: SoboTheme.fontSerif(fontSize: 18, fontWeight: FontWeight.bold, color: SoboTheme.espresso),
+                                  (_summary?.aktifRezervasyonlar.isNotEmpty == true)
+                                      ? '${_summary?.bakiye ?? 0} Boş (${_summary!.aktifRezervasyonlar.length} Rez)'
+                                      : '${_summary?.bakiye ?? 0} Ders',
+                                  style: SoboTheme.fontSerif(fontSize: 16, fontWeight: FontWeight.bold, color: SoboTheme.espresso),
                                 ),
                               ],
                             ),

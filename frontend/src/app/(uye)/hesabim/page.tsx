@@ -444,11 +444,18 @@ export default function HesabimPage() {
                 <div className="bg-ivory/80 rounded-2xl p-3.5 border border-line flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <CreditBadge credits={summary.bakiye} />
-                    {summary.aktif_paket_adi && (
-                      <span className="text-xs text-secondary font-medium hidden sm:inline">
-                        {summary.aktif_paket_adi}
-                      </span>
-                    )}
+                    <div className="flex flex-col">
+                      {summary.aktif_paket_adi && (
+                        <span className="text-xs text-secondary font-bold">
+                          {summary.aktif_paket_adi}
+                        </span>
+                      )}
+                      {summary.aktif_rezervasyonlar && summary.aktif_rezervasyonlar.length > 0 && (
+                        <span className="text-[11px] text-mocha font-semibold">
+                          {summary.aktif_rezervasyonlar.length} Rezerve • Toplam {summary.bakiye + summary.aktif_rezervasyonlar.length} Ders
+                        </span>
+                      )}
+                    </div>
                   </div>
                   <Link href="/rezervasyon">
                     <Button size="sm" className="text-xs font-bold bg-espresso hover:bg-espresso-dark text-ivory border-none shadow-xs rounded-xl px-4">
