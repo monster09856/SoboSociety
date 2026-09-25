@@ -296,7 +296,7 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
       final dynamic res = await ApiClient.get('/admin/packages');
       if (mounted) {
         setState(() {
-          _packages = res is List ? res : <dynamic>[];
+          _packages = res is List ? res.where((p) => p['aktif'] == true).toList() : <dynamic>[];
           _isLoadingPackages = false;
         });
       }

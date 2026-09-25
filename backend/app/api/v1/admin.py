@@ -221,7 +221,7 @@ async def assign_package(
                 ders_adedi=custom_credits,
                 gecerlilik_gun=custom_days,
                 fiyat_kurus=0,
-                aktif=True,
+                aktif=False,
             )
             db.add(pkg)
             await db.flush()
@@ -1775,7 +1775,7 @@ async def list_admin_packages(
     current_admin: Member = Depends(get_current_admin),
 ):
     """Admin paneli için tüm hazır stüdyo ders paketlerini ve detaylarını listeler."""
-    res = await db.execute(select(Package).order_by(Package.id.asc()))
+    res = await db.execute(select(Package).where(Package.aktif == True).order_by(Package.id.asc()))
     pkgs = res.scalars().all()
     return [
         PackageResponse(
