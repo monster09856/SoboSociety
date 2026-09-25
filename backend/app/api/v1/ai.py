@@ -273,6 +273,7 @@ async def ai_concierge_chat(
             .where(
                 ClassSession.durum == SessionDurumu.AKTIF,
                 ClassSession.baslangic >= now,
+                ClassSession.kontenjan > 1,
             )
             .order_by(ClassSession.baslangic.asc())
             .limit(20)
