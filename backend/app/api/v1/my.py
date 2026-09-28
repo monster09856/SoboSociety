@@ -74,6 +74,15 @@ async def get_my_summary(
             )
         )
     active_pkgs = [p for p in paket_listesi if p.aktif]
+    if active_pkgs:
+        sum_active_rem = sum(p.kalan_ders for p in active_pkgs)
+        diff_rem = current_bakiye - sum_active_rem
+        if diff_rem != 0:
+            if len(active_pkgs) == 1:
+                active_pkgs[0].kalan_ders = max(0, current_bakiye)
+            else:
+                active_pkgs[0].kalan_ders = max(0, active_pkgs[0].kalan_ders + diff_rem)
+
     if len(active_pkgs) == 1:
         aktif_pkg_ad = active_pkgs[0].ad
         pkg_bitis_str = active_pkgs[0].bitis_tarihi

@@ -654,6 +654,13 @@ async def delete_session_endpoint(
     for b in bookings:
         b.durum = BookingDurumu.CANCELLED
         b.cancelled_at = datetime.now(timezone.utc)
+        res_orig_pkg = await db.execute(
+            select(CreditLedger.member_package_id).where(
+                CreditLedger.booking_id == b.id,
+                CreditLedger.tip == LedgerTipi.BOOKING,
+            )
+        )
+        orig_mp_id = res_orig_pkg.scalar_one_or_none()
         await hareket_ekle(
             db,
             member_id=b.member_id,
@@ -661,6 +668,7 @@ async def delete_session_endpoint(
             miktar=1,
             sebep=f"Ders yönetici tarafından iptal edildi",
             booking_id=b.id,
+            member_package_id=orig_mp_id,
         )
         await bildirim_gonder(
             db,
@@ -973,6 +981,16 @@ async def _build_member_detail_response(db: AsyncSession, m: Member) -> MemberAd
                 pkg_bitis_str = bitis_str
                 kalan_gun = max(0, days_left)
 
+    # Ensure active packages sum strictly matches current_bakiye
+    if aktif_paketler:
+        sum_active_rem = sum(p.kalan_ders for p in aktif_paketler)
+        diff_rem = current_bakiye - sum_active_rem
+        if diff_rem != 0:
+            if len(aktif_paketler) == 1:
+                aktif_paketler[0].kalan_ders = max(0, current_bakiye)
+            else:
+                aktif_paketler[0].kalan_ders = max(0, aktif_paketler[0].kalan_ders + diff_rem)
+
     is_bireysel_member = any(
         any(k in (getattr(mp, "ozel_paket_adi", None) or (p.ad if p else "")).lower() for k in ["bireysel", "özel", "birebir", "1-on-1"])
         for mp, p in mp_rows
@@ -1141,6 +1159,11 @@ async def update_admin_member(
         if fark != 0:
             from app.services.kredi import aktif_paket_sec
             active_pkg = await aktif_paket_sec(db, member_id=member_id, bugun=date.today())
+            if not active_pkg:
+                mp_res = await db.execute(
+                    select(MemberPackage).where(MemberPackage.member_id == member_id).order_by(MemberPackage.id.desc())
+                )
+                active_pkg = mp_res.scalars().first()
             await hareket_ekle(
                 db,
                 member_id=member_id,
@@ -1315,6 +1338,11 @@ async def deduct_admin_member_lesson(
     if not paket:
         from app.services.kredi import aktif_paket_sec
         paket = await aktif_paket_sec(db, member_id=member_id, bugun=datetime.now().date())
+    if not paket:
+        mp_res = await db.execute(
+            select(MemberPackage).where(MemberPackage.member_id == member_id).order_by(MemberPackage.id.desc())
+        )
+        paket = mp_res.scalars().first()
 
     await hareket_ekle(
         db,
