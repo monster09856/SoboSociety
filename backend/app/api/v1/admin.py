@@ -981,16 +981,6 @@ async def _build_member_detail_response(db: AsyncSession, m: Member) -> MemberAd
                 pkg_bitis_str = bitis_str
                 kalan_gun = max(0, days_left)
 
-    # Ensure active packages sum strictly matches current_bakiye
-    if aktif_paketler:
-        sum_active_rem = sum(p.kalan_ders for p in aktif_paketler)
-        diff_rem = current_bakiye - sum_active_rem
-        if diff_rem != 0:
-            if len(aktif_paketler) == 1:
-                aktif_paketler[0].kalan_ders = max(0, current_bakiye)
-            else:
-                aktif_paketler[0].kalan_ders = max(0, aktif_paketler[0].kalan_ders + diff_rem)
-
     is_bireysel_member = any(
         any(k in (getattr(mp, "ozel_paket_adi", None) or (p.ad if p else "")).lower() for k in ["bireysel", "özel", "birebir", "1-on-1"])
         for mp, p in mp_rows
