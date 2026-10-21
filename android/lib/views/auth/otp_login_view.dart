@@ -160,11 +160,12 @@ class _OTPLoginViewState extends State<OTPLoginView> with SingleTickerProviderSt
 
       await StorageService.saveToken(accessToken);
 
-      bool isAdmin = false;
+      bool isAdmin = await StorageService.getIsAdmin();
       try {
         final dynamic meRes = await ApiClient.get('/auth/me');
         final MemberMeResponse me = MemberMeResponse.fromJson(meRes);
         isAdmin = me.isAdmin;
+        await StorageService.saveIsAdmin(isAdmin);
 
         await NotificationService().registerDeviceToken();
       } catch (_) {
@@ -221,11 +222,12 @@ class _OTPLoginViewState extends State<OTPLoginView> with SingleTickerProviderSt
       final String accessToken = res['access_token'];
       await StorageService.saveToken(accessToken);
 
-      bool isAdmin = false;
+      bool isAdmin = await StorageService.getIsAdmin();
       try {
         final dynamic meRes = await ApiClient.get('/auth/me');
         final MemberMeResponse me = MemberMeResponse.fromJson(meRes);
         isAdmin = me.isAdmin;
+        await StorageService.saveIsAdmin(isAdmin);
         await NotificationService().registerDeviceToken();
       } catch (_) {}
 

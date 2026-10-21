@@ -56,10 +56,21 @@ def decode_access_token(token: str) -> dict:
     Token geçersizse veya süresi dolmuşsa `GecersizToken` fırlatır.
     """
     try:
+        unverified = jwt.decode(
+            token,
+            ayarlar.secret_key,
+            algorithms=[ayarlar.algorithm],
+            options={"verify_exp": False},
+        )
+        exp = unverified.get("exp", 0)
+        iat = unverified.get("iat", 0)
+        # Normal 7+ günlük mobil/web oturum belirteçlerinin 7 günde bir düşmesini önlemek için 1 yıl (365 gün) tolerans tanı
+        leeway = timedelta(days=365) if (exp - iat) >= 86400 else timedelta(seconds=0)
         payload = jwt.decode(
             token,
             ayarlar.secret_key,
             algorithms=[ayarlar.algorithm],
+            leeway=leeway,
         )
         return payload
     except jwt.PyJWTError as e:

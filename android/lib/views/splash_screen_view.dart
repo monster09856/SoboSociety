@@ -93,12 +93,18 @@ class _SplashScreenViewState extends State<SplashScreenView> with TickerProvider
     bool isAdmin = false;
 
     if (isAuth) {
+      isAdmin = await StorageService.getIsAdmin();
       try {
         final dynamic meRes = await ApiClient.get('/auth/me');
         final MemberMeResponse me = MemberMeResponse.fromJson(meRes);
         isAdmin = me.isAdmin;
+        await StorageService.saveIsAdmin(isAdmin);
+      } on ApiException catch (e) {
+        if (e.statusCode == 401 || e.statusCode == 403) {
+          await StorageService.clearToken();
+        }
       } catch (_) {
-        await StorageService.clearToken();
+        // Geçici ağ/sunucu gecikmelerinde kullanıcının kayıtlı oturumunu silme
       }
     }
 
