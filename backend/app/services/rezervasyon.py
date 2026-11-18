@@ -12,7 +12,7 @@ from app.services.hatalar import (
     DersBaslamis, DersDolu, DersIptalEdilmis, KayitBulunamadi,
     YetersizKredi, ZatenRezerve,
 )
-from app.services.kredi import aktif_paket_sec, bakiye, bakiye_detay, hareket_ekle
+from app.services.kredi import aktif_paket_sec, bakiye, bakiye_detay, hareket_ekle, herhangi_kredili_paket_sec
 
 
 async def rezerve_et(
@@ -135,7 +135,11 @@ async def rezerve_et(
     # satırların hangi pakete ait olduğu geriye dönük kurtarılamaz.
     # `None` olabilir: admin düzeltmesiyle kredi verilmiş ama paketi
     # olmayan üye geçerli bir durumdur.
-    paket = await aktif_paket_sec(db, member_id=member_id, bugun=now.date(), is_bireysel=is_bireysel_session)
+    paket = await aktif_paket_sec(db, member_id=member_id, bugun=oturum.baslangic.date(), is_bireysel=is_bireysel_session)
+    if paket is None:
+        paket = await aktif_paket_sec(db, member_id=member_id, bugun=now.date(), is_bireysel=is_bireysel_session)
+    if paket is None:
+        paket = await herhangi_kredili_paket_sec(db, member_id=member_id, is_bireysel=is_bireysel_session)
 
     await hareket_ekle(
         db,

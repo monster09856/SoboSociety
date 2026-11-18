@@ -45,6 +45,7 @@ class Member(ZamanDamgali, Base):
     borc_bakiye: Mapped[float] = mapped_column(Float, default=0.0)
 
     aktif: Mapped[bool] = mapped_column(Boolean, default=True)
+    pasif: Mapped[bool] = mapped_column(Boolean, default=False)
 
 
 class Instructor(ZamanDamgali, Base):

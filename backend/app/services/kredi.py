@@ -68,6 +68,8 @@ async def aktif_paket_sec(
 ) -> MemberPackage | None:
     """Krediyi düşmek için kullanılacak paketi seçer.
     Eğer is_bireysel belirtilmişse ilgili kategoriye (Bireysel / Grup) ait paketi önceliklendirir.
+    Kalan ders hakkı (rem > 0) olan paketi önceliklendirir; böylece bitmiş (0 ders) eski paketten
+    eksiye düşülmez.
     """
     stmt = (
         select(MemberPackage, Package)
@@ -77,21 +79,85 @@ async def aktif_paket_sec(
             MemberPackage.baslangic <= bugun,
             MemberPackage.bitis > bugun,
         )
-        .order_by(MemberPackage.bitis)
+        .order_by(MemberPackage.bitis, MemberPackage.id)
     )
     res = await db.execute(stmt)
     rows = res.all()
     if not rows:
         return None
 
+    candidates: list[tuple[MemberPackage, bool, int]] = []
+    for mp, p in rows:
+        p_name = getattr(mp, "ozel_paket_adi", None) or (p.ad if p else "")
+        is_pkg_bireysel = any(k in p_name.lower() for k in ["bireysel", "özel", "birebir", "1-on-1"])
+        l_res = await db.execute(
+            select(func.coalesce(func.sum(CreditLedger.miktar), 0)).where(
+                CreditLedger.member_package_id == mp.id
+            )
+        )
+        rem = int(l_res.scalar_one() or 0)
+        candidates.append((mp, is_pkg_bireysel, rem))
+
+    # 1. Öncelik: Kalan dersi > 0 olan ve kategorisi eşleşen paket
     if is_bireysel is not None:
-        for mp, p in rows:
-            p_name = getattr(mp, "ozel_paket_adi", None) or (p.ad if p else "")
-            is_pkg_bireysel = any(k in p_name.lower() for k in ["bireysel", "özel", "birebir", "1-on-1"])
-            if is_pkg_bireysel == is_bireysel:
+        for mp, is_pkg_b, rem in candidates:
+            if is_pkg_b == is_bireysel and rem > 0:
                 return mp
 
-    return rows[0][0]
+    # 2. Öncelik: Kalan dersi > 0 olan herhangi bir aktif paket
+    for mp, _, rem in candidates:
+        if rem > 0:
+            return mp
+
+    # 3. Yedek: Tüm paketler 0 ise kategori eşleşen veya ilk paket
+    if is_bireysel is not None:
+        for mp, is_pkg_b, _ in candidates:
+            if is_pkg_b == is_bireysel:
+                return mp
+
+    return candidates[0][0]
+
+
+async def herhangi_kredili_paket_sec(
+    db: AsyncSession, *, member_id: int, is_bireysel: bool | None = None
+) -> MemberPackage | None:
+    """Tarih aralığı dışında (henüz başlamamış veya süresi dolmuş) olsa bile
+    içinde kalan ders hakkı (rem > 0) bulunan paketi seçer.
+    Rezervasyonların member_package_id=NULL olarak kalmasını önler.
+    """
+    stmt = (
+        select(MemberPackage, Package)
+        .outerjoin(Package, MemberPackage.package_id == Package.id)
+        .where(MemberPackage.member_id == member_id)
+        .order_by(MemberPackage.bitis.desc(), MemberPackage.id.desc())
+    )
+    res = await db.execute(stmt)
+    rows = res.all()
+    if not rows:
+        return None
+
+    candidates: list[tuple[MemberPackage, bool, int]] = []
+    for mp, p in rows:
+        p_name = getattr(mp, "ozel_paket_adi", None) or (p.ad if p else "")
+        is_pkg_bireysel = any(k in p_name.lower() for k in ["bireysel", "özel", "birebir", "1-on-1"])
+        l_res = await db.execute(
+            select(func.coalesce(func.sum(CreditLedger.miktar), 0)).where(
+                CreditLedger.member_package_id == mp.id
+            )
+        )
+        rem = int(l_res.scalar_one() or 0)
+        candidates.append((mp, is_pkg_bireysel, rem))
+
+    if is_bireysel is not None:
+        for mp, is_pkg_b, rem in candidates:
+            if is_pkg_b == is_bireysel and rem > 0:
+                return mp
+
+    for mp, _, rem in candidates:
+        if rem > 0:
+            return mp
+
+    return candidates[0][0]
 
 
 async def hareket_ekle(

@@ -4324,6 +4324,103 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
     }
   }
 
+  Future<void> _handleSetMemberPassive(dynamic m) async {
+    final String memberName = m['ad'] ?? 'Üye';
+    final List<dynamic> detailedReservations = (m['rezerve_ders_detaylari'] is List) ? (m['rezerve_ders_detaylari'] as List) : <dynamic>[];
+    final List<dynamic> reservations = (m['aktif_rezervasyonlar'] is List) ? (m['aktif_rezervasyonlar'] as List) : <dynamic>[];
+    final int resCount = detailedReservations.isNotEmpty ? detailedReservations.length : reservations.length;
+
+    final bool? confirm = await showDialog<bool>(
+      context: context,
+      builder: (dialogCtx) => AlertDialog(
+        backgroundColor: SoboTheme.ivory,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            const Icon(Icons.pause_circle_filled_rounded, color: Color(0xFFB45309), size: 24),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text('Üyeyi Pasife Al', style: SoboTheme.fontSerif(fontWeight: FontWeight.bold, color: SoboTheme.ink)),
+            ),
+          ],
+        ),
+        content: Text(
+          '$memberName isimli üyeyi geçici olarak pasife (ara veren üyeler listesine) almak istiyor musunuz?\n\n'
+          '• Üyenin kalan ders hakları, paketleri ve vücut ölçümleri kesinlikle silinmez, olduğu gibi korunur.\n'
+          '• Üye siz tekrar aktife alana kadar uygulamaya veya siteye giriş yapamaz ("Üyeliğiniz pasif duruma alınmıştır" uyarısı görür).'
+          '${resCount > 0 ? '\n• Üyenin gelecekteki $resCount ders rezervasyonu otomatik iptal edilip ders hakkı paketine iade edilecektir.' : ''}',
+          style: SoboTheme.fontSans(fontSize: 13, height: 1.45, color: SoboTheme.ink),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogCtx, false),
+            child: Text('Vazgeç', style: SoboTheme.fontSans(color: SoboTheme.secondary, fontWeight: FontWeight.bold)),
+          ),
+          ElevatedButton.icon(
+            onPressed: () => Navigator.pop(dialogCtx, true),
+            icon: const Icon(Icons.pause_circle_outline_rounded, size: 16, color: Colors.white),
+            label: const Text('Pasife Al', style: TextStyle(fontWeight: FontWeight.bold)),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFB45309),
+              foregroundColor: Colors.white,
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
+    try {
+      await ApiClient.post('/admin/members/${m['id']}/set-passive', <String, dynamic>{});
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('$memberName pasif üyeler listesine taşındı ⏸️'),
+            backgroundColor: const Color(0xFFB45309),
+          ),
+        );
+        _loadMembers(_searchMemberCtrl.text);
+        _loadTodaySessions();
+        _loadScheduleData();
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Hata: ${e.toString().replaceAll('Exception: ', '')}'),
+            backgroundColor: SoboTheme.clay,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _handleSetMemberActive(dynamic m) async {
+    final String memberName = m['ad'] ?? 'Üye';
+    try {
+      await ApiClient.post('/admin/members/${m['id']}/set-active', <String, dynamic>{});
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('$memberName tekrar aktif üyeler listesine alındı ✨'),
+            backgroundColor: SoboTheme.sage,
+          ),
+        );
+        _loadMembers(_searchMemberCtrl.text);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Hata: ${e.toString().replaceAll('Exception: ', '')}'),
+            backgroundColor: SoboTheme.clay,
+          ),
+        );
+      }
+    }
+  }
+
   Future<void> _handleDeleteMember(dynamic m) async {
     final String memberName = m['ad'] ?? 'Üye';
     final String phone = m['telefon'] ?? 'Telefon Yok';
@@ -5645,7 +5742,8 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
   // TAB 4: ÜYELER & BODY MEASUREMENTS
   Widget _buildMembersTab() {
     final List<dynamic> pendingMembers = _members.where((m) => m['aktif'] == false).toList();
-    final List<dynamic> activeMembers = _members.where((m) => m['aktif'] != false).toList();
+    final List<dynamic> passiveMembers = _members.where((m) => m['aktif'] != false && m['pasif'] == true).toList();
+    final List<dynamic> activeMembers = _members.where((m) => m['aktif'] != false && m['pasif'] != true).toList();
     final List<dynamic> bireyselMembers = activeMembers.where((m) => _isBireyselMember(m)).toList();
     final List<dynamic> grupMembers = activeMembers.where((m) => !_isBireyselMember(m)).toList();
 
@@ -5654,6 +5752,8 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
       displayedActiveMembers = bireyselMembers;
     } else if (_memberFilterTab == 'GRUP') {
       displayedActiveMembers = grupMembers;
+    } else if (_memberFilterTab == 'PASSIVE') {
+      displayedActiveMembers = passiveMembers;
     } else if (_memberFilterTab == 'PENDING') {
       displayedActiveMembers = <dynamic>[];
     } else {
@@ -5702,6 +5802,8 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
                   _buildFilterChip('BIREYSEL', '💎 Bireysel Üyeler (${bireyselMembers.length})', Icons.person_rounded),
                   const SizedBox(width: 8),
                   _buildFilterChip('GRUP', '👥 Grup Üyeleri (${grupMembers.length})', Icons.people_alt_rounded),
+                  const SizedBox(width: 8),
+                  _buildFilterChip('PASSIVE', '⏸️ Pasif Üyeler (${passiveMembers.length})', Icons.pause_circle_outline_rounded),
                   if (pendingMembers.isNotEmpty) ...[
                     const SizedBox(width: 8),
                     _buildFilterChip('PENDING', '⏳ Onay Bekleyen (${pendingMembers.length})', Icons.schedule_rounded),
@@ -5855,7 +5957,9 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
                     ? '💎 BİREYSEL / ÖZEL DERS ÜYELERİ (${displayedActiveMembers.length})'
                     : _memberFilterTab == 'GRUP'
                         ? '👥 GRUP DERSİ ÜYELERİ (${displayedActiveMembers.length})'
-                        : 'KAYITLI VE AKTİF ÜYELER (${displayedActiveMembers.length})',
+                        : _memberFilterTab == 'PASSIVE'
+                            ? '⏸️ PASİF / ARA VEREN ÜYELER (${displayedActiveMembers.length})'
+                            : 'KAYITLI VE AKTİF ÜYELER (${displayedActiveMembers.length})',
                 style: SoboTheme.fontSans(fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 1.2, color: SoboTheme.secondary),
               ),
               const SizedBox(height: 10),
@@ -5872,7 +5976,9 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
                           ? 'Kayıtlı bireysel ders üyesi bulunamadı.'
                           : _memberFilterTab == 'GRUP'
                               ? 'Kayıtlı grup dersi üyesi bulunamadı.'
-                              : 'Kayıtlı aktif üye bulunamadı.',
+                              : _memberFilterTab == 'PASSIVE'
+                                  ? 'Şu anda pasife alınmış (ara veren) üye bulunmuyor.'
+                                  : 'Kayıtlı aktif üye bulunamadı.',
                       style: SoboTheme.fontSans(fontSize: 12, color: SoboTheme.secondary),
                     ),
                   ),
@@ -5892,6 +5998,7 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
                   final int bireyselBakiye = (m['bireysel_bakiye'] is num) ? (m['bireysel_bakiye'] as num).toInt() : 0;
                   final String activePkgName = m['aktif_paket_adi'] ?? 'Aktif Paket Yok';
                   final bool isAdminMember = m['is_admin'] == true;
+                  final bool isPassiveMember = m['pasif'] == true;
                   final List<dynamic> aktifPaketler = (m['aktif_paketler'] is List) ? (m['aktif_paketler'] as List) : <dynamic>[];
                   final List<dynamic> reservations = (m['aktif_rezervasyonlar'] is List) ? (m['aktif_rezervasyonlar'] as List) : <dynamic>[];
                   final List<dynamic> detailedReservations = (m['rezerve_ders_detaylari'] is List) ? (m['rezerve_ders_detaylari'] as List) : <dynamic>[];
@@ -5933,16 +6040,34 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
                                       Container(
                                         padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
                                         decoration: BoxDecoration(
-                                          color: isAdminMember ? SoboTheme.espresso : SoboTheme.sage.withOpacity(0.15),
+                                          color: isAdminMember
+                                              ? SoboTheme.espresso
+                                              : isPassiveMember
+                                                  ? const Color(0xFFFFFBEB)
+                                                  : SoboTheme.sage.withOpacity(0.15),
                                           borderRadius: BorderRadius.circular(6),
-                                          border: Border.all(color: isAdminMember ? SoboTheme.espresso : SoboTheme.sage.withOpacity(0.4)),
+                                          border: Border.all(
+                                            color: isAdminMember
+                                                ? SoboTheme.espresso
+                                                : isPassiveMember
+                                                    ? const Color(0xFFF59E0B)
+                                                    : SoboTheme.sage.withOpacity(0.4),
+                                          ),
                                         ),
                                         child: Text(
-                                          isAdminMember ? 'Yönetici' : 'Aktif Üye',
+                                          isAdminMember
+                                              ? 'Yönetici'
+                                              : isPassiveMember
+                                                  ? '⏸️ Pasif Üye'
+                                                  : 'Aktif Üye',
                                           style: TextStyle(
                                             fontSize: 9,
                                             fontWeight: FontWeight.bold,
-                                            color: isAdminMember ? Colors.white : SoboTheme.sage,
+                                            color: isAdminMember
+                                                ? Colors.white
+                                                : isPassiveMember
+                                                    ? const Color(0xFFB45309)
+                                                    : SoboTheme.sage,
                                           ),
                                         ),
                                       ),
@@ -6731,6 +6856,42 @@ class _AdminTodayViewState extends State<AdminTodayView> with SingleTickerProvid
                             ),
                           ],
                         ),
+                        if (!isAdminMember) ...[
+                          const SizedBox(height: 6),
+                          SizedBox(
+                            width: double.infinity,
+                            child: isPassiveMember
+                                ? ElevatedButton.icon(
+                                    onPressed: () => _handleSetMemberActive(m),
+                                    icon: const Icon(Icons.play_circle_fill_rounded, size: 16, color: Colors.white),
+                                    label: const Text(
+                                      'ÜYELİĞİ TEKRAR AKTİFE AL (GİRİŞİ AÇ)',
+                                      style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 0.4),
+                                    ),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: SoboTheme.sage,
+                                      foregroundColor: Colors.white,
+                                      padding: const EdgeInsets.symmetric(vertical: 9),
+                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                    ),
+                                  )
+                                : OutlinedButton.icon(
+                                    onPressed: () => _handleSetMemberPassive(m),
+                                    icon: const Icon(Icons.pause_circle_outline_rounded, size: 15, color: Color(0xFFB45309)),
+                                    label: const Text(
+                                      'Üyeyi Pasife Al (Ara Verdi / Girişi Kapat)',
+                                      style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.bold, color: Color(0xFFB45309)),
+                                    ),
+                                    style: OutlinedButton.styleFrom(
+                                      foregroundColor: const Color(0xFFB45309),
+                                      backgroundColor: const Color(0xFFFFFBEB),
+                                      side: const BorderSide(color: Color(0xFFFCD34D)),
+                                      padding: const EdgeInsets.symmetric(vertical: 8),
+                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                    ),
+                                  ),
+                          ),
+                        ],
                       ],
                     ),
                   );

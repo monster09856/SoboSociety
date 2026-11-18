@@ -761,13 +761,13 @@ async def broadcast_push_notification(
         pkg_member_ids = list(res_pkgs.scalars().all())
         if pkg_member_ids:
             res = await db.execute(
-                select(Member).where(Member.id.in_(pkg_member_ids), Member.aktif == True)
+                select(Member).where(Member.id.in_(pkg_member_ids), Member.aktif == True, Member.pasif == False)
             )
             members = res.scalars().all()
         else:
             members = []
     else:  # TUM_UYELER
-        res = await db.execute(select(Member).where(Member.aktif == True))
+        res = await db.execute(select(Member).where(Member.aktif == True, Member.pasif == False))
         members = res.scalars().all()
 
     gonderilen = 0
@@ -800,7 +800,7 @@ async def get_notification_stats(
     """Aktif üye ve cihaz token istatistiklerini getirir."""
     from app.services.bildirim import _firebase_app
     from app.models.bildirim import DeviceToken
-    res_m = await db.execute(select(Member).where(Member.aktif == True))
+    res_m = await db.execute(select(Member).where(Member.aktif == True, Member.pasif == False))
     members_count = len(res_m.scalars().all())
 
     res_t = await db.execute(select(DeviceToken))
@@ -944,13 +944,14 @@ async def _build_member_detail_response(db: AsyncSession, m: Member) -> MemberAd
     pkg_history = []
 
     today = date.today()
+    parsed_pkgs = []
     for mp, p in mp_rows:
         pkg_name = getattr(mp, "ozel_paket_adi", None) or (p.ad if p else "Stüdyo Ders Paketi")
         ders_sayisi = getattr(mp, "ders_adedi", p.ders_adedi if p else 0)
         baslangic_str = mp.baslangic.strftime('%d.%m.%Y') if mp.baslangic else ""
         bitis_str = mp.bitis.strftime('%d.%m.%Y') if mp.bitis else ""
         days_left = (mp.bitis - today).days if mp.bitis else 0
-        is_active = (today < mp.bitis) if mp.bitis else False
+        is_date_active = (today < mp.bitis) if mp.bitis else False
         is_b = any(k in pkg_name.lower() for k in ["bireysel", "özel", "birebir", "1-on-1"])
 
         l_res = await db.execute(
@@ -958,9 +959,16 @@ async def _build_member_detail_response(db: AsyncSession, m: Member) -> MemberAd
             .where(CreditLedger.member_package_id == mp.id)
         )
         mp_rem = max(0, int(l_res.scalar_one() or 0))
-
         pkg_history.append(f"{pkg_name} ({ders_sayisi} Ders / Bitiş: {bitis_str})")
-        if is_active:
+        parsed_pkgs.append((mp, pkg_name, ders_sayisi, baslangic_str, bitis_str, days_left, is_date_active, is_b, mp_rem))
+
+    has_positive_pkg = any(item[8] > 0 for item in parsed_pkgs)
+
+    for mp, pkg_name, ders_sayisi, baslangic_str, bitis_str, days_left, is_date_active, is_b, mp_rem in parsed_pkgs:
+        # Kalan dersi (mp_rem > 0) olan tüm paketleri her zaman göster (süresi dolmuş olsa bile uzatılabilsin / köşedeki bakiye ile birebir tutsun).
+        # Eğer üyenin hiçbir paketinde kalan ders yoksa (hepsi 0 ise), tarihi geçerli en güncel paketi göster.
+        show_in_active = (mp_rem > 0) or (not has_positive_pkg and is_date_active and len(aktif_paketler) == 0)
+        if show_in_active:
             aktif_paketler.append(
                 MemberPackageDetail(
                     id=mp.id,
@@ -1036,6 +1044,7 @@ async def _build_member_detail_response(db: AsyncSession, m: Member) -> MemberAd
         bireysel_bakiye=bireysel_bakiye,
         borc_bakiye=float(m.borc_bakiye or 0.0),
         aktif=m.aktif,
+        pasif=bool(getattr(m, "pasif", False)),
         is_admin=is_adm,
         toplam_rezervasyon=len(rezerve_ders_listesi),
         bel=m.bel,
@@ -1123,6 +1132,11 @@ async def update_admin_member(
             m.telefon = None
     if body.aktif is not None:
         m.aktif = body.aktif
+    if body.pasif is not None:
+        is_target_admin = (m.telefon in ayarlar.admin_telefons if m.telefon else False) or (m.kullanici_adi == "admin")
+        if body.pasif and is_target_admin:
+            raise HTTPException(status_code=400, detail="Yönetici (Admin) hesabı pasife alınamaz.")
+        m.pasif = body.pasif
 
     if body.yeni_sifre and body.yeni_sifre.strip():
         new_pw = body.yeni_sifre.strip()
@@ -1430,6 +1444,7 @@ async def approve_admin_member(
         raise HTTPException(status_code=404, detail="Üye bulunamadı.")
 
     m.aktif = True
+    m.pasif = False
     await db.commit()
     await db.refresh(m)
 
@@ -1447,6 +1462,73 @@ async def approve_admin_member(
     except Exception:
         pass
 
+    return await _build_member_detail_response(db, m)
+
+
+@router.post("/members/{member_id}/set-passive", response_model=MemberAdminDetailResponse)
+async def set_member_passive_endpoint(
+    member_id: int,
+    iptal_gelecek_dersler: bool = True,
+    db: AsyncSession = Depends(get_db),
+    current_admin: Member = Depends(get_current_admin),
+):
+    """Üyeyi geçici olarak pasife (ara veren üyeler listesine) alır.
+    Hiçbir ders hakkı, paket veya ölçüm verisi silinmez.
+    Varsa gelecek aktif ders rezervasyonları iptal edilip hakları paketine iade edilir.
+    """
+    m = await db.get(Member, member_id)
+    if not m:
+        raise HTTPException(status_code=404, detail="Üye bulunamadı.")
+
+    is_target_admin = (
+        m.id == current_admin.id
+        or m.kullanici_adi == "admin"
+        or (m.telefon and m.telefon in ayarlar.admin_telefons)
+    )
+    if is_target_admin:
+        raise HTTPException(status_code=400, detail="Yönetici (Admin) hesabı pasife alınamaz.")
+
+    now = datetime.now(timezone.utc)
+    if iptal_gelecek_dersler:
+        from app.services.iptal import iptal_et
+        future_res = await db.execute(
+            select(Booking)
+            .join(ClassSession, Booking.session_id == ClassSession.id)
+            .where(
+                Booking.member_id == m.id,
+                Booking.durum == BookingDurumu.BOOKED,
+                ClassSession.durum == SessionDurumu.AKTIF,
+                ClassSession.baslangic > now,
+            )
+        )
+        for b in future_res.scalars().all():
+            try:
+                await iptal_et(db, booking_id=b.id, now=now, is_admin=True)
+            except Exception as exc:
+                logger.warning("set_member_passive booking cancel warning (booking_id=%s): %s", b.id, exc)
+
+    m.aktif = True
+    m.pasif = True
+    await db.commit()
+    await db.refresh(m)
+    return await _build_member_detail_response(db, m)
+
+
+@router.post("/members/{member_id}/set-active", response_model=MemberAdminDetailResponse)
+async def set_member_active_endpoint(
+    member_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_admin: Member = Depends(get_current_admin),
+):
+    """Pasifteki (ara veren) üyeyi tekrar aktif üyeler listesine alır ve giriş iznini açar."""
+    m = await db.get(Member, member_id)
+    if not m:
+        raise HTTPException(status_code=404, detail="Üye bulunamadı.")
+
+    m.aktif = True
+    m.pasif = False
+    await db.commit()
+    await db.refresh(m)
     return await _build_member_detail_response(db, m)
 
 
@@ -1568,7 +1650,7 @@ async def create_admin_event(
 
     # Tüm kayıtlı ve aktif üyelere anında bildirim & push gönder
     try:
-        res_m = await db.execute(select(Member).where(Member.aktif == True))
+        res_m = await db.execute(select(Member).where(Member.aktif == True, Member.pasif == False))
         members = res_m.scalars().all()
         formatted_ts = ev.tarih_saat.astimezone(STUDYO_TZ).strftime("%d.%m.%Y %H:%M") if ev.tarih_saat else ""
         for m in members:

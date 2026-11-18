@@ -115,6 +115,7 @@ class MemberUpdateRequest(BaseModel):
     ad: str | None = None
     telefon: str | None = None
     aktif: bool | None = None
+    pasif: bool | None = None
     bakiye_override: int | None = Field(default=None, description="Elle kural dışı bakiye tanımlama / düzeltme")
     bel: str | None = None
     kalca: str | None = None
@@ -166,6 +167,7 @@ class MemberAdminDetailResponse(BaseModel):
     bireysel_bakiye: int = 0
     borc_bakiye: float = 0.0
     aktif: bool
+    pasif: bool = False
     is_admin: bool
     toplam_rezervasyon: int = 0
 

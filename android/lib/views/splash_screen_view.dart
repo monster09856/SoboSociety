@@ -91,6 +91,7 @@ class _SplashScreenViewState extends State<SplashScreenView> with TickerProvider
   Future<void> _checkAuthAndNavigate() async {
     final bool isAuth = await StorageService.isAuthenticated();
     bool isAdmin = false;
+    String? blockedMessage;
 
     if (isAuth) {
       isAdmin = await StorageService.getIsAdmin();
@@ -102,6 +103,9 @@ class _SplashScreenViewState extends State<SplashScreenView> with TickerProvider
       } on ApiException catch (e) {
         if (e.statusCode == 401 || e.statusCode == 403) {
           await StorageService.clearToken();
+          if (e.statusCode == 403 && e.message.isNotEmpty) {
+            blockedMessage = e.message;
+          }
         }
       } catch (_) {
         // Geçici ağ/sunucu gecikmelerinde kullanıcının kayıtlı oturumunu silme
@@ -125,7 +129,7 @@ class _SplashScreenViewState extends State<SplashScreenView> with TickerProvider
       } else {
         Navigator.of(context).pushReplacement(
           PageRouteBuilder<dynamic>(
-            pageBuilder: (_, __, ___) => const OTPLoginView(),
+            pageBuilder: (_, __, ___) => OTPLoginView(initialMessage: blockedMessage),
             transitionsBuilder: (_, animation, __, child) {
               return FadeTransition(opacity: animation, child: child);
             },

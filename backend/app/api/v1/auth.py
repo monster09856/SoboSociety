@@ -75,6 +75,11 @@ async def register_endpoint(
         await db.commit()
         await db.refresh(existing_tel)
         is_admin = norm_tel in ayarlar.admin_telefons or username == "admin"
+        if getattr(existing_tel, "pasif", False) and not is_admin:
+            raise HTTPException(
+                status_code=403,
+                detail="Üyeliğiniz pasif duruma alınmıştır. Yeniden aktif etmek için stüdyo yönetimi ile iletişime geçebilirsiniz.",
+            )
         if not existing_tel.aktif and not is_admin:
             raise HTTPException(
                 status_code=403,
@@ -149,25 +154,44 @@ async def login_endpoint(
     except Exception:
         norm_tel = None
 
+    username_alt1 = username.replace("i", "ı")
+    username_alt2 = username.replace("ı", "i")
+    conditions = [
+        Member.kullanici_adi.ilike(username),
+        Member.kullanici_adi.ilike(username_alt1),
+        Member.kullanici_adi.ilike(username_alt2),
+    ]
     if norm_tel:
-        stmt = select(Member).where(
-            or_(
-                Member.kullanici_adi.ilike(username),
-                Member.telefon == norm_tel,
-            )
-        )
-    else:
-        stmt = select(Member).where(Member.kullanici_adi.ilike(username))
+        local_tel = "0" + norm_tel[3:] if norm_tel.startswith("+90") else norm_tel
+        conditions.extend([
+            Member.telefon == norm_tel,
+            Member.telefon == local_tel,
+            Member.telefon == user_input,
+        ])
+
+    stmt = select(Member).where(or_(*conditions)).order_by(Member.sifre_hash.is_(None), Member.id.desc())
     res = await db.execute(stmt)
-    member = res.scalar_one_or_none()
+    candidates = res.scalars().all()
+
+    if not candidates:
+        raise HTTPException(status_code=400, detail="Kullanıcı adı veya şifre hatalı.")
+
+    member = None
+    for cand in candidates:
+        if verify_password(password, cand.sifre_hash):
+            member = cand
+            break
 
     if not member:
         raise HTTPException(status_code=400, detail="Kullanıcı adı veya şifre hatalı.")
 
-    if not verify_password(password, member.sifre_hash):
-        raise HTTPException(status_code=400, detail="Kullanıcı adı veya şifre hatalı.")
-
     is_admin = (member.telefon in ayarlar.admin_telefons) or (member.kullanici_adi == "admin")
+
+    if getattr(member, "pasif", False) and not is_admin:
+        raise HTTPException(
+            status_code=403,
+            detail="Üyeliğiniz pasif duruma alınmıştır. Yeniden aktif etmek için stüdyo yönetimi ile iletişime geçebilirsiniz.",
+        )
 
     if not member.aktif and not is_admin:
         raise HTTPException(
@@ -180,8 +204,17 @@ async def login_endpoint(
 
 
 @router.post("/otp/send", response_model=OTPSendResponse)
-async def send_otp_endpoint(body: OTPSendRequest):
+async def send_otp_endpoint(body: OTPSendRequest, db: AsyncSession = Depends(get_db)):
     norm_tel = normalize_telefon(body.telefon)
+    is_admin = norm_tel in ayarlar.admin_telefons
+    if not is_admin:
+        stmt = select(Member).where(Member.telefon == norm_tel)
+        existing_m = (await db.execute(stmt)).scalar_one_or_none()
+        if existing_m and getattr(existing_m, "pasif", False):
+            raise HTTPException(
+                status_code=403,
+                detail="Üyeliğiniz pasif duruma alınmıştır. Yeniden aktif etmek için stüdyo yönetimi ile iletişime geçebilirsiniz.",
+            )
     send_otp(norm_tel)
     return OTPSendResponse(mesaj="OTP kodu gönderildi", telefon=norm_tel)
 
@@ -200,6 +233,12 @@ async def verify_otp_endpoint(
     member = res.scalar_one_or_none()
 
     is_admin = norm_tel in ayarlar.admin_telefons
+
+    if member is not None and getattr(member, "pasif", False) and not is_admin:
+        raise HTTPException(
+            status_code=403,
+            detail="Üyeliğiniz pasif duruma alınmıştır. Yeniden aktif etmek için stüdyo yönetimi ile iletişime geçebilirsiniz.",
+        )
 
     if member is None:
         member = Member(
@@ -247,6 +286,7 @@ async def get_me_endpoint(
         kvkk_onay_at=current_member.kvkk_onay_at,
         katilimci_gorunurluk_onay=current_member.katilimci_gorunurluk_onay,
         aktif=current_member.aktif,
+        pasif=bool(getattr(current_member, "pasif", False)),
         is_admin=is_admin,
         bel=current_member.bel,
         kalca=current_member.kalca,
@@ -291,6 +331,7 @@ async def update_me_endpoint(
         kvkk_onay_at=current_member.kvkk_onay_at,
         katilimci_gorunurluk_onay=current_member.katilimci_gorunurluk_onay,
         aktif=current_member.aktif,
+        pasif=bool(getattr(current_member, "pasif", False)),
         is_admin=is_admin,
         bel=current_member.bel,
         kalca=current_member.kalca,

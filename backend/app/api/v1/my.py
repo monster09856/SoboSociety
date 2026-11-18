@@ -51,7 +51,7 @@ async def get_my_summary(
         baslangic_str = mp.baslangic.strftime("%d.%m.%Y") if mp.baslangic else ""
         bitis_str = mp.bitis.strftime("%d.%m.%Y") if mp.bitis else ""
         days_left = (mp.bitis - today).days if mp.bitis else 0
-        is_active = (mp.baslangic <= today < mp.bitis) if (mp.baslangic and mp.bitis) else False
+        is_date_active = (today < mp.bitis) if mp.bitis else False
         is_b = any(k in pkg_name.lower() for k in ["bireysel", "özel", "birebir", "1-on-1"])
 
         l_res = await db.execute(
@@ -59,6 +59,7 @@ async def get_my_summary(
             .where(CreditLedger.member_package_id == mp.id)
         )
         mp_rem = max(0, int(l_res.scalar_one() or 0))
+        is_active = (mp_rem > 0) or is_date_active
 
         paket_listesi.append(
             MemberPackageSummary(

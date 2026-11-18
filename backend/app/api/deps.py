@@ -63,7 +63,24 @@ async def get_current_member(
         res = await db.execute(stmt)
         member = res.scalar_one_or_none()
 
-    if member is None or not member.aktif:
+    if member is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Üye bulunamadı veya hesabı aktif değil",
+        )
+
+    is_admin_member = (
+        (member.telefon in ayarlar.admin_telefons if member.telefon else False)
+        or (member.kullanici_adi == "admin")
+    )
+
+    if getattr(member, "pasif", False) and not is_admin_member:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Üyeliğiniz pasif duruma alınmıştır. Yeniden aktif etmek için stüdyo yönetimi ile iletişime geçebilirsiniz.",
+        )
+
+    if not member.aktif and not is_admin_member:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Üye bulunamadı veya hesabı aktif değil",

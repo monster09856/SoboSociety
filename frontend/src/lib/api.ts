@@ -798,6 +798,14 @@ export const adminApi = {
     apiFetch<any>(`/admin/members/${memberId}/approve`, {
       method: 'POST',
     }),
+  setMemberPassive: (memberId: number) =>
+    apiFetch<any>(`/admin/members/${memberId}/set-passive`, {
+      method: 'POST',
+    }),
+  setMemberActive: (memberId: number) =>
+    apiFetch<any>(`/admin/members/${memberId}/set-active`, {
+      method: 'POST',
+    }),
   rejectMember: (memberId: number) =>
     apiFetch<any>(`/admin/members/${memberId}/reject`, {
       method: 'POST',

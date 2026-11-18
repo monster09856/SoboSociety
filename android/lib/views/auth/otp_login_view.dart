@@ -7,7 +7,9 @@ import '../../theme/sobo_theme.dart';
 import '../main_tab_view.dart';
 
 class OTPLoginView extends StatefulWidget {
-  const OTPLoginView({super.key});
+  final String? initialMessage;
+
+  const OTPLoginView({super.key, this.initialMessage});
 
   @override
   State<OTPLoginView> createState() => _OTPLoginViewState();
@@ -36,6 +38,7 @@ class _OTPLoginViewState extends State<OTPLoginView> with SingleTickerProviderSt
   @override
   void initState() {
     super.initState();
+    _errorMessage = widget.initialMessage;
     _fadeController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 600),

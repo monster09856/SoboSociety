@@ -44,6 +44,7 @@ class MemberMeResponse(BaseModel):
     kvkk_onay_at: datetime | None = None
     katilimci_gorunurluk_onay: bool = False
     aktif: bool = True
+    pasif: bool = False
     is_admin: bool = False
 
     # Vücut Ölçüleri & Sağlık / Hedef Notları
