@@ -13,7 +13,7 @@ on:
 jobs:
   patch_ios:
     name: iOS Patch (Shorebird)
-    runs-on: macos-latest
+    runs-on: macos-15-intel
 
     steps:
       - name: 📥 Kodu İndir
@@ -35,10 +35,9 @@ jobs:
         with:
           cache: true
 
-      - name: 🚀 Android & iOS Shorebird Patch Gönder
+      - name: 🚀 iOS Shorebird Patch Gönder
         run: |
-          printf 'y\ny\ny\n' | shorebird patch android --release-version=latest --allow-asset-diffs --allow-native-diffs || true
-          printf 'y\ny\ny\n' | shorebird patch ios --release-version=latest --no-codesign --allow-asset-diffs --allow-native-diffs
+          printf 'y\ny\ny\n' | shorebird patch ios --release-version=1.0.4+15 --no-codesign --allow-asset-diffs --allow-native-diffs
         working-directory: android
         env:
           SHOREBIRD_TOKEN: ${{ secrets.SHOREBIRD_TOKEN }}
